@@ -1,0 +1,315 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { services, WeekSession, VALID_NAMES } from "@/lib/services";
+import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle } from "lucide-react";
+import { isBefore, setDay, setHours, setMinutes } from "date-fns";
+import RatingForm from "./RatingForm";
+import DeanDashboard from "./DeanDashboard";
+import Leaderboard from "./Leaderboard";
+
+export default function Dashboard() {
+    const { user, logout } = useAuth();
+    const [currentWeek, setCurrentWeek] = useState<WeekSession | null>(null);
+    const [pastWeek, setPastWeek] = useState<WeekSession | null>(null);
+    const [hasRatedPastWeek, setHasRatedPastWeek] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    // Forms state
+    const [selectedDay, setSelectedDay] = useState<"الخميس" | "الجمعة">("الخميس");
+    const [restaurant, setRestaurant] = useState("");
+    const [saving, setSaving] = useState(false);
+
+    const fetchWeek = async () => {
+        setLoading(true);
+        const week = await services.getCurrentWeek();
+        const previous = await services.getPreviousWeek();
+
+        if (week) {
+            setCurrentWeek(week);
+            if (week.day) setSelectedDay(week.day);
+            if (week.restaurant) setRestaurant(week.restaurant);
+        } else {
+            setCurrentWeek(null);
+        }
+
+        if (previous) {
+            setPastWeek(previous);
+            if (user?.name) {
+                const rated = await services.hasUserRated(previous.id, user.name);
+                setHasRatedPastWeek(rated);
+            }
+        } else {
+            setPastWeek(null);
+        }
+
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        fetchWeek();
+    }, [user]);
+
+    const handleSetChoices = async () => {
+        if (!currentWeek || !user) return;
+        setSaving(true);
+        try {
+            await services.setWeekChoices(currentWeek.id, selectedDay, restaurant, null);
+            await fetchWeek();
+        } catch (e) {
+            console.error(e);
+            alert("حدث خطأ أثناء الحفظ");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleStartNewWeek = async () => {
+        setSaving(true);
+        try {
+            if (currentWeek) {
+                // Complete the current one first
+                await services.completeWeek(currentWeek.id);
+            }
+
+            // Determine the next king in the sequence
+            let nextKing = VALID_NAMES[0];
+            let isRandom = false;
+            let nextCycleNumber = currentWeek ? currentWeek.cycleNumber : 1;
+            let nextWeekNumber = currentWeek ? currentWeek.weekNumber + 1 : 1;
+
+            if (currentWeek && !currentWeek.isRandom) {
+                const currentIndex = VALID_NAMES.indexOf(currentWeek.king || "");
+                if (currentIndex === VALID_NAMES.length - 1) {
+                    // After the 6th person, the 7th week is random
+                    nextKing = "أسبوع عشوائي";
+                    isRandom = true;
+                } else if (currentIndex !== -1) {
+                    nextKing = VALID_NAMES[currentIndex + 1];
+                }
+            } else if (currentWeek && currentWeek.isRandom) {
+                // After random week, start new cycle
+                nextKing = VALID_NAMES[0];
+                nextCycleNumber++;
+            }
+
+            // Note: Not selecting "أسبوع عشوائي" as actual king name in DB if random, set to null
+            const finalKingName = isRandom ? null : nextKing;
+
+            await services.startNewWeek(finalKingName, isRandom, nextCycleNumber, nextWeekNumber);
+            await fetchWeek();
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const isKing = currentWeek?.king === user?.name;
+
+    return (
+        <div className="min-h-screen bg-slate-950 p-4 md:p-8 font-sans">
+            <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800">
+                <div>
+                    <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent flex items-center gap-3">
+                        <Crown className="w-8 h-8 text-amber-500" />
+                        عرش الخميس
+                    </h1>
+                    <p className="text-slate-400 mt-2">أهلاً بك، {user?.name}</p>
+                </div>
+                <button
+                    onClick={logout}
+                    className="text-sm bg-slate-900 border border-slate-800 hover:bg-slate-800 py-2 md:py-3 px-4 md:px-6 rounded-xl transition-all shadow-md text-slate-300 font-medium"
+                >
+                    تسجيل الخروج
+                </button>
+            </header>
+
+            {/* Dean's Admin Panel */}
+            {user?.role === "dean" && (
+                <div className="bg-amber-900/20 border border-amber-500/30 rounded-2xl p-6 mb-8 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-2 h-full bg-amber-500 opacity-80" />
+                    <h2 className="text-amber-500 font-bold mb-4 flex items-center gap-2 text-xl">
+                        <Shield className="w-6 h-6" />
+                        لوحة العميد (سرية)
+                    </h2>
+                    <div className="flex flex-wrap gap-4">
+                        <button
+                            onClick={handleStartNewWeek}
+                            disabled={saving}
+                            className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold py-3 px-6 rounded-xl flex items-center gap-2 transition-all"
+                        >
+                            <PlusCircle className="w-5 h-5" />
+                            {currentWeek ? "إنهاء الأسبوع الحالي وبدء أسبوع جديد" : "بدء أسبوع جديد"}
+                        </button>
+
+                        {currentWeek && (
+                            <div className="flex items-center gap-2 bg-slate-950/40 p-1 rounded-xl border border-amber-500/20">
+                                <span className="text-slate-400 text-sm px-2">تغيير سري للملك:</span>
+                                <select
+                                    className="bg-slate-900 text-amber-500 border border-slate-700/50 rounded-lg p-2 text-sm outline-none w-32 focus:border-amber-500"
+                                    value={currentWeek.isRandom ? "" : currentWeek.king || ""}
+                                    onChange={async (e) => {
+                                        setSaving(true);
+                                        const newKing = e.target.value === "" ? null : e.target.value;
+                                        await services.secretlyChangeKing(currentWeek.id, newKing);
+                                        await fetchWeek();
+                                        setSaving(false);
+                                    }}
+                                    disabled={saving}
+                                >
+                                    <option value="">عشوائي (من غير ملك)</option>
+                                    {VALID_NAMES.map(name => (
+                                        <option key={name} value={name}>{name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Dean can see stats for the past week */}
+                    {pastWeek && (
+                        <DeanDashboard weekId={pastWeek.id} />
+                    )}
+                </div>
+            )}
+
+            {loading ? (
+                <div className="flex justify-center p-20">
+                    <div className="w-10 h-10 border-4 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                    {/* Main Status Card */}
+                    <div className="lg:col-span-2 space-y-8">
+
+                        {/* PAST WEEK RATING (Only if past week exists and user hasn't rated) */}
+                        {pastWeek && !hasRatedPastWeek && user?.name !== pastWeek.king && (
+                            <RatingForm
+                                weekId={pastWeek.id}
+                                userName={user?.name || ""}
+                                onRated={() => setHasRatedPastWeek(true)}
+                            />
+                        )}
+
+                        {!currentWeek ? (
+                            <div className="text-center p-16 bg-slate-900/50 rounded-3xl border border-slate-800">
+                                <AlertTriangle className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+                                <h3 className="text-2xl font-semibold text-slate-300">لا يوجد أسبوع نشط حالياً</h3>
+                                <p className="text-slate-500 mt-2">ننتظر العميد لبدء الدورة الجديدة.</p>
+                            </div>
+                        ) : (
+                            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                                <div className="absolute -top-20 -right-20 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl" />
+
+                                <div className="flex items-start justify-between mb-8 relative z-10">
+                                    <div>
+                                        <h3 className="text-slate-400 font-medium mb-1">دورة هذا الأسبوع</h3>
+                                        <h2 className="text-3xl font-bold text-white flex items-center gap-3">
+                                            ملك الأسبوع: <span className="text-amber-400">{currentWeek.king || "عشوائي"}</span>
+                                            {currentWeek.king === user?.name && (
+                                                <span className="text-xs bg-amber-500/20 text-amber-500 px-3 py-1 rounded-full border border-amber-500/30">
+                                                    أنت الملك!
+                                                </span>
+                                            )}
+                                        </h2>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6 relative z-10">
+                                    <div className="bg-slate-950/50 rounded-2xl p-5 border border-slate-800 flex items-center gap-4">
+                                        <Calendar className="w-10 h-10 text-slate-500" />
+                                        <div className="flex-1">
+                                            <p className="text-sm text-slate-400 mb-1">يوم الطلعة</p>
+                                            {isKing ? (
+                                                <select
+                                                    value={selectedDay}
+                                                    onChange={e => setSelectedDay(e.target.value as any)}
+                                                    className="bg-slate-900 text-white border border-slate-700 rounded-lg p-2 outline-none w-48 focus:border-amber-500"
+                                                >
+                                                    <option value="الخميس">الخميس</option>
+                                                    <option value="الجمعة">الجمعة</option>
+                                                </select>
+                                            ) : (
+                                                <p className="text-xl font-semibold text-white">
+                                                    {currentWeek.day || <span className="text-slate-600 font-normal">لم يحدد بعد</span>}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-slate-950/50 rounded-2xl p-5 border border-slate-800 flex items-center gap-4">
+                                        <MapPin className="w-10 h-10 text-slate-500" />
+                                        <div className="flex-1">
+                                            <p className="text-sm text-slate-400 mb-1">المطعم المختار (الميزانية أقل من 175 ريال)</p>
+                                            {isKing ? (
+                                                <input
+                                                    type="text"
+                                                    placeholder="اسم المطعم..."
+                                                    value={restaurant}
+                                                    onChange={e => setRestaurant(e.target.value)}
+                                                    className="bg-slate-900 text-white border border-slate-700 rounded-lg p-3 outline-none w-full max-w-sm focus:border-amber-500"
+                                                />
+                                            ) : (
+                                                <p className="text-xl font-semibold text-white">
+                                                    {currentWeek.restaurant || <span className="text-slate-600 font-normal">لم يحدد بعد</span>}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {isKing && (
+                                        <div className="pt-4 border-t border-slate-800">
+                                            <button
+                                                onClick={handleSetChoices}
+                                                disabled={saving}
+                                                className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-semibold py-3 px-8 rounded-xl flex items-center gap-2 transition-all w-full md:w-auto justify-center"
+                                            >
+                                                {saving ? "جاري الحفظ..." : "حفظ القرارات"}
+                                                <CheckCircle className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl sticky top-8">
+                            <h3 className="font-semibold text-lg mb-4 text-slate-300">دستور الأسبوع</h3>
+                            <ul className="space-y-3 text-sm text-slate-400">
+                                <li className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                                    <span>يجب على الملك أن يقرر วัน الطلعة قبل يوم الأربعاء 8م. والمطعم قبل 10م.</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                                    <span>الميزانية ما تزيد عن 175 ريال للشخص.</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                                    <span>ممنوع اختيار نفس المطعم دورتين ورا بعض.</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                                    <span>في حال المناسبات الخاصة يمكنك الاستيلاء على الاسبوع، وتتأجل الدورة.</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                                    <span>تقييم أقل من 2 لدورتين متتاليتين يسقط دورك القادم.</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* Leaderboard Section */}
+                        <Leaderboard cycleNumber={currentWeek ? currentWeek.cycleNumber : (pastWeek ? pastWeek.cycleNumber : 1)} />
+                    </div>
+
+                </div>
+            )}
+        </div>
+    );
+}
