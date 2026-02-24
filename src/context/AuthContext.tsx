@@ -17,6 +17,8 @@ export interface UserProfile {
     name: string;
     role: UserRole;
     registered: boolean;
+    phoneNumber?: string;
+    resetCode?: string;
 }
 
 interface AuthContextType {
@@ -80,7 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const profile: UserProfile = {
             name: userData.name,
             role: userData.role,
-            registered: userData.registered
+            registered: userData.registered,
+            phoneNumber: userData.phoneNumber
         };
 
         setUser(profile);
@@ -113,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const profile: UserProfile = {
             name: newUser.name,
             role: newUser.role,
-            registered: newUser.registered
+            registered: newUser.registered,
         };
 
         setUser(profile);

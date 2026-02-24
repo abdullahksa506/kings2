@@ -21,6 +21,14 @@ export default function Dashboard() {
     const [restaurant, setRestaurant] = useState("");
     const [saving, setSaving] = useState(false);
 
+    // Change Password State
+    const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+    const [changePasswordError, setChangePasswordError] = useState("");
+    const [changePasswordSuccess, setChangePasswordSuccess] = useState("");
+
     const fetchWeek = async () => {
         setLoading(true);
         const week = await services.getCurrentWeek();
@@ -62,6 +70,29 @@ export default function Dashboard() {
             alert("حدث خطأ أثناء الحفظ");
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleChangePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setChangePasswordError("");
+        setChangePasswordSuccess("");
+        if (!user) return;
+        setChangePasswordLoading(true);
+
+        try {
+            await services.changePassword(user.name, currentPassword, newPassword);
+            setChangePasswordSuccess("تم تغيير كلمة المرور بنجاح");
+            setTimeout(() => {
+                setIsChangePasswordOpen(false);
+                setCurrentPassword("");
+                setNewPassword("");
+                setChangePasswordSuccess("");
+            }, 2000);
+        } catch (e: any) {
+            setChangePasswordError(e.message || "حدث خطأ ما");
+        } finally {
+            setChangePasswordLoading(false);
         }
     };
 
@@ -118,13 +149,86 @@ export default function Dashboard() {
                     </h1>
                     <p className="text-slate-400 mt-2">أهلاً بك، {user?.name}</p>
                 </div>
-                <button
-                    onClick={logout}
-                    className="text-sm bg-slate-900 border border-slate-800 hover:bg-slate-800 py-2 md:py-3 px-4 md:px-6 rounded-xl transition-all shadow-md text-slate-300 font-medium"
-                >
-                    تسجيل الخروج
-                </button>
+                <div className="flex gap-2 text-xs md:text-sm">
+                    <button
+                        onClick={() => setIsChangePasswordOpen(true)}
+                        className="bg-slate-900 border border-slate-800 hover:bg-slate-800 py-2 md:py-3 px-3 md:px-5 rounded-xl transition-all shadow-md text-amber-500 font-medium"
+                    >
+                        تغيير كلمة المرور
+                    </button>
+                    <button
+                        onClick={logout}
+                        className="bg-slate-900 border border-slate-800 hover:bg-slate-800 py-2 md:py-3 px-3 md:px-5 rounded-xl transition-all shadow-md text-slate-300 font-medium"
+                    >
+                        تسجيل الخروج
+                    </button>
+                </div>
             </header>
+
+            {/* Change Password Modal */}
+            {isChangePasswordOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
+                        <h2 className="text-xl font-bold text-amber-500 mb-4">تغيير كلمة المرور</h2>
+
+                        {changePasswordError && (
+                            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                                {changePasswordError}
+                            </div>
+                        )}
+                        {changePasswordSuccess && (
+                            <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm">
+                                {changePasswordSuccess}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleChangePassword} className="space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-sm text-slate-300">كلمة المرور الحالية</label>
+                                <input
+                                    type="password"
+                                    required
+                                    value={currentPassword}
+                                    onChange={e => setCurrentPassword(e.target.value)}
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-amber-500 font-mono"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-sm text-slate-300">كلمة المرور الجديدة</label>
+                                <input
+                                    type="password"
+                                    required
+                                    value={newPassword}
+                                    onChange={e => setNewPassword(e.target.value)}
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-amber-500 font-mono"
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="submit"
+                                    disabled={changePasswordLoading}
+                                    className="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+                                >
+                                    {changePasswordLoading ? "جاري..." : "حفظ"}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsChangePasswordOpen(false);
+                                        setCurrentPassword("");
+                                        setNewPassword("");
+                                        setChangePasswordError("");
+                                        setChangePasswordSuccess("");
+                                    }}
+                                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg font-medium transition-colors"
+                                >
+                                    إلغاء
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Dean's Admin Panel */}
             {user?.role === "dean" && (

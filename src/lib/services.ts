@@ -160,5 +160,90 @@ export const services = {
 
         // Sort by average score descending
         return leaderboard.sort((a, b) => b.averageScore - a.averageScore);
+    },
+
+    async getAllUsers() {
+        const snap = await getDocs(collection(db, "users"));
+        return snap.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+    },
+
+    async updateUserPhone(userName: string, phone: string) {
+        const userRef = doc(db, "users", userName);
+        await updateDoc(userRef, { phoneNumber: phone });
+    },
+
+    // --- Password Management Features ---
+
+    async requestPasswordReset(userName: string): Promise<void> {
+        if (!VALID_NAMES.includes(userName)) throw new Error("اسم غير مصرح به");
+
+        const userRef = doc(db, "users", userName);
+        const userDoc = await getDoc(userRef);
+
+        if (!userDoc.exists()) {
+            throw new Error("المستخدم غير مسجل بعد");
+        }
+
+        // Generate a 4-digit code
+        const code = Math.floor(1000 + Math.random() * 9000).toString();
+
+        await updateDoc(userRef, { resetCode: code });
+    },
+
+    async resetPasswordWithCode(userName: string, code: string, newPassword: string): Promise<void> {
+        if (!VALID_NAMES.includes(userName)) throw new Error("اسم غير مصرح به");
+
+        const userRef = doc(db, "users", userName);
+        const userDoc = await getDoc(userRef);
+
+        if (!userDoc.exists()) {
+            throw new Error("المستخدم غير مسجل بعد");
+        }
+
+        const data = userDoc.data();
+        if (data.resetCode !== code) {
+            throw new Error("رمز الاسترجاع خاطئ");
+        }
+
+        await updateDoc(userRef, {
+            password: newPassword,
+            resetCode: null // Clear the code after successful reset
+        });
+    },
+
+    async changePassword(userName: string, currentPassword: string, newPassword: string): Promise<void> {
+        if (!VALID_NAMES.includes(userName)) throw new Error("اسم غير مصرح به");
+
+        const userRef = doc(db, "users", userName);
+        const userDoc = await getDoc(userRef);
+
+        if (!userDoc.exists()) {
+            throw new Error("المستخدم غير موجود");
+        }
+
+        const data = userDoc.data();
+        if (data.password !== currentPassword) {
+            throw new Error("كلمة المرور الحالية خاطئة");
+        }
+
+        await updateDoc(userRef, { password: newPassword });
+    },
+
+    async getUsersWithResetCodes(): Promise<{ id: string, name: string, resetCode: string }[]> {
+        const usersSnap = await getDocs(collection(db, "users"));
+        const requests: { id: string, name: string, resetCode: string }[] = [];
+
+        usersSnap.forEach(doc => {
+            const data = doc.data();
+            if (data.resetCode) {
+                requests.push({
+                    id: doc.id,
+                    name: data.name || doc.id,
+                    resetCode: data.resetCode
+                });
+            }
+        });
+
+        return requests;
     }
 };

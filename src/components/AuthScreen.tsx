@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { services } from "@/lib/services";
 import { motion, AnimatePresence } from "framer-motion";
-import { Crown, Lock, User, AlertCircle, ArrowRight } from "lucide-react";
+import { Crown, Lock, User, AlertCircle, ArrowRight, KeyRound, CheckCircle2 } from "lucide-react";
 
 const VALID_NAMES = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
 
@@ -11,6 +12,12 @@ export default function AuthScreen() {
     const { login, register, registeredNamesCount } = useAuth();
 
     const [isRegistering, setIsRegistering] = useState(false);
+    const [isForgotPassword, setIsForgotPassword] = useState(false);
+    const [forgotPasswordStep, setForgotPasswordStep] = useState<1 | 2>(1);
+    const [resetCode, setResetCode] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [successMsg, setSuccessMsg] = useState("");
+
     const [selectedName, setSelectedName] = useState(VALID_NAMES[0]);
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -22,10 +29,25 @@ export default function AuthScreen() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
+        setSuccessMsg("");
         setLoading(true);
 
         try {
-            if (isRegistering && !allRegistered) {
+            if (isForgotPassword) {
+                if (forgotPasswordStep === 1) {
+                    await services.requestPasswordReset(selectedName);
+                    setSuccessMsg("تم إرسال كود الاسترجاع إلى العميد. يرجى التواصل معه للحصول على الكود.");
+                    setForgotPasswordStep(2);
+                } else {
+                    await services.resetPasswordWithCode(selectedName, resetCode, newPassword);
+                    setSuccessMsg("تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.");
+                    setIsForgotPassword(false);
+                    setForgotPasswordStep(1);
+                    setPassword("");
+                    setResetCode("");
+                    setNewPassword("");
+                }
+            } else if (isRegistering && !allRegistered) {
                 await register(selectedName, password);
             } else {
                 await login(selectedName, password);
@@ -35,6 +57,17 @@ export default function AuthScreen() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const toggleForgotPassword = () => {
+        setIsForgotPassword(!isForgotPassword);
+        setIsRegistering(false);
+        setForgotPasswordStep(1);
+        setError("");
+        setSuccessMsg("");
+        setPassword("");
+        setResetCode("");
+        setNewPassword("");
     };
 
     return (
@@ -62,16 +95,30 @@ export default function AuthScreen() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
-                    {error && (
-                        <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-2 text-red-400 text-sm"
-                        >
-                            <AlertCircle className="w-4 h-4" />
-                            <span>{error}</span>
-                        </motion.div>
-                    )}
+                    <AnimatePresence>
+                        {error && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-2 text-red-400 text-sm"
+                            >
+                                <AlertCircle className="w-4 h-4 shrink-0" />
+                                <span>{error}</span>
+                            </motion.div>
+                        )}
+                        {successMsg && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2 text-emerald-400 text-sm"
+                            >
+                                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                                <span>{successMsg}</span>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     <div className="space-y-1">
                         <label className="text-sm font-medium text-slate-300">الاسم</label>
@@ -80,6 +127,7 @@ export default function AuthScreen() {
                                 value={selectedName}
                                 onChange={(e) => setSelectedName(e.target.value)}
                                 className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all appearance-none text-white"
+                                disabled={isForgotPassword && forgotPasswordStep === 2}
                             >
                                 {VALID_NAMES.map((name) => (
                                     <option key={name} value={name}>{name}</option>
@@ -91,22 +139,61 @@ export default function AuthScreen() {
                         </div>
                     </div>
 
-                    <div className="space-y-1">
-                        <label className="text-sm font-medium text-slate-300">الرمز السري</label>
-                        <div className="relative">
-                            <input
-                                type="password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="••••••"
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 pr-10 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all text-white placeholder-slate-600 font-mono"
-                            />
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
-                                <Lock className="w-4 h-4" />
+                    {!isForgotPassword ? (
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium text-slate-300">الرمز السري</label>
+                            <div className="relative">
+                                <input
+                                    type="password"
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="••••••"
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 pr-10 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all text-white placeholder-slate-600 font-mono"
+                                />
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
+                                    <Lock className="w-4 h-4" />
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    ) : (
+                        forgotPasswordStep === 2 && (
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-5">
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-300">كود الاسترجاع (من العميد)</label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            required
+                                            value={resetCode}
+                                            onChange={(e) => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                            placeholder="1234"
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 pr-10 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all text-white placeholder-slate-600 font-mono tracking-widest text-center"
+                                        />
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
+                                            <KeyRound className="w-4 h-4" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-300">كلمة المرور الجديدة</label>
+                                    <div className="relative">
+                                        <input
+                                            type="password"
+                                            required
+                                            value={newPassword}
+                                            onChange={(e) => setNewPassword(e.target.value)}
+                                            placeholder="••••••"
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 pr-10 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all text-white placeholder-slate-600 font-mono"
+                                        />
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
+                                            <Lock className="w-4 h-4" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )
+                    )}
 
                     <button
                         type="submit"
@@ -117,25 +204,49 @@ export default function AuthScreen() {
                             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         ) : (
                             <>
-                                {isRegistering && !allRegistered ? "إنشاء حساب" : "تسجيل الدخول"}
+                                {isForgotPassword
+                                    ? (forgotPasswordStep === 1 ? "طلب كود الاسترجاع" : "تأكيد كلمة المرور الجديدة")
+                                    : (isRegistering && !allRegistered ? "إنشاء حساب" : "تسجيل الدخول")}
                                 <ArrowRight className="w-4 h-4 rotate-180" />
                             </>
                         )}
                     </button>
                 </form>
 
-                {!allRegistered && (
-                    <div className="mt-6 text-center text-sm text-slate-500">
-                        {isRegistering ? "لديك حساب مسبقاً؟ " : "لم تسجل بعد؟ "}
+                <div className="mt-6 flex flex-col gap-3 text-center text-sm text-slate-500">
+                    {!isForgotPassword && (
                         <button
                             type="button"
-                            onClick={() => setIsRegistering(!isRegistering)}
-                            className="text-amber-500 hover:text-amber-400 font-medium transition-colors"
+                            onClick={toggleForgotPassword}
+                            className="text-slate-400 hover:text-amber-400 font-medium transition-colors"
                         >
-                            {isRegistering ? "تسجيل الدخول" : "إنشاء حساب"}
+                            نسيت كلمة المرور؟
                         </button>
-                    </div>
-                )}
+                    )}
+
+                    {isForgotPassword ? (
+                        <button
+                            type="button"
+                            onClick={toggleForgotPassword}
+                            className="text-slate-400 hover:text-amber-400 font-medium transition-colors"
+                        >
+                            العودة لتسجيل الدخول
+                        </button>
+                    ) : (
+                        !allRegistered && (
+                            <div>
+                                {isRegistering ? "لديك حساب مسبقاً؟ " : "لم تسجل بعد؟ "}
+                                <button
+                                    type="button"
+                                    onClick={() => setIsRegistering(!isRegistering)}
+                                    className="text-amber-500 hover:text-amber-400 font-medium transition-colors"
+                                >
+                                    {isRegistering ? "تسجيل الدخول" : "إنشاء حساب"}
+                                </button>
+                            </div>
+                        )
+                    )}
+                </div>
             </motion.div>
         </div>
     );
