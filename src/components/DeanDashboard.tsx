@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, Rating } from "@/lib/services";
 import { Star, ShieldAlert, BarChart3, KeyRound } from "lucide-react";
 
-export default function DeanDashboard({ weekId }: { weekId: string }) {
+export default function DeanDashboard({ weekId }: { weekId?: string }) {
     const [ratings, setRatings] = useState<Rating[]>([]);
     const [users, setUsers] = useState<{ id: string, name: string, phoneNumber?: string }[]>([]);
     const [resetRequests, setResetRequests] = useState<{ id: string, name: string, resetCode: string }[]>([]);
@@ -16,7 +16,7 @@ export default function DeanDashboard({ weekId }: { weekId: string }) {
         const fetchRatings = async () => {
             setLoading(true);
             try {
-                if (weekId) {
+                if (weekId && weekId.length > 0) {
                     const fetchedRatings = await services.getAllRatingsForWeek(weekId);
                     setRatings(fetchedRatings);
                 }

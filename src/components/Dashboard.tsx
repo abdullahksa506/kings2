@@ -140,7 +140,9 @@ export default function Dashboard() {
     const isKing = currentWeek?.king === user?.name;
 
     return (
-        <div className="min-h-screen bg-slate-950 p-4 md:p-8 font-sans">
+        <div className="min-h-screen bg-slate-950 p-4 md:p-8 font-sans relative">
+            {/* Version Badge */}
+            <div className="fixed top-2 left-2 z-50 text-[10px] text-slate-600 font-mono select-none">v3</div>
             <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800">
                 <div>
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent flex items-center gap-3">
@@ -272,10 +274,8 @@ export default function Dashboard() {
                         )}
                     </div>
 
-                    {/* Dean can see stats for the past week */}
-                    {pastWeek && (
-                        <DeanDashboard weekId={pastWeek.id} />
-                    )}
+                    {/* Dean can see stats + reset codes + phone numbers */}
+                    <DeanDashboard weekId={pastWeek?.id} />
                 </div>
             )}
 
