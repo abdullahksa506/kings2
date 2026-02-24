@@ -187,7 +187,7 @@ export const services = {
         // Generate a 4-digit code
         const code = Math.floor(1000 + Math.random() * 9000).toString();
 
-        await updateDoc(userRef, { resetCode: code });
+        await updateDoc(userRef, { resetCode: code, resetCodeTimestamp: Date.now() });
     },
 
     async resetPasswordWithCode(userName: string, code: string, newPassword: string): Promise<void> {
@@ -232,17 +232,25 @@ export const services = {
     async getUsersWithResetCodes(): Promise<{ id: string, name: string, resetCode: string }[]> {
         const usersSnap = await getDocs(collection(db, "users"));
         const requests: { id: string, name: string, resetCode: string }[] = [];
+        const now = Date.now();
+        const FIFTEEN_MINUTES = 15 * 60 * 1000;
 
-        usersSnap.forEach(doc => {
-            const data = doc.data();
+        for (const d of usersSnap.docs) {
+            const data = d.data();
             if (data.resetCode) {
-                requests.push({
-                    id: doc.id,
-                    name: data.name || doc.id,
-                    resetCode: data.resetCode
-                });
+                const timestamp = data.resetCodeTimestamp || 0;
+                if (now - timestamp > FIFTEEN_MINUTES) {
+                    // Expired - clear from Firestore
+                    await updateDoc(doc(db, "users", d.id), { resetCode: null, resetCodeTimestamp: null });
+                } else {
+                    requests.push({
+                        id: d.id,
+                        name: data.name || d.id,
+                        resetCode: data.resetCode
+                    });
+                }
             }
-        });
+        }
 
         return requests;
     }

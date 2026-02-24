@@ -2,35 +2,35 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { services, WeekSession, Rating } from "@/lib/services";
-import { Star, ShieldAlert, BarChart3, KeyRound } from "lucide-react";
+import { services, WeekSession, Rating, VALID_NAMES } from "@/lib/services";
+import { Star, ShieldAlert, BarChart3, KeyRound, Users, CheckCircle2 } from "lucide-react";
 
 export default function DeanDashboard({ weekId }: { weekId?: string }) {
     const [ratings, setRatings] = useState<Rating[]>([]);
-    const [users, setUsers] = useState<{ id: string, name: string, phoneNumber?: string }[]>([]);
     const [resetRequests, setResetRequests] = useState<{ id: string, name: string, resetCode: string }[]>([]);
+    const [registeredNames, setRegisteredNames] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
-    const [savingPhone, setSavingPhone] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchRatings = async () => {
+        const fetchData = async () => {
             setLoading(true);
             try {
                 if (weekId && weekId.length > 0) {
                     const fetchedRatings = await services.getAllRatingsForWeek(weekId);
                     setRatings(fetchedRatings);
                 }
-                const allUsers = await services.getAllUsers();
-                setUsers(allUsers);
 
                 const reqs = await services.getUsersWithResetCodes();
                 setResetRequests(reqs);
+
+                const allUsers = await services.getAllUsers();
+                setRegisteredNames(allUsers.map((u: any) => u.name || u.id));
             } catch (err) {
                 console.error(err);
             }
             setLoading(false);
         };
-        fetchRatings();
+        fetchData();
     }, [weekId]);
 
     if (loading) return <div className="text-amber-500 font-mono text-sm animate-pulse">جاري جلب التقييمات السرية...</div>;
@@ -84,44 +84,41 @@ export default function DeanDashboard({ weekId }: { weekId?: string }) {
                 </>
             )}
 
-            {/* Phone Numbers Management Section */}
+            {/* Registration Status Section */}
             <div className="mt-8 pt-6 border-t border-amber-900/50">
                 <h3 className="text-lg font-bold text-amber-500 mb-4 flex items-center gap-2">
-                    <ShieldAlert className="w-5 h-5" />
-                    أرقام الجوالات (لتنبيهات الواتساب)
+                    <Users className="w-5 h-5" />
+                    حالة التسجيل
                 </h3>
-                <div className="space-y-3">
-                    {users.map(u => (
-                        <div key={u.id} className="flex flex-col md:flex-row md:items-center gap-3 bg-slate-900/80 p-3 rounded-lg border border-slate-800">
-                            <span className="text-slate-300 min-w-[100px]">{u.name}</span>
-                            <div className="flex-1 flex gap-2">
-                                <input
-                                    type="text"
-                                    placeholder="+9665..."
-                                    className="bg-slate-950 text-white border border-slate-700 rounded-md px-3 py-1.5 text-sm outline-none flex-1 focus:border-amber-500"
-                                    value={u.phoneNumber || ""}
-                                    onChange={(e) => {
-                                        setUsers(prev => prev.map(user => user.id === u.id ? { ...user, phoneNumber: e.target.value } : user));
-                                    }}
-                                />
-                                <button
-                                    onClick={async () => {
-                                        setSavingPhone(u.id);
-                                        await services.updateUserPhone(u.id, u.phoneNumber || "");
-                                        setSavingPhone(null);
-                                    }}
-                                    disabled={savingPhone === u.id}
-                                    className="bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-xs px-4 rounded-md transition-colors"
-                                >
-                                    {savingPhone === u.id ? "..." : "حفظ"}
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                <p className="text-xs text-slate-500 mt-4">
-                    ملاحظة: يجب إدخال الرقم بالصيغة الدولية (+966) لتصله رسايل التذكير عبر واتساب.
-                </p>
+                {registeredNames.length >= VALID_NAMES.length ? (
+                    <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-emerald-400">
+                        <CheckCircle2 className="w-5 h-5 shrink-0" />
+                        <span className="font-medium">جميع الأعضاء مسجلين ✅</span>
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        {VALID_NAMES.map(name => {
+                            const isRegistered = registeredNames.includes(name);
+                            return (
+                                <div key={name} className={`flex justify-between items-center p-3 rounded-lg border ${isRegistered
+                                        ? "bg-emerald-900/10 border-emerald-500/20"
+                                        : "bg-red-900/10 border-red-500/20"
+                                    }`}>
+                                    <span className="text-slate-300">{name}</span>
+                                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${isRegistered
+                                            ? "bg-emerald-500/20 text-emerald-400"
+                                            : "bg-red-500/20 text-red-400"
+                                        }`}>
+                                        {isRegistered ? "مسجّل ✓" : "لم يسجّل ✗"}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                        <p className="text-xs text-slate-500 mt-2">
+                            {registeredNames.length} من {VALID_NAMES.length} سجّلوا حساباتهم
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Password Reset Requests Section */}
@@ -149,3 +146,4 @@ export default function DeanDashboard({ weekId }: { weekId?: string }) {
         </div>
     );
 }
+
