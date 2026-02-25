@@ -218,7 +218,7 @@ export const services = {
         const snap = await getDocs(q);
         const subs: any[] = [];
         snap.forEach(doc => {
-            const data = doc.data();
+            const data = doc.data() as any;
             if (data.pushSubscription) {
                 try {
                     subs.push(JSON.parse(data.pushSubscription));
