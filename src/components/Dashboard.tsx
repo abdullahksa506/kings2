@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, VALID_NAMES } from "@/lib/services";
-import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw } from "lucide-react";
+import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import RatingForm from "./RatingForm";
 import DeanDashboard from "./DeanDashboard";
 import Leaderboard from "./Leaderboard";
@@ -56,15 +57,39 @@ export default function Dashboard() {
         setLoading(false);
     };
 
+    const { isSupported, isSubscribed, subscribeToPush } = usePushNotifications();
+    const [subscribing, setSubscribing] = useState(false);
+
     useEffect(() => {
         fetchWeek();
     }, [user]);
+
+    const handleSubscribe = async () => {
+        setSubscribing(true);
+        const sub = await subscribeToPush();
+        if (sub && user) {
+            await services.updatePushSubscription(user.name, sub);
+        }
+        setSubscribing(false);
+    };
 
     const handleSetChoices = async () => {
         if (!currentWeek || !user) return;
         setSaving(true);
         try {
             await services.setWeekChoices(currentWeek.id, selectedDay, restaurant, null);
+
+            // Notify members (Web Push)
+            try {
+                await fetch("/api/reminders/decision", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ weekId: currentWeek.id })
+                });
+            } catch (e) {
+                console.error("Failed to notify members about the decision:", e);
+            }
+
             await fetchWeek();
         } catch (e) {
             console.error(e);
@@ -143,7 +168,7 @@ export default function Dashboard() {
     return (
         <div className="min-h-screen bg-slate-950 p-4 md:p-8 font-sans relative">
             {/* Version Badge */}
-            <div className="fixed top-2 left-2 z-50 text-[10px] text-slate-600 font-mono select-none">v7</div>
+            <div className="fixed top-2 left-2 z-50 text-[10px] text-slate-600 font-mono select-none">v8</div>
             <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800">
                 <div>
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent flex items-center gap-3">
@@ -153,6 +178,16 @@ export default function Dashboard() {
                     <p className="text-slate-400 mt-2">أهلاً بك، {user?.name}</p>
                 </div>
                 <div className="flex gap-2 text-xs md:text-sm">
+                    {isSupported && !isSubscribed && (
+                        <button
+                            onClick={handleSubscribe}
+                            disabled={subscribing}
+                            className="bg-emerald-900/30 border border-emerald-500/30 hover:bg-emerald-800/40 py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all shadow-md text-emerald-400 flex items-center gap-2"
+                        >
+                            <Bell className="w-4 h-4" />
+                            <span className="hidden md:inline">{subscribing ? "جاري التفعيل..." : "تفعيل الإشعارات"}</span>
+                        </button>
+                    )}
                     <button
                         onClick={() => setIsChangePasswordOpen(true)}
                         className="bg-slate-900 border border-slate-800 hover:bg-slate-800 py-2 md:py-3 px-3 md:px-5 rounded-xl transition-all shadow-md text-amber-500 font-medium"
@@ -251,6 +286,26 @@ export default function Dashboard() {
                             {currentWeek ? "إنهاء الأسبوع الحالي وبدء أسبوع جديد" : "بدء أسبوع جديد"}
                         </button>
 
+                        <button
+                            onClick={async () => {
+                                setSaving(true);
+                                try {
+                                    const res = await fetch("/api/reminders/test-push", { method: "POST" });
+                                    const data = await res.json();
+                                    alert(data.message || "Request sent");
+                                } catch (e) {
+                                    console.error("Failed to send test push:", e);
+                                    alert("خطأ في إرسال الإشعار التجريبي");
+                                }
+                                setSaving(false);
+                            }}
+                            disabled={saving}
+                            className="bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/30 text-sky-400 font-semibold py-3 px-6 rounded-xl flex items-center gap-2 transition-all"
+                        >
+                            <Bell className="w-5 h-5" />
+                            اختبار الإشعارات
+                        </button>
+
                         {currentWeek && (
                             <div className="flex items-center gap-2 bg-slate-950/40 p-1 rounded-xl border border-amber-500/20">
                                 <span className="text-slate-400 text-sm px-2">تغيير سري للملك:</span>
@@ -281,7 +336,22 @@ export default function Dashboard() {
                                 <button
                                     onClick={async () => {
                                         setSaving(true);
-                                        await services.toggleRatingEnabled(ratingWeek.id, !ratingWeek.ratingEnabled);
+                                        const willBeEnabled = !ratingWeek.ratingEnabled;
+                                        await services.toggleRatingEnabled(ratingWeek.id, willBeEnabled);
+
+                                        // If we are enabling the rating, notify members
+                                        if (willBeEnabled) {
+                                            try {
+                                                await fetch("/api/reminders/rating-unlocked", {
+                                                    method: "POST",
+                                                    headers: { "Content-Type": "application/json" },
+                                                    body: JSON.stringify({ weekId: ratingWeek.id })
+                                                });
+                                            } catch (e) {
+                                                console.error("Failed to notify members about unlocked rating:", e);
+                                            }
+                                        }
+
                                         await fetchWeek();
                                         setSaving(false);
                                     }}

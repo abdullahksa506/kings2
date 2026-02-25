@@ -30,30 +30,62 @@ export async function POST(request: Request) {
         const client = twilio(accountSid, authToken);
         let sentCount = 0;
 
+        // 3. Web Push setup (if configured)
+        const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+        let webPushInitialized = false;
+
+        if (vapidPublicKey && vapidPrivateKey) {
+            try {
+                const webpush = require('web-push');
+                webpush.setVapidDetails(
+                    'mailto:abo0odi_8@yahoo.com',
+                    vapidPublicKey,
+                    vapidPrivateKey
+                );
+                webPushInitialized = true;
+            } catch (e) {
+                console.error("Web push library not installed or configured correctly.");
+            }
+        }
+
         for (const user of users) {
             // King doesn't rate themselves
             if (user.name === week.king) continue;
 
-            // Skip users without phone numbers
-            if (!user.phoneNumber) continue;
-
             const hasRated = await services.hasUserRated(week.id, user.name);
             if (!hasRated) {
-                const messageBody = `أهلاً ${user.name} ⭐️!
-لا تنسى تقيّم مطعم "${week.restaurant}" الخاص بملك الأسبوع ${week.king}.
-تقييمك السري يهمنا في حسم النتائج!
+                const messageBody = `لا تنسى تقيّم مطعم "${week.restaurant}" الخاص بملك الأسبوع ${week.king}. تقييمك السري يحسم النتائج!`;
+                const whatsappBody = `أهلاً ${user.name} ⭐️!\n${messageBody}\n\nادخل قيم الآن: https://kings2.onrender.com`;
 
-ادخل قيم الآن: https://kings2.onrender.com
-`;
-                try {
-                    await client.messages.create({
-                        body: messageBody,
-                        from: `whatsapp:${twilioPhone}`,
-                        to: `whatsapp:${user.phoneNumber.startsWith('+') ? user.phoneNumber : '+' + user.phoneNumber}`
-                    });
-                    sentCount++;
-                } catch (err: any) {
-                    console.error(`Failed to send to ${user.name}:`, err.message);
+                // --- 1. Send WhatsApp ---
+                if (user.phoneNumber) {
+                    try {
+                        await client.messages.create({
+                            body: whatsappBody,
+                            from: `whatsapp:${twilioPhone}`,
+                            to: `whatsapp:${user.phoneNumber.startsWith('+') ? user.phoneNumber : '+' + user.phoneNumber}`
+                        });
+                        sentCount++;
+                    } catch (err: any) {
+                        console.error(`Failed to send WhatsApp to ${user.name}:`, err.message);
+                    }
+                }
+
+                // --- 2. Send Native Web Push (iPhone) ---
+                if (webPushInitialized && user.pushSubscription) {
+                    try {
+                        const sub = JSON.parse(user.pushSubscription);
+                        const webpush = require('web-push');
+                        await webpush.sendNotification(sub, JSON.stringify({
+                            title: `أهلاً ${user.name} ⭐️`,
+                            body: messageBody,
+                            url: '/',
+                            icon: '/icon.png'
+                        }));
+                    } catch (err: any) {
+                        console.error(`Failed to send Web Push to ${user.name}:`, err.message);
+                    }
                 }
             }
         }

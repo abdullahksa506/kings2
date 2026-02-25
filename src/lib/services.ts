@@ -204,6 +204,32 @@ export const services = {
         await updateDoc(userRef, { phoneNumber: phone });
     },
 
+    async updatePushSubscription(userName: string, subscription: any) {
+        const userRef = doc(db, "users", userName);
+        await updateDoc(userRef, { pushSubscription: JSON.stringify(subscription) });
+    },
+
+    async getPushSubscriptions(usernames?: string[]): Promise<any[]> {
+        let q = collection(db, "users") as any;
+        if (usernames && usernames.length > 0) {
+            q = query(collection(db, "users"), where("__name__", "in", usernames));
+        }
+
+        const snap = await getDocs(q);
+        const subs: any[] = [];
+        snap.forEach(doc => {
+            const data = doc.data();
+            if (data.pushSubscription) {
+                try {
+                    subs.push(JSON.parse(data.pushSubscription));
+                } catch (e) {
+                    console.error("Failed to parse push subscription for user:", doc.id);
+                }
+            }
+        });
+        return subs;
+    },
+
     // --- Password Management Features ---
 
     async requestPasswordReset(userName: string): Promise<void> {
