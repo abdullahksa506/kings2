@@ -273,24 +273,28 @@ export default function Dashboard() {
                             </div>
                         )}
 
-                        {pastWeek && (
-                            <button
-                                onClick={async () => {
-                                    setSaving(true);
-                                    await services.toggleRatingEnabled(pastWeek.id, !pastWeek.ratingEnabled);
-                                    await fetchWeek();
-                                    setSaving(false);
-                                }}
-                                disabled={saving}
-                                className={`py-3 px-6 rounded-xl flex items-center gap-2 transition-all font-semibold ${pastWeek.ratingEnabled
-                                    ? "bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
-                                    : "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
-                                    }`}
-                            >
-                                {pastWeek.ratingEnabled ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
-                                {pastWeek.ratingEnabled ? "قفل التقييم" : "فتح التقييم للأعضاء"}
-                            </button>
-                        )}
+                        {(() => {
+                            const ratingWeek = pastWeek || currentWeek;
+                            if (!ratingWeek) return null;
+                            return (
+                                <button
+                                    onClick={async () => {
+                                        setSaving(true);
+                                        await services.toggleRatingEnabled(ratingWeek.id, !ratingWeek.ratingEnabled);
+                                        await fetchWeek();
+                                        setSaving(false);
+                                    }}
+                                    disabled={saving}
+                                    className={`py-3 px-6 rounded-xl flex items-center gap-2 transition-all font-semibold ${ratingWeek.ratingEnabled
+                                            ? "bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
+                                            : "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
+                                        }`}
+                                >
+                                    {ratingWeek.ratingEnabled ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
+                                    {ratingWeek.ratingEnabled ? "قفل التقييم" : "فتح التقييم للأعضاء"}
+                                </button>
+                            );
+                        })()}
                     </div>
 
                     {/* Dean can see stats + reset codes + phone numbers */}
