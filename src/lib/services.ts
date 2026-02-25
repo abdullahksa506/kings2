@@ -11,7 +11,8 @@ import {
     orderBy,
     limit,
     addDoc,
-    Timestamp
+    Timestamp,
+    onSnapshot
 } from "firebase/firestore";
 
 export interface WeekSession {
@@ -54,6 +55,22 @@ export const services = {
             return { id: snap.docs[0].id, ...snap.docs[0].data() } as WeekSession;
         }
         return null;
+    },
+
+    // Listen to changes in the current active week
+    listenToCurrentWeek(callback: (week: WeekSession | null) => void) {
+        const q = query(
+            collection(db, "weeks"),
+            where("status", "==", "pending"),
+            limit(1)
+        );
+        return onSnapshot(q, (snap) => {
+            if (!snap.empty) {
+                callback({ id: snap.docs[0].id, ...snap.docs[0].data() } as WeekSession);
+            } else {
+                callback(null);
+            }
+        });
     },
 
     async startNewWeek(kingName: string | null, isRandom: boolean, cycleNumber: number, weekNumber: number) {

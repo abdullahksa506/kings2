@@ -32,11 +32,28 @@ export default function Dashboard() {
     const [changePasswordError, setChangePasswordError] = useState("");
     const [changePasswordSuccess, setChangePasswordSuccess] = useState("");
 
+    const fetchPastWeekOnly = async () => {
+        const previous = await services.getPreviousWeek();
+        if (previous) {
+            setPastWeek(previous);
+            if (user?.name) {
+                const rated = await services.hasUserRated(previous.id, user.name);
+                setHasRatedPastWeek(rated);
+            }
+        } else {
+            setPastWeek(null);
+            setHasRatedPastWeek(false);
+        }
+    };
+
     const fetchWeek = async () => {
         setLoading(true);
-        const week = await services.getCurrentWeek();
-        const previous = await services.getPreviousWeek();
+        // We still fetch past week statically
+        await fetchPastWeekOnly();
 
+        // But we rely on real-time listener for current week
+        // Note: fetchWeek will now be an initial trigger, the real-time listener handles the rest
+        const week = await services.getCurrentWeek();
         if (week) {
             setCurrentWeek(week);
             if (week.day) setSelectedDay(week.day);
@@ -49,26 +66,39 @@ export default function Dashboard() {
             setCurrentWeek(null);
             setHasRatedCurrentWeek(false);
         }
-
-        if (previous) {
-            setPastWeek(previous);
-            if (user?.name) {
-                const rated = await services.hasUserRated(previous.id, user.name);
-                setHasRatedPastWeek(rated);
-            }
-        } else {
-            setPastWeek(null);
-            setHasRatedPastWeek(false);
-        }
-
         setLoading(false);
+    };
+
+    const handleManualRefresh = async () => {
+        setLoading(true);
+        await fetchWeek();
     };
 
     const { isSupported, isSubscribed, subscribeToPush } = usePushNotifications();
     const [subscribing, setSubscribing] = useState(false);
 
     useEffect(() => {
-        fetchWeek();
+        fetchPastWeekOnly();
+
+        // Setup real-time listener for the active week
+        const unsubscribe = services.listenToCurrentWeek(async (week) => {
+            if (week) {
+                setCurrentWeek(week);
+                if (week.day) setSelectedDay(week.day);
+                if (week.restaurant) setRestaurant(week.restaurant);
+                if (user?.name) {
+                    const rated = await services.hasUserRated(week.id, user.name);
+                    setHasRatedCurrentWeek(rated);
+                }
+            } else {
+                setCurrentWeek(null);
+                setHasRatedCurrentWeek(false);
+            }
+            setLoading(false);
+        });
+
+        // Cleanup on unmount
+        return () => unsubscribe();
     }, [user]);
 
     const handleSubscribe = async () => {
@@ -195,6 +225,13 @@ export default function Dashboard() {
                             <span className="hidden md:inline">{subscribing ? "جاري التفعيل..." : "تفعيل الإشعارات"}</span>
                         </button>
                     )}
+                    <button
+                        onClick={handleManualRefresh}
+                        className="bg-slate-900 border border-slate-800 hover:bg-slate-800 py-2 md:py-3 px-3 rounded-xl transition-all shadow-md text-slate-300"
+                        title="تحديث البيانات"
+                    >
+                        <RotateCcw className={`w-5 h-5 ${loading ? 'animate-spin text-amber-500' : ''}`} />
+                    </button>
                     <button
                         onClick={() => setIsChangePasswordOpen(true)}
                         className="bg-slate-900 border border-slate-800 hover:bg-slate-800 py-2 md:py-3 px-3 md:px-5 rounded-xl transition-all shadow-md text-amber-500 font-medium"
