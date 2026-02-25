@@ -24,6 +24,7 @@ export interface WeekSession {
     restaurant: string | null;
     activity: string | null;
     status: "pending" | "completed" | "skipped";
+    ratingEnabled: boolean;
     createdAt: Timestamp;
 }
 
@@ -64,6 +65,7 @@ export const services = {
             restaurant: null,
             activity: null,
             status: "pending",
+            ratingEnabled: false,
             createdAt: Timestamp.now()
         };
         await setDoc(newWeekRef, newWeek);
@@ -88,6 +90,11 @@ export const services = {
             king: newKingName,
             isRandom: newKingName === null
         });
+    },
+
+    async toggleRatingEnabled(weekId: string, enabled: boolean) {
+        const weekRef = doc(db, "weeks", weekId);
+        await updateDoc(weekRef, { ratingEnabled: enabled });
     },
 
     async submitRating(weekId: string, userName: string, score: number) {
