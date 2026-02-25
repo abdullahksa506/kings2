@@ -380,12 +380,29 @@ export default function Dashboard() {
                                 <div className="flex flex-wrap gap-2">
                                     {VALID_NAMES.map(name => {
                                         const isAbsent = currentWeek.absentees?.includes(name) || false;
+                                        const hasResponded = currentWeek.responded?.includes(name) || false;
                                         return (
                                             <button
                                                 key={name}
                                                 onClick={async () => {
                                                     setSaving(true);
-                                                    const justCompleted = await services.toggleAttendance(currentWeek.id, name, !isAbsent);
+
+                                                    // Logic for Dean toggle: 
+                                                    // Wait -> Attend -> Absent -> Wait
+                                                    let setAbsent = false;
+
+                                                    if (!hasResponded) {
+                                                        // They haven't decided. Force them to Attending.
+                                                        setAbsent = false;
+                                                    } else if (!isAbsent) {
+                                                        // They are attending. Force them to Absent.
+                                                        setAbsent = true;
+                                                    } else {
+                                                        // They are absent. Force them back to Attending for now.
+                                                        setAbsent = false;
+                                                    }
+
+                                                    const justCompleted = await services.toggleAttendance(currentWeek.id, name, setAbsent);
 
                                                     if (justCompleted) {
                                                         try {
@@ -403,9 +420,9 @@ export default function Dashboard() {
                                                     setSaving(false);
                                                 }}
                                                 disabled={saving}
-                                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${isAbsent ? 'bg-red-500/20 border-red-500/30 text-red-400' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'}`}
+                                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${(!currentWeek.responded?.includes(name)) ? 'bg-slate-800 border-slate-700 text-slate-400 opacity-70' : isAbsent ? 'bg-red-500/20 border-red-500/30 text-red-400' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'}`}
                                             >
-                                                {name}: {isAbsent ? 'معتذر ❌' : 'حاضر ✅'}
+                                                {name}: {(!currentWeek.responded?.includes(name)) ? 'بانتظار الرد ⏳' : isAbsent ? 'معتذر ❌' : 'حاضر ✅'}
                                             </button>
                                         );
                                     })}
@@ -559,18 +576,37 @@ export default function Dashboard() {
                                         </div>
 
                                         <div className="space-y-4">
+                                            {/* Attendees Section */}
                                             <div>
                                                 <p className="text-sm text-emerald-500 mb-2 font-semibold">
-                                                    الحاضرين ({VALID_NAMES.filter(n => !(currentWeek.absentees || []).includes(n)).length}):
+                                                    الحاضرين ({VALID_NAMES.filter(n => (currentWeek.responded || []).includes(n) && !(currentWeek.absentees || []).includes(n) || n === currentWeek.king).length}):
                                                 </p>
                                                 <div className="flex flex-wrap gap-2">
-                                                    {VALID_NAMES.filter(n => !(currentWeek.absentees || []).includes(n)).map(name => (
+                                                    {VALID_NAMES.filter(n => (currentWeek.responded || []).includes(n) && !(currentWeek.absentees || []).includes(n) || n === currentWeek.king).map(name => (
                                                         <span key={name} className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm rounded-lg flex items-center gap-1">
-                                                            {name} {name === currentWeek.king ? "👑" : ""}
+                                                            {name} {name === currentWeek.king ? "👑" : "✅"}
                                                         </span>
                                                     ))}
                                                 </div>
                                             </div>
+
+                                            {/* Waiting Response Section */}
+                                            {VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).length > 0 && (
+                                                <div className="pt-2 border-t border-slate-800/50">
+                                                    <p className="text-sm text-slate-400 mb-2 font-semibold">
+                                                        بانتظار الرد ({VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).length}):
+                                                    </p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).map(name => (
+                                                            <span key={name} className="px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-400 text-sm rounded-lg flex items-center gap-1 opacity-70">
+                                                                {name} ⏳
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Absentees Section */}
                                             {(currentWeek.absentees || []).length > 0 && (
                                                 <div className="pt-2 border-t border-slate-800/50">
                                                     <p className="text-sm text-red-500 mb-2 font-semibold">
