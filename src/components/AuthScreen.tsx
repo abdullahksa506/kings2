@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { services } from "@/lib/services";
 import { motion, AnimatePresence } from "framer-motion";
 import { Crown, Lock, User, AlertCircle, ArrowRight, KeyRound, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 const VALID_NAMES = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
 
@@ -16,11 +17,9 @@ export default function AuthScreen() {
     const [forgotPasswordStep, setForgotPasswordStep] = useState<1 | 2>(1);
     const [resetCode, setResetCode] = useState("");
     const [newPassword, setNewPassword] = useState("");
-    const [successMsg, setSuccessMsg] = useState("");
 
     const [selectedName, setSelectedName] = useState(VALID_NAMES[0]);
     const [password, setPassword] = useState("");
-    const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
     // If 6 or more are registered, we permanently hide registration
@@ -28,19 +27,17 @@ export default function AuthScreen() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError("");
-        setSuccessMsg("");
         setLoading(true);
 
         try {
             if (isForgotPassword) {
                 if (forgotPasswordStep === 1) {
                     await services.requestPasswordReset(selectedName);
-                    setSuccessMsg("تم إرسال كود الاسترجاع إلى العميد. يرجى التواصل معه للحصول على الكود.");
+                    toast.success("تم إرسال كود الاسترجاع إلى العميد. يرجى التواصل معه للحصول على الكود.", { duration: 5000 });
                     setForgotPasswordStep(2);
                 } else {
                     await services.resetPasswordWithCode(selectedName, resetCode, newPassword);
-                    setSuccessMsg("تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.");
+                    toast.success("تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.");
                     setIsForgotPassword(false);
                     setForgotPasswordStep(1);
                     setPassword("");
@@ -53,7 +50,7 @@ export default function AuthScreen() {
                 await login(selectedName, password);
             }
         } catch (err: any) {
-            setError(err.message || "حدث خطأ ما");
+            toast.error(err.message || "حدث خطأ ما");
         } finally {
             setLoading(false);
         }
@@ -63,8 +60,6 @@ export default function AuthScreen() {
         setIsForgotPassword(!isForgotPassword);
         setIsRegistering(false);
         setForgotPasswordStep(1);
-        setError("");
-        setSuccessMsg("");
         setPassword("");
         setResetCode("");
         setNewPassword("");
@@ -95,30 +90,6 @@ export default function AuthScreen() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
-                    <AnimatePresence>
-                        {error && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-2 text-red-400 text-sm"
-                            >
-                                <AlertCircle className="w-4 h-4 shrink-0" />
-                                <span>{error}</span>
-                            </motion.div>
-                        )}
-                        {successMsg && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2 text-emerald-400 text-sm"
-                            >
-                                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                                <span>{successMsg}</span>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
 
                     <div className="space-y-1">
                         <label className="text-sm font-medium text-slate-300">الاسم</label>

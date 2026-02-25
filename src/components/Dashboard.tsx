@@ -9,6 +9,8 @@ import RatingForm from "./RatingForm";
 import DeanDashboard from "./DeanDashboard";
 import Leaderboard from "./Leaderboard";
 import GlobalLeaderboard from "./GlobalLeaderboard";
+import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Dashboard() {
     const { user, logout } = useAuth();
@@ -27,8 +29,6 @@ export default function Dashboard() {
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [changePasswordLoading, setChangePasswordLoading] = useState(false);
-    const [changePasswordError, setChangePasswordError] = useState("");
-    const [changePasswordSuccess, setChangePasswordSuccess] = useState("");
 
     const fetchWeek = async () => {
         setLoading(true);
@@ -66,9 +66,10 @@ export default function Dashboard() {
         try {
             await services.setWeekChoices(currentWeek.id, selectedDay, restaurant, null);
             await fetchWeek();
+            toast.success("تم حفظ القرارات بنجاح");
         } catch (e) {
             console.error(e);
-            alert("حدث خطأ أثناء الحفظ");
+            toast.error("حدث خطأ أثناء الحفظ");
         } finally {
             setSaving(false);
         }
@@ -76,22 +77,17 @@ export default function Dashboard() {
 
     const handleChangePassword = async (e: React.FormEvent) => {
         e.preventDefault();
-        setChangePasswordError("");
-        setChangePasswordSuccess("");
         if (!user) return;
         setChangePasswordLoading(true);
 
         try {
             await services.changePassword(user.name, currentPassword, newPassword);
-            setChangePasswordSuccess("تم تغيير كلمة المرور بنجاح");
-            setTimeout(() => {
-                setIsChangePasswordOpen(false);
-                setCurrentPassword("");
-                setNewPassword("");
-                setChangePasswordSuccess("");
-            }, 2000);
+            toast.success("تم تغيير كلمة المرور بنجاح");
+            setIsChangePasswordOpen(false);
+            setCurrentPassword("");
+            setNewPassword("");
         } catch (e: any) {
-            setChangePasswordError(e.message || "حدث خطأ ما");
+            toast.error(e.message || "حدث خطأ ما");
         } finally {
             setChangePasswordLoading(false);
         }
@@ -131,8 +127,10 @@ export default function Dashboard() {
 
             await services.startNewWeek(finalKingName, isRandom, nextCycleNumber, nextWeekNumber);
             await fetchWeek();
+            toast.success(currentWeek ? "تم إنهاء الأسبوع وبدء أسبوع جديد!" : "تم بدء الدورة بنجاح!");
         } catch (e) {
             console.error(e);
+            toast.error("حدث خطأ أثناء بدء الأسبوع الجديد");
         } finally {
             setSaving(false);
         }
@@ -169,69 +167,58 @@ export default function Dashboard() {
             </header>
 
             {/* Change Password Modal */}
-            {isChangePasswordOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
-                        <h2 className="text-xl font-bold text-amber-500 mb-4">تغيير كلمة المرور</h2>
+            <AnimatePresence>
+                {isChangePasswordOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
+                            <h2 className="text-xl font-bold text-amber-500 mb-4">تغيير كلمة المرور</h2>
 
-                        {changePasswordError && (
-                            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-                                {changePasswordError}
-                            </div>
-                        )}
-                        {changePasswordSuccess && (
-                            <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm">
-                                {changePasswordSuccess}
-                            </div>
-                        )}
-
-                        <form onSubmit={handleChangePassword} className="space-y-4">
-                            <div className="space-y-1">
-                                <label className="text-sm text-slate-300">كلمة المرور الحالية</label>
-                                <input
-                                    type="password"
-                                    required
-                                    value={currentPassword}
-                                    onChange={e => setCurrentPassword(e.target.value)}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-amber-500 font-mono"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-sm text-slate-300">كلمة المرور الجديدة</label>
-                                <input
-                                    type="password"
-                                    required
-                                    value={newPassword}
-                                    onChange={e => setNewPassword(e.target.value)}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-amber-500 font-mono"
-                                />
-                            </div>
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    type="submit"
-                                    disabled={changePasswordLoading}
-                                    className="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
-                                >
-                                    {changePasswordLoading ? "جاري..." : "حفظ"}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setIsChangePasswordOpen(false);
-                                        setCurrentPassword("");
-                                        setNewPassword("");
-                                        setChangePasswordError("");
-                                        setChangePasswordSuccess("");
-                                    }}
-                                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg font-medium transition-colors"
-                                >
-                                    إلغاء
-                                </button>
-                            </div>
-                        </form>
+                            <form onSubmit={handleChangePassword} className="space-y-4">
+                                <div className="space-y-1">
+                                    <label className="text-sm text-slate-300">كلمة المرور الحالية</label>
+                                    <input
+                                        type="password"
+                                        required
+                                        value={currentPassword}
+                                        onChange={e => setCurrentPassword(e.target.value)}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-amber-500 font-mono"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm text-slate-300">كلمة المرور الجديدة</label>
+                                    <input
+                                        type="password"
+                                        required
+                                        value={newPassword}
+                                        onChange={e => setNewPassword(e.target.value)}
+                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-amber-500 font-mono"
+                                    />
+                                </div>
+                                <div className="flex gap-3 pt-2">
+                                    <button
+                                        type="submit"
+                                        disabled={changePasswordLoading}
+                                        className="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+                                    >
+                                        {changePasswordLoading ? "جاري..." : "حفظ"}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsChangePasswordOpen(false);
+                                            setCurrentPassword("");
+                                            setNewPassword("");
+                                        }}
+                                        className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg font-medium transition-colors"
+                                    >
+                                        إلغاء
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
                     </div>
-                </div>
-            )}
+                )}
+            </AnimatePresence>
 
             {/* Dean's Admin Panel */}
             {user?.role === "dean" && (
@@ -260,9 +247,15 @@ export default function Dashboard() {
                                     onChange={async (e) => {
                                         setSaving(true);
                                         const newKing = e.target.value === "" ? null : e.target.value;
-                                        await services.secretlyChangeKing(currentWeek.id, newKing);
-                                        await fetchWeek();
-                                        setSaving(false);
+                                        try {
+                                            await services.secretlyChangeKing(currentWeek.id, newKing);
+                                            await fetchWeek();
+                                            toast.success("تم تغيير الملك بنجاح");
+                                        } catch (err) {
+                                            toast.error("حدث خطأ أثناء تغيير الملك");
+                                        } finally {
+                                            setSaving(false);
+                                        }
                                     }}
                                     disabled={saving}
                                 >
@@ -281,9 +274,15 @@ export default function Dashboard() {
                                 <button
                                     onClick={async () => {
                                         setSaving(true);
-                                        await services.toggleRatingEnabled(ratingWeek.id, !ratingWeek.ratingEnabled);
-                                        await fetchWeek();
-                                        setSaving(false);
+                                        try {
+                                            await services.toggleRatingEnabled(ratingWeek.id, !ratingWeek.ratingEnabled);
+                                            await fetchWeek();
+                                            toast.success(ratingWeek.ratingEnabled ? "تم قفل التقييم" : "تم فتح التقييم بنجاح");
+                                        } catch (err) {
+                                            toast.error("حدث خطأ أثناء تغيير حالة التقييم");
+                                        } finally {
+                                            setSaving(false);
+                                        }
                                     }}
                                     disabled={saving}
                                     className={`py-3 px-6 rounded-xl flex items-center gap-2 transition-all font-semibold ${ratingWeek.ratingEnabled
@@ -304,8 +303,35 @@ export default function Dashboard() {
             )}
 
             {loading ? (
-                <div className="flex justify-center p-20">
-                    <div className="w-10 h-10 border-4 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full animate-pulse">
+                    <div className="lg:col-span-2 space-y-8">
+                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 h-80 flex flex-col gap-6">
+                            <div className="h-8 w-48 bg-slate-800 rounded-lg"></div>
+                            <div className="h-12 w-64 bg-slate-800 rounded-xl"></div>
+                            <div className="space-y-4 flex-1">
+                                <div className="h-20 w-full bg-slate-950/50 rounded-2xl border border-slate-800"></div>
+                                <div className="h-20 w-full bg-slate-950/50 rounded-2xl border border-slate-800"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="space-y-6">
+                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 h-64">
+                            <div className="h-6 w-32 bg-slate-800 rounded-lg mb-6"></div>
+                            <div className="space-y-4">
+                                <div className="h-4 w-full bg-slate-800 rounded"></div>
+                                <div className="h-4 w-5/6 bg-slate-800 rounded"></div>
+                                <div className="h-4 w-4/6 bg-slate-800 rounded"></div>
+                            </div>
+                        </div>
+                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 h-80">
+                            <div className="h-6 w-40 bg-slate-800 rounded-lg mb-6"></div>
+                            <div className="space-y-3">
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className="h-16 w-full bg-slate-800/50 rounded-2xl border border-slate-800/60"></div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -324,13 +350,13 @@ export default function Dashboard() {
                         )}
 
                         {!currentWeek ? (
-                            <div className="text-center p-16 bg-slate-900/50 rounded-3xl border border-slate-800">
+                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center p-16 bg-slate-900/50 rounded-3xl border border-slate-800">
                                 <AlertTriangle className="w-16 h-16 text-slate-600 mx-auto mb-4" />
                                 <h3 className="text-2xl font-semibold text-slate-300">لا يوجد أسبوع نشط حالياً</h3>
                                 <p className="text-slate-500 mt-2">ننتظر العميد لبدء الدورة الجديدة.</p>
-                            </div>
+                            </motion.div>
                         ) : (
-                            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
                                 <div className="absolute -top-20 -right-20 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl" />
 
                                 <div className="flex items-start justify-between mb-8 relative z-10">
@@ -402,12 +428,12 @@ export default function Dashboard() {
                                         </div>
                                     )}
                                 </div>
-                            </div>
+                            </motion.div>
                         )}
                     </div>
 
                     <div className="space-y-6">
-                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl sticky top-8">
+                        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl sticky top-8">
                             <h3 className="font-semibold text-lg mb-4 text-slate-300">دستور الأسبوع</h3>
                             <ul className="space-y-3 text-sm text-slate-400">
                                 <li className="flex items-start gap-2">
@@ -431,7 +457,7 @@ export default function Dashboard() {
                                     <span>تقييم أقل من 2 لدورتين متتاليتين يسقط دورك القادم.</span>
                                 </li>
                             </ul>
-                        </div>
+                        </motion.div>
 
                         {/* Leaderboard Section */}
                         <Leaderboard
@@ -439,9 +465,15 @@ export default function Dashboard() {
                             isDean={user?.role === "dean"}
                             onReset={currentWeek ? async () => {
                                 setSaving(true);
-                                await services.resetCycleLeaderboard(currentWeek.id, currentWeek.cycleNumber + 1);
-                                await fetchWeek();
-                                setSaving(false);
+                                try {
+                                    await services.resetCycleLeaderboard(currentWeek.id, currentWeek.cycleNumber + 1);
+                                    await fetchWeek();
+                                    toast.success("تم تصفير الدورة بنجاح");
+                                } catch (err) {
+                                    toast.error("حدث خطأ أثناء التصفير");
+                                } finally {
+                                    setSaving(false);
+                                }
                             } : undefined}
                         />
 
