@@ -46,6 +46,9 @@ export async function POST(request: Request) {
             // Skip the king since they don't vote on their own restaurant
             if (user.name === targetWeek.king) continue;
 
+            // Skip absent users
+            if ((targetWeek.absentees || []).includes(user.name)) continue;
+
             const messageTitle = `التصويت متاح الآن! ⭐️`;
             const messageBody = `تم فتح باب التقييم لمطعم "${targetWeek.restaurant || 'هذا الأسبوع'}". ادخل قيم الآن! 👑`;
 

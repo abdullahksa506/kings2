@@ -53,6 +53,9 @@ export async function POST(request: Request) {
             // King doesn't rate themselves
             if (user.name === week.king) continue;
 
+            // Skip absent users
+            if ((week.absentees || []).includes(user.name)) continue;
+
             const hasRated = await services.hasUserRated(week.id, user.name);
             if (!hasRated) {
                 const messageBody = `لا تنسى تقيّم مطعم "${week.restaurant}" الخاص بملك الأسبوع ${week.king}. تقييمك السري يحسم النتائج!`;

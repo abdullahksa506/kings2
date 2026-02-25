@@ -15,6 +15,7 @@ export default function Dashboard() {
     const { user, logout } = useAuth();
     const [currentWeek, setCurrentWeek] = useState<WeekSession | null>(null);
     const [pastWeek, setPastWeek] = useState<WeekSession | null>(null);
+    const [hasRatedCurrentWeek, setHasRatedCurrentWeek] = useState(false);
     const [hasRatedPastWeek, setHasRatedPastWeek] = useState(false);
     const [loading, setLoading] = useState(true);
 
@@ -40,8 +41,13 @@ export default function Dashboard() {
             setCurrentWeek(week);
             if (week.day) setSelectedDay(week.day);
             if (week.restaurant) setRestaurant(week.restaurant);
+            if (user?.name) {
+                const rated = await services.hasUserRated(week.id, user.name);
+                setHasRatedCurrentWeek(rated);
+            }
         } else {
             setCurrentWeek(null);
+            setHasRatedCurrentWeek(false);
         }
 
         if (previous) {
@@ -52,6 +58,7 @@ export default function Dashboard() {
             }
         } else {
             setPastWeek(null);
+            setHasRatedPastWeek(false);
         }
 
         setLoading(false);
@@ -168,7 +175,7 @@ export default function Dashboard() {
     return (
         <div className="min-h-screen bg-slate-950 p-4 md:p-8 font-sans relative">
             {/* Version Badge */}
-            <div className="fixed top-2 left-2 z-50 text-[10px] text-slate-600 font-mono select-none">v8</div>
+            <div className="fixed top-2 left-2 z-50 text-[10px] text-slate-600 font-mono select-none">v9</div>
             <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800">
                 <div>
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent flex items-center gap-3">
@@ -330,7 +337,7 @@ export default function Dashboard() {
                         )}
 
                         {(() => {
-                            const ratingWeek = pastWeek || currentWeek;
+                            const ratingWeek = currentWeek || pastWeek;
                             if (!ratingWeek) return null;
                             return (
                                 <button
@@ -366,10 +373,36 @@ export default function Dashboard() {
                                 </button>
                             );
                         })()}
+
+                        {currentWeek && (
+                            <div className="w-full bg-slate-950/40 p-4 rounded-xl border border-amber-500/20 mt-4">
+                                <h3 className="text-amber-500 font-semibold mb-3">إدارة الحضور (صلاحية العميد)</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {VALID_NAMES.map(name => {
+                                        const isAbsent = currentWeek.absentees?.includes(name) || false;
+                                        return (
+                                            <button
+                                                key={name}
+                                                onClick={async () => {
+                                                    setSaving(true);
+                                                    await services.toggleAttendance(currentWeek.id, name, !isAbsent);
+                                                    await fetchWeek();
+                                                    setSaving(false);
+                                                }}
+                                                disabled={saving}
+                                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${isAbsent ? 'bg-red-500/20 border-red-500/30 text-red-400' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'}`}
+                                            >
+                                                {name}: {isAbsent ? 'معتذر ❌' : 'حاضر ✅'}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Dean can see stats + reset codes + phone numbers */}
-                    <DeanDashboard weekId={pastWeek?.id} />
+                    <DeanDashboard weekId={currentWeek?.id || pastWeek?.id} />
                 </div>
             )}
 
@@ -383,14 +416,30 @@ export default function Dashboard() {
                     {/* Main Status Card */}
                     <div className="lg:col-span-2 space-y-8">
 
+                        {/* CURRENT WEEK RATING */}
+                        {currentWeek && currentWeek.ratingEnabled && !hasRatedCurrentWeek && user?.name !== currentWeek.king && !(currentWeek.absentees || []).includes(user?.name || "") && (
+                            <div className="mb-6">
+                                <h3 className="text-emerald-400 font-bold mb-3 flex items-center gap-2"><Unlock className="w-5 h-5" /> تقييم طلعة هذا الأسبوع متاح الآن</h3>
+                                <RatingForm
+                                    weekId={currentWeek.id}
+                                    userName={user?.name || ""}
+                                    onRated={() => setHasRatedCurrentWeek(true)}
+                                    disabled={false}
+                                />
+                            </div>
+                        )}
+
                         {/* PAST WEEK RATING (Only if past week exists and user hasn't rated) */}
-                        {pastWeek && !hasRatedPastWeek && user?.name !== pastWeek.king && (
-                            <RatingForm
-                                weekId={pastWeek.id}
-                                userName={user?.name || ""}
-                                onRated={() => setHasRatedPastWeek(true)}
-                                disabled={!pastWeek.ratingEnabled}
-                            />
+                        {pastWeek && pastWeek.ratingEnabled && !hasRatedPastWeek && user?.name !== pastWeek.king && !(pastWeek.absentees || []).includes(user?.name || "") && (
+                            <div className="mb-6">
+                                <h3 className="text-amber-400 font-bold mb-3 flex items-center gap-2"><Unlock className="w-5 h-5" /> تقييم طلعة الأسبوع الماضي متاح</h3>
+                                <RatingForm
+                                    weekId={pastWeek.id}
+                                    userName={user?.name || ""}
+                                    onRated={() => setHasRatedPastWeek(true)}
+                                    disabled={false}
+                                />
+                            </div>
                         )}
 
                         {!currentWeek ? (
@@ -455,6 +504,60 @@ export default function Dashboard() {
                                                 <p className="text-xl font-semibold text-white">
                                                     {currentWeek.restaurant || <span className="text-slate-600 font-normal">لم يحدد بعد</span>}
                                                 </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Attendance Section */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-inner">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-slate-300">قائمة الحضور والتأكيد</h3>
+                                                <p className="text-xs text-slate-500 mb-2">أكد حضورك أو اعتذارك عن الطلعة</p>
+                                            </div>
+                                            {!isKing && user?.name && (
+                                                <button
+                                                    onClick={async () => {
+                                                        setSaving(true);
+                                                        const isAbsent = currentWeek.absentees?.includes(user!.name) || false;
+                                                        await services.toggleAttendance(currentWeek.id, user!.name, !isAbsent);
+                                                        await fetchWeek();
+                                                        setSaving(false);
+                                                    }}
+                                                    disabled={saving}
+                                                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border shadow-sm ${currentWeek.absentees?.includes(user?.name) ? 'bg-red-500/20 border-red-500/30 text-red-400 hover:bg-red-500/30' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30'}`}
+                                                >
+                                                    {currentWeek.absentees?.includes(user?.name) ? "أنا معتذر ❌" : "سأحضر ✅"}
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div>
+                                                <p className="text-sm text-emerald-500 mb-2 font-semibold">
+                                                    الحاضرين ({VALID_NAMES.filter(n => !(currentWeek.absentees || []).includes(n)).length}):
+                                                </p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {VALID_NAMES.filter(n => !(currentWeek.absentees || []).includes(n)).map(name => (
+                                                        <span key={name} className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm rounded-lg flex items-center gap-1">
+                                                            {name} {name === currentWeek.king ? "👑" : ""}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            {(currentWeek.absentees || []).length > 0 && (
+                                                <div className="pt-2 border-t border-slate-800/50">
+                                                    <p className="text-sm text-red-500 mb-2 font-semibold">
+                                                        المعتذرين ({(currentWeek.absentees || []).length}):
+                                                    </p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {(currentWeek.absentees || []).map(name => (
+                                                            <span key={name} className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg flex items-center gap-1">
+                                                                {name} ❌
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
                                     </div>

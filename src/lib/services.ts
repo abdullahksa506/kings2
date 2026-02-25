@@ -25,6 +25,7 @@ export interface WeekSession {
     activity: string | null;
     status: "pending" | "completed" | "skipped";
     ratingEnabled: boolean;
+    absentees: string[];
     createdAt: Timestamp;
 }
 
@@ -66,10 +67,28 @@ export const services = {
             activity: null,
             status: "pending",
             ratingEnabled: false,
+            absentees: [],
             createdAt: Timestamp.now()
         };
         await setDoc(newWeekRef, newWeek);
         return { id: newWeekRef.id, ...newWeek };
+    },
+
+    async toggleAttendance(weekId: string, userName: string, isAbsent: boolean) {
+        const weekRef = doc(db, "weeks", weekId);
+        const weekSnap = await getDoc(weekRef);
+        if (!weekSnap.exists()) return;
+        const data = weekSnap.data();
+        const absentees = data.absentees || [];
+
+        let newAbsentees = [...absentees];
+        if (isAbsent && !newAbsentees.includes(userName)) {
+            newAbsentees.push(userName);
+        } else if (!isAbsent) {
+            newAbsentees = newAbsentees.filter((n: string) => n !== userName);
+        }
+
+        await updateDoc(weekRef, { absentees: newAbsentees });
     },
 
     async setWeekChoices(weekId: string, day: "الخميس" | "الجمعة" | null, restaurant: string | null, activity: string | null) {

@@ -43,6 +43,9 @@ export async function POST(request: Request) {
         }
 
         for (const user of users) {
+            // Skip absent users
+            if ((week.absentees || []).includes(user.name)) continue;
+
             // We can notify the king too, or skip them. Let's send to everyone so they know it's locked in!
 
             const messageTitle = `تم تحديد الطلعة! 👑`;
