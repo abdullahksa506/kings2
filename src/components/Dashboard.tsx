@@ -101,6 +101,22 @@ export default function Dashboard() {
         return () => unsubscribe();
     }, [user]);
 
+    // Detect and log if user is using the standalone PWA 
+    useEffect(() => {
+        if (!user) return;
+
+        const checkStandalone = async () => {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+            try {
+                await services.updateUserStandaloneStatus(user.name, isStandalone);
+            } catch (e) {
+                console.error("Failed to update standalone status", e);
+            }
+        };
+
+        checkStandalone();
+    }, [user]);
+
     const handleSubscribe = async () => {
         setSubscribing(true);
         const sub = await subscribeToPush();
@@ -463,6 +479,32 @@ export default function Dashboard() {
                                             </button>
                                         );
                                     })}
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-amber-500/10">
+                                    <button
+                                        onClick={async () => {
+                                            if (!confirm("هل أنت متأكد من إرسال إشعار تذكير للأعضاء الذين لم يؤكدوا حضورهم؟")) return;
+                                            setSaving(true);
+                                            try {
+                                                const res = await fetch("/api/reminders/attendance-pending", {
+                                                    method: "POST",
+                                                    headers: { "Content-Type": "application/json" },
+                                                    body: JSON.stringify({ weekId: currentWeek.id })
+                                                });
+                                                const data = await res.json();
+                                                alert(data.message || "تم إرسال الإشعارات بنجاح");
+                                            } catch (e) {
+                                                console.error("Failed to send pending notifications:", e);
+                                                alert("خطأ في إرسال الإشعارات");
+                                            }
+                                            setSaving(false);
+                                        }}
+                                        disabled={saving || VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).length === 0}
+                                        className="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-500 font-semibold py-2 px-4 rounded-xl flex items-center gap-2 transition-all w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <Bell className="w-4 h-4" />
+                                        إرسال تذكير لمن لم يرد ({VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).length})
+                                    </button>
                                 </div>
                             </div>
                         )}

@@ -247,6 +247,11 @@ export const services = {
         return snap.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
     },
 
+    async updateUserStandaloneStatus(userName: string, isStandalone: boolean) {
+        const userRef = doc(db, "users", userName);
+        await updateDoc(userRef, { isStandalone });
+    },
+
     async updatePushSubscription(userName: string, subscription: any) {
         const userRef = doc(db, "users", userName);
         await updateDoc(userRef, { pushSubscription: JSON.stringify(subscription) });

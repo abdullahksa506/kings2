@@ -9,6 +9,8 @@ export default function DeanDashboard({ weekId }: { weekId?: string }) {
     const [ratings, setRatings] = useState<Rating[]>([]);
     const [resetRequests, setResetRequests] = useState<{ id: string, name: string, resetCode: string }[]>([]);
     const [registeredNames, setRegisteredNames] = useState<string[]>([]);
+    const [usersData, setUsersData] = useState<any[]>([]);
+    const [showPwaList, setShowPwaList] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -25,6 +27,7 @@ export default function DeanDashboard({ weekId }: { weekId?: string }) {
 
                 const allUsers = await services.getAllUsers();
                 setRegisteredNames(allUsers.map((u: any) => u.name || u.id));
+                setUsersData(allUsers);
             } catch (err) {
                 console.error(err);
             }
@@ -84,6 +87,58 @@ export default function DeanDashboard({ weekId }: { weekId?: string }) {
                 </>
             )}
 
+            {/* PWA Tracking Section */}
+            {(() => {
+                const registeredUsers = usersData.filter(u => registeredNames.includes(u.name || u.id));
+                const allStandalone = registeredUsers.length > 0 && registeredUsers.every(u => u.isStandalone === true);
+
+                if (allStandalone || registeredUsers.length === 0) return null;
+
+                const standaloneCount = registeredUsers.filter(u => u.isStandalone === true).length;
+
+                return (
+                    <div className="mt-8 pt-6 border-t border-amber-900/50">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-bold text-amber-500 flex items-center gap-2">
+                                📱 حالة تثبيت التطبيق
+                            </h3>
+                            <button
+                                onClick={() => setShowPwaList(!showPwaList)}
+                                className="text-sm bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-300 px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                                {showPwaList ? "إخفاء القائمة" : "عرض القائمة"}
+                            </button>
+                        </div>
+
+                        {showPwaList && (
+                            <div className="space-y-2 mt-4">
+                                {registeredUsers.map(user => {
+                                    const name = user.name || user.id;
+                                    const isApp = user.isStandalone === true;
+                                    return (
+                                        <div key={name} className={`flex justify-between items-center p-3 rounded-lg border ${isApp
+                                            ? "bg-emerald-900/10 border-emerald-500/20"
+                                            : "bg-slate-900/50 border-slate-700/50"
+                                            }`}>
+                                            <span className="text-slate-300">{name}</span>
+                                            <span className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${isApp
+                                                ? "bg-emerald-500/20 text-emerald-400"
+                                                : "bg-slate-800 text-slate-400"
+                                                }`}>
+                                                {isApp ? "تطبيق 📱" : "متصفح 🌐"}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                                <p className="text-xs text-slate-500 mt-2">
+                                    {standaloneCount} من {registeredUsers.length} ثبتوا التطبيق
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
+
             {/* Registration Status Section */}
             <div className="mt-8 pt-6 border-t border-amber-900/50">
                 <h3 className="text-lg font-bold text-amber-500 mb-4 flex items-center gap-2">
@@ -101,13 +156,13 @@ export default function DeanDashboard({ weekId }: { weekId?: string }) {
                             const isRegistered = registeredNames.includes(name);
                             return (
                                 <div key={name} className={`flex justify-between items-center p-3 rounded-lg border ${isRegistered
-                                        ? "bg-emerald-900/10 border-emerald-500/20"
-                                        : "bg-red-900/10 border-red-500/20"
+                                    ? "bg-emerald-900/10 border-emerald-500/20"
+                                    : "bg-red-900/10 border-red-500/20"
                                     }`}>
                                     <span className="text-slate-300">{name}</span>
                                     <span className={`text-xs font-medium px-2 py-1 rounded-full ${isRegistered
-                                            ? "bg-emerald-500/20 text-emerald-400"
-                                            : "bg-red-500/20 text-red-400"
+                                        ? "bg-emerald-500/20 text-emerald-400"
+                                        : "bg-red-500/20 text-red-400"
                                         }`}>
                                         {isRegistered ? "مسجّل ✓" : "لم يسجّل ✗"}
                                     </span>
