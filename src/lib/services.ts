@@ -169,6 +169,31 @@ export const services = {
         return leaderboard.sort((a, b) => b.averageScore - a.averageScore);
     },
 
+    async getAllCompletedWeeks(): Promise<{ week: WeekSession, averageScore: number }[]> {
+        const q = query(
+            collection(db, "weeks"),
+            where("status", "==", "completed")
+        );
+        const snap = await getDocs(q);
+        const weeks = snap.docs.map(d => ({ id: d.id, ...d.data() } as WeekSession));
+
+        const results = await Promise.all(weeks.map(async (week) => {
+            const ratings = await this.getAllRatingsForWeek(week.id);
+            let averageScore = 0;
+            if (ratings.length > 0) {
+                averageScore = ratings.reduce((acc, curr) => acc + curr.score, 0) / ratings.length;
+            }
+            return { week, averageScore };
+        }));
+
+        return results.sort((a, b) => a.week.createdAt.toMillis() - b.week.createdAt.toMillis());
+    },
+
+    async resetCycleLeaderboard(currentWeekId: string, newCycleNumber: number) {
+        const weekRef = doc(db, "weeks", currentWeekId);
+        await updateDoc(weekRef, { cycleNumber: newCycleNumber });
+    },
+
     async getAllUsers() {
         const snap = await getDocs(collection(db, "users"));
         return snap.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));

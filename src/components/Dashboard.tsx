@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, VALID_NAMES } from "@/lib/services";
-import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock } from "lucide-react";
+import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import RatingForm from "./RatingForm";
 import DeanDashboard from "./DeanDashboard";
 import Leaderboard from "./Leaderboard";
+import GlobalLeaderboard from "./GlobalLeaderboard";
 
 export default function Dashboard() {
     const { user, logout } = useAuth();
@@ -142,7 +143,7 @@ export default function Dashboard() {
     return (
         <div className="min-h-screen bg-slate-950 p-4 md:p-8 font-sans relative">
             {/* Version Badge */}
-            <div className="fixed top-2 left-2 z-50 text-[10px] text-slate-600 font-mono select-none">v6</div>
+            <div className="fixed top-2 left-2 z-50 text-[10px] text-slate-600 font-mono select-none">v7</div>
             <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800">
                 <div>
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent flex items-center gap-3">
@@ -286,8 +287,8 @@ export default function Dashboard() {
                                     }}
                                     disabled={saving}
                                     className={`py-3 px-6 rounded-xl flex items-center gap-2 transition-all font-semibold ${ratingWeek.ratingEnabled
-                                            ? "bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
-                                            : "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
+                                        ? "bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
+                                        : "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
                                         }`}
                                 >
                                     {ratingWeek.ratingEnabled ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
@@ -433,7 +434,19 @@ export default function Dashboard() {
                         </div>
 
                         {/* Leaderboard Section */}
-                        <Leaderboard cycleNumber={currentWeek ? currentWeek.cycleNumber : (pastWeek ? pastWeek.cycleNumber : 1)} />
+                        <Leaderboard
+                            cycleNumber={currentWeek ? currentWeek.cycleNumber : (pastWeek ? pastWeek.cycleNumber : 1)}
+                            isDean={user?.role === "dean"}
+                            onReset={currentWeek ? async () => {
+                                setSaving(true);
+                                await services.resetCycleLeaderboard(currentWeek.id, currentWeek.cycleNumber + 1);
+                                await fetchWeek();
+                                setSaving(false);
+                            } : undefined}
+                        />
+
+                        {/* Global Chronological Leaderboard */}
+                        <GlobalLeaderboard />
                     </div>
 
                 </div>

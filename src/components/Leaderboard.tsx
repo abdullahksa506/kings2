@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { services, WeekSession } from "@/lib/services";
-import { Trophy, Medal, Star } from "lucide-react";
+import { Trophy, Medal, Star, RotateCcw } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface LeaderboardEntry {
@@ -10,7 +10,7 @@ interface LeaderboardEntry {
     averageScore: number;
 }
 
-export default function Leaderboard({ cycleNumber }: { cycleNumber: number }) {
+export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { cycleNumber: number, isDean?: boolean, onReset?: () => Promise<void> }) {
     const [data, setData] = useState<LeaderboardEntry[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -52,10 +52,21 @@ export default function Leaderboard({ cycleNumber }: { cycleNumber: number }) {
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-            <h3 className="font-semibold text-lg mb-6 text-slate-200 flex items-center gap-2">
-                <Trophy className="w-6 h-6 text-amber-500" />
-                قائمة الشرف للمطاعم
-            </h3>
+            <div className="flex items-center justify-between mb-6">
+                <h3 className="font-semibold text-lg text-slate-200 flex items-center gap-2">
+                    <Trophy className="w-6 h-6 text-amber-500" />
+                    قائمة الشرف للمطاعم
+                </h3>
+                {isDean && onReset && (
+                    <button
+                        onClick={onReset}
+                        className="text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all"
+                    >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        تصفير الدورة
+                    </button>
+                )}
+            </div>
 
             <div className="space-y-3 relative z-10">
                 {data.map((entry, index) => {
