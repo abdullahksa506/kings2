@@ -26,6 +26,7 @@ export interface WeekSession {
     status: "pending" | "completed" | "skipped";
     ratingEnabled: boolean;
     absentees: string[];
+    responded: string[];
     createdAt: Timestamp;
 }
 
@@ -68,6 +69,7 @@ export const services = {
             status: "pending",
             ratingEnabled: false,
             absentees: [],
+            responded: [],
             createdAt: Timestamp.now()
         };
         await setDoc(newWeekRef, newWeek);
@@ -77,9 +79,10 @@ export const services = {
     async toggleAttendance(weekId: string, userName: string, isAbsent: boolean) {
         const weekRef = doc(db, "weeks", weekId);
         const weekSnap = await getDoc(weekRef);
-        if (!weekSnap.exists()) return;
+        if (!weekSnap.exists()) return false;
         const data = weekSnap.data();
         const absentees = data.absentees || [];
+        const responded = data.responded || [];
 
         let newAbsentees = [...absentees];
         if (isAbsent && !newAbsentees.includes(userName)) {
@@ -88,7 +91,16 @@ export const services = {
             newAbsentees = newAbsentees.filter((n: string) => n !== userName);
         }
 
-        await updateDoc(weekRef, { absentees: newAbsentees });
+        let newResponded = [...responded];
+        if (!newResponded.includes(userName)) {
+            newResponded.push(userName);
+        }
+
+        await updateDoc(weekRef, { absentees: newAbsentees, responded: newResponded });
+
+        const requiredCount = VALID_NAMES.length - 1; // King doesn't have to respond
+        const justCompleted = newResponded.length >= requiredCount && responded.length < requiredCount;
+        return justCompleted;
     },
 
     async setWeekChoices(weekId: string, day: "الخميس" | "الجمعة" | null, restaurant: string | null, activity: string | null) {
@@ -216,11 +228,6 @@ export const services = {
     async getAllUsers() {
         const snap = await getDocs(collection(db, "users"));
         return snap.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
-    },
-
-    async updateUserPhone(userName: string, phone: string) {
-        const userRef = doc(db, "users", userName);
-        await updateDoc(userRef, { phoneNumber: phone });
     },
 
     async updatePushSubscription(userName: string, subscription: any) {

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import twilio from "twilio";
 import { services } from "@/lib/services";
 
 export async function POST(request: Request) {
@@ -17,17 +16,6 @@ export async function POST(request: Request) {
         }
 
         const users = await services.getAllUsers();
-
-        // 2. We only remind users who are NOT the king, AND haven't rated yet
-        const accountSid = process.env.TWILIO_ACCOUNT_SID;
-        const authToken = process.env.TWILIO_AUTH_TOKEN;
-        const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
-
-        if (!accountSid || !authToken || !twilioPhone) {
-            return NextResponse.json({ error: "Twilio unconfigured." }, { status: 500 });
-        }
-
-        const client = twilio(accountSid, authToken);
         let sentCount = 0;
 
         // 3. Web Push setup (if configured)
@@ -59,21 +47,6 @@ export async function POST(request: Request) {
             const hasRated = await services.hasUserRated(week.id, user.name);
             if (!hasRated) {
                 const messageBody = `لا تنسى تقيّم مطعم "${week.restaurant}" الخاص بملك الأسبوع ${week.king}. تقييمك السري يحسم النتائج!`;
-                const whatsappBody = `أهلاً ${user.name} ⭐️!\n${messageBody}\n\nادخل قيم الآن: https://kings2.onrender.com`;
-
-                // --- 1. Send WhatsApp ---
-                if (user.phoneNumber) {
-                    try {
-                        await client.messages.create({
-                            body: whatsappBody,
-                            from: `whatsapp:${twilioPhone}`,
-                            to: `whatsapp:${user.phoneNumber.startsWith('+') ? user.phoneNumber : '+' + user.phoneNumber}`
-                        });
-                        sentCount++;
-                    } catch (err: any) {
-                        console.error(`Failed to send WhatsApp to ${user.name}:`, err.message);
-                    }
-                }
 
                 // --- 2. Send Native Web Push (iPhone) ---
                 if (webPushInitialized && user.pushSubscription) {

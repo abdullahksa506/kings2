@@ -385,7 +385,20 @@ export default function Dashboard() {
                                                 key={name}
                                                 onClick={async () => {
                                                     setSaving(true);
-                                                    await services.toggleAttendance(currentWeek.id, name, !isAbsent);
+                                                    const justCompleted = await services.toggleAttendance(currentWeek.id, name, !isAbsent);
+
+                                                    if (justCompleted) {
+                                                        try {
+                                                            await fetch("/api/reminders/attendance-complete", {
+                                                                method: "POST",
+                                                                headers: { "Content-Type": "application/json" },
+                                                                body: JSON.stringify({ weekId: currentWeek.id })
+                                                            });
+                                                        } catch (e) {
+                                                            console.error("Failed to notify members about attendance:", e);
+                                                        }
+                                                    }
+
                                                     await fetchWeek();
                                                     setSaving(false);
                                                 }}
@@ -520,7 +533,20 @@ export default function Dashboard() {
                                                     onClick={async () => {
                                                         setSaving(true);
                                                         const isAbsent = currentWeek.absentees?.includes(user!.name) || false;
-                                                        await services.toggleAttendance(currentWeek.id, user!.name, !isAbsent);
+                                                        const justCompleted = await services.toggleAttendance(currentWeek.id, user!.name, !isAbsent);
+
+                                                        if (justCompleted) {
+                                                            try {
+                                                                await fetch("/api/reminders/attendance-complete", {
+                                                                    method: "POST",
+                                                                    headers: { "Content-Type": "application/json" },
+                                                                    body: JSON.stringify({ weekId: currentWeek.id })
+                                                                });
+                                                            } catch (e) {
+                                                                console.error("Failed to notify members:", e);
+                                                            }
+                                                        }
+
                                                         await fetchWeek();
                                                         setSaving(false);
                                                     }}
