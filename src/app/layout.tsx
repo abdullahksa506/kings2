@@ -15,9 +15,6 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "ملك الخميس",
   },
-  icons: {
-    apple: "/icon.svg",
-  },
 };
 
 export const viewport: Viewport = {
