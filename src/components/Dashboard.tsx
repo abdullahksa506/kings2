@@ -15,8 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function Dashboard() {
     const { user, logout } = useAuth();
     const [currentWeek, setCurrentWeek] = useState<WeekSession | null>(null);
-    const [pastWeek, setPastWeek] = useState<WeekSession | null>(null);
-    const [hasRatedPastWeek, setHasRatedPastWeek] = useState(false);
+    const [hasRatedCurrentWeek, setHasRatedCurrentWeek] = useState(false);
     const [loading, setLoading] = useState(true);
 
     // Forms state
@@ -33,24 +32,17 @@ export default function Dashboard() {
     const fetchWeek = async () => {
         setLoading(true);
         const week = await services.getCurrentWeek();
-        const previous = await services.getPreviousWeek();
-
         if (week) {
             setCurrentWeek(week);
             if (week.day) setSelectedDay(week.day);
             if (week.restaurant) setRestaurant(week.restaurant);
-        } else {
-            setCurrentWeek(null);
-        }
-
-        if (previous) {
-            setPastWeek(previous);
             if (user?.name) {
-                const rated = await services.hasUserRated(previous.id, user.name);
-                setHasRatedPastWeek(rated);
+                const rated = await services.hasUserRated(week.id, user.name);
+                setHasRatedCurrentWeek(rated);
             }
         } else {
-            setPastWeek(null);
+            setCurrentWeek(null);
+            setHasRatedCurrentWeek(false);
         }
 
         setLoading(false);
@@ -267,38 +259,34 @@ export default function Dashboard() {
                             </div>
                         )}
 
-                        {(() => {
-                            const ratingWeek = pastWeek || currentWeek;
-                            if (!ratingWeek) return null;
-                            return (
-                                <button
-                                    onClick={async () => {
-                                        setSaving(true);
-                                        try {
-                                            await services.toggleRatingEnabled(ratingWeek.id, !ratingWeek.ratingEnabled);
-                                            await fetchWeek();
-                                            toast.success(ratingWeek.ratingEnabled ? "تم قفل التقييم" : "تم فتح التقييم بنجاح");
-                                        } catch (err) {
-                                            toast.error("حدث خطأ أثناء تغيير حالة التقييم");
-                                        } finally {
-                                            setSaving(false);
-                                        }
-                                    }}
-                                    disabled={saving}
-                                    className={`py-3 px-6 rounded-xl flex items-center gap-2 transition-all font-semibold ${ratingWeek.ratingEnabled
-                                        ? "bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
-                                        : "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
-                                        }`}
-                                >
-                                    {ratingWeek.ratingEnabled ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
-                                    {ratingWeek.ratingEnabled ? "قفل التقييم" : "فتح التقييم للأعضاء"}
-                                </button>
-                            );
-                        })()}
+                        {currentWeek && (
+                            <button
+                                onClick={async () => {
+                                    setSaving(true);
+                                    try {
+                                        await services.toggleRatingEnabled(currentWeek.id, !currentWeek.ratingEnabled);
+                                        await fetchWeek();
+                                        toast.success(currentWeek.ratingEnabled ? "تم قفل التقييم" : "تم فتح التقييم بنجاح");
+                                    } catch (err) {
+                                        toast.error("حدث خطأ أثناء تغيير حالة التقييم");
+                                    } finally {
+                                        setSaving(false);
+                                    }
+                                }}
+                                disabled={saving}
+                                className={`py-3 px-6 rounded-xl flex items-center gap-2 transition-all font-semibold ${currentWeek.ratingEnabled
+                                    ? "bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
+                                    : "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
+                                    }`}
+                            >
+                                {currentWeek.ratingEnabled ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
+                                {currentWeek.ratingEnabled ? "قفل التقييم" : "فتح التقييم للأعضاء"}
+                            </button>
+                        )}
                     </div>
 
                     {/* Dean can see stats + reset codes + phone numbers */}
-                    <DeanDashboard weekId={pastWeek?.id} />
+                    <DeanDashboard weekId={currentWeek?.id} />
                 </div>
             )}
 
@@ -339,13 +327,13 @@ export default function Dashboard() {
                     {/* Main Status Card */}
                     <div className="lg:col-span-2 space-y-8">
 
-                        {/* PAST WEEK RATING (Only if past week exists and user hasn't rated) */}
-                        {pastWeek && !hasRatedPastWeek && user?.name !== pastWeek.king && (
+                        {/* CURRENT WEEK RATING (Only if current week exists and user hasn't rated and is not the king) */}
+                        {currentWeek && !hasRatedCurrentWeek && user?.name !== currentWeek.king && (
                             <RatingForm
-                                weekId={pastWeek.id}
+                                weekId={currentWeek.id}
                                 userName={user?.name || ""}
-                                onRated={() => setHasRatedPastWeek(true)}
-                                disabled={!pastWeek.ratingEnabled}
+                                onRated={() => setHasRatedCurrentWeek(true)}
+                                disabled={!currentWeek.ratingEnabled}
                             />
                         )}
 
@@ -461,7 +449,7 @@ export default function Dashboard() {
 
                         {/* Leaderboard Section */}
                         <Leaderboard
-                            cycleNumber={currentWeek ? currentWeek.cycleNumber : (pastWeek ? pastWeek.cycleNumber : 1)}
+                            cycleNumber={currentWeek ? currentWeek.cycleNumber : 1}
                             isDean={user?.role === "dean"}
                             onReset={currentWeek ? async () => {
                                 setSaving(true);
