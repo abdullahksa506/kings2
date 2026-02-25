@@ -237,9 +237,17 @@ export const services = {
             throw new Error("رمز الاسترجاع خاطئ");
         }
 
+        // Check if code is expired (15 minutes)
+        const FIFTEEN_MINUTES = 15 * 60 * 1000;
+        if (data.resetCodeTimestamp && (Date.now() - data.resetCodeTimestamp > FIFTEEN_MINUTES)) {
+            await updateDoc(userRef, { resetCode: null, resetCodeTimestamp: null });
+            throw new Error("انتهت صلاحية كود الاسترجاع. اطلب كود جديد.");
+        }
+
         await updateDoc(userRef, {
             password: newPassword,
-            resetCode: null // Clear the code after successful reset
+            resetCode: null,
+            resetCodeTimestamp: null
         });
     },
 
@@ -270,8 +278,8 @@ export const services = {
         for (const d of usersSnap.docs) {
             const data = d.data();
             if (data.resetCode) {
-                const timestamp = data.resetCodeTimestamp || 0;
-                if (now - timestamp > FIFTEEN_MINUTES) {
+                const timestamp = data.resetCodeTimestamp;
+                if (timestamp && (now - timestamp > FIFTEEN_MINUTES)) {
                     // Expired - clear from Firestore
                     await updateDoc(doc(db, "users", d.id), { resetCode: null, resetCodeTimestamp: null });
                 } else {
