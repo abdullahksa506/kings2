@@ -1,34 +1,67 @@
 import { db } from "./firebase";
 import { doc, getDoc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
 
+export type Direction = "UP" | "DOWN" | "LEFT" | "RIGHT" | "NONE";
+
 export interface GamePlayer {
     name: string;
     x: number;
     y: number;
     score: number;
     color: string;
-    direction: "UP" | "DOWN" | "LEFT" | "RIGHT" | "NONE";
-    isSuper: boolean;
-    superUntil: number;
+    direction: Direction;
+    speedBoostUntil: number; // timestamp
+    stunnedUntil: number; // timestamp
     lastActive: number;
+}
+
+export interface Enemy {
+    id: string;
+    x: number;
+    y: number;
+    dirX: number;
+    dirY: number;
+}
+
+export interface Projectile {
+    id: string;
+    x: number;
+    y: number;
+    dirX: number;
+    dirY: number;
+    owner: string;
+    createdAt: number;
 }
 
 export interface GameState {
     players: Record<string, GamePlayer>;
     foods: { x: number; y: number }[];
-    powerup: { x: number; y: number } | null;
+    boosts: { x: number; y: number }[];
+    enemies: Enemy[];
+    projectiles: Projectile[];
+    lastHostUpdate: number;
 }
 
-export const GAME_DOC_ID = "hungryKingsState";
+// 60x60 massive map
+export const MAP_SIZE = 60;
+export const GAME_DOC_ID = "hungryKingsStateV2";
 
 const INITIAL_STATE: GameState = {
     players: {},
     foods: [],
-    powerup: null,
+    boosts: [],
+    enemies: Array.from({ length: 5 }).map((_, i) => ({
+        id: `enemy_${i}`,
+        x: Math.floor(Math.random() * MAP_SIZE),
+        y: Math.floor(Math.random() * MAP_SIZE),
+        dirX: Math.random() > 0.5 ? 1 : -1,
+        dirY: Math.random() > 0.5 ? 1 : -1,
+    })),
+    projectiles: [],
+    lastHostUpdate: 0,
 };
 
 export const gameServices = {
-    // Initialize or reset the game document
     async initGameArea() {
         const gameRef = doc(db, "minigames", GAME_DOC_ID);
         const gameSnap = await getDoc(gameRef);
@@ -37,7 +70,6 @@ export const gameServices = {
         }
     },
 
-    // Listen to real-time state changes
     listenToGameState(callback: (state: GameState | null) => void) {
         const gameRef = doc(db, "minigames", GAME_DOC_ID);
         return onSnapshot(gameRef, (snap) => {
@@ -49,11 +81,8 @@ export const gameServices = {
         });
     },
 
-    // Join the game arena
     async joinGame(userName: string, color: string, startX: number, startY: number) {
         const gameRef = doc(db, "minigames", GAME_DOC_ID);
-
-        // We use a transaction-like update for the nested object, but updateDoc is sufficient here
         await updateDoc(gameRef, {
             [`players.${userName}`]: {
                 name: userName,
@@ -62,34 +91,64 @@ export const gameServices = {
                 score: 0,
                 color: color,
                 direction: "NONE",
-                isSuper: false,
-                superUntil: 0,
+                speedBoostUntil: 0,
+                stunnedUntil: 0,
                 lastActive: Date.now()
             }
         });
     },
 
-    // Update player position and score
-    async updatePlayerState(userName: string, playerState: Partial<GamePlayer>) {
+    // Used by clients to register their movement intent
+    async updatePlayerIntent(userName: string, x: number, y: number, direction: Direction, score: number) {
         const gameRef = doc(db, "minigames", GAME_DOC_ID);
-        const updates: Record<string, any> = {};
+        await updateDoc(gameRef, {
+            [`players.${userName}.x`]: x,
+            [`players.${userName}.y`]: y,
+            [`players.${userName}.direction`]: direction,
+            [`players.${userName}.score`]: score,
+            [`players.${userName}.lastActive`]: Date.now()
+        });
+    },
 
-        // Flatten the update for Firestore dot notation
-        for (const [key, value] of Object.entries(playerState)) {
-            updates[`players.${userName}.${key}`] = value;
+    // Specifically for when you hit another player or enemy
+    async updatePlayerStatus(userName: string, updates: Partial<GamePlayer>) {
+        const gameRef = doc(db, "minigames", GAME_DOC_ID);
+        const fbUpdates: Record<string, any> = {};
+        for (const [key, val] of Object.entries(updates)) {
+            fbUpdates[`players.${userName}.${key}`] = val;
         }
-        updates[`players.${userName}.lastActive`] = Date.now();
-
-        await updateDoc(gameRef, updates);
+        await updateDoc(gameRef, fbUpdates);
     },
 
-    // Update global items (foods, powerups) when someone eats them or spawns them
-    async updateItems(foods: { x: number; y: number }[], powerup: { x: number; y: number } | null) {
+    // Shoot a projectile
+    async shootProjectile(projectile: Projectile) {
         const gameRef = doc(db, "minigames", GAME_DOC_ID);
-        await updateDoc(gameRef, { foods, powerup });
+        const snap = await getDoc(gameRef);
+        if (snap.exists()) {
+            const data = snap.data() as GameState;
+            const projs = data.projectiles || [];
+            projs.push(projectile);
+            await updateDoc(gameRef, { projectiles: projs });
+        }
     },
 
-    // Leave the game
+    // The host calls this to update all entities
+    async hostSyncEntities(
+        foods: { x: number; y: number }[],
+        boosts: { x: number; y: number }[],
+        enemies: Enemy[],
+        projectiles: Projectile[]
+    ) {
+        const gameRef = doc(db, "minigames", GAME_DOC_ID);
+        await updateDoc(gameRef, {
+            foods,
+            boosts,
+            enemies,
+            projectiles,
+            lastHostUpdate: Date.now()
+        });
+    },
+
     async leaveGame(userName: string) {
         const gameRef = doc(db, "minigames", GAME_DOC_ID);
         const gameSnap = await getDoc(gameRef);
