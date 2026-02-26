@@ -3,13 +3,14 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, VALID_NAMES } from "@/lib/services";
-import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell } from "lucide-react";
+import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import RatingForm from "./RatingForm";
 import DeanDashboard from "./DeanDashboard";
 import Leaderboard from "./Leaderboard";
 import GlobalLeaderboard from "./GlobalLeaderboard";
+import ConstitutionModal from "./ConstitutionModal";
 
 export default function Dashboard() {
     const { user, logout } = useAuth();
@@ -31,6 +32,9 @@ export default function Dashboard() {
     const [changePasswordLoading, setChangePasswordLoading] = useState(false);
     const [changePasswordError, setChangePasswordError] = useState("");
     const [changePasswordSuccess, setChangePasswordSuccess] = useState("");
+
+    // Constitution State
+    const [isConstitutionOpen, setIsConstitutionOpen] = useState(false);
 
     const fetchPastWeekOnly = async () => {
         const previous = await services.getPreviousWeek();
@@ -728,30 +732,21 @@ export default function Dashboard() {
                     </div>
 
                     <div className="space-y-6">
-                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl sticky top-8">
-                            <h3 className="font-semibold text-lg mb-4 text-slate-300">دستور الأسبوع</h3>
-                            <ul className="space-y-3 text-sm text-slate-400">
-                                <li className="flex items-start gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                                    <span>يجب على الملك أن يقرر วัน الطلعة قبل يوم الأربعاء 8م. والمطعم قبل 10م.</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                                    <span>الميزانية ما تزيد عن 175 ريال للشخص.</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                                    <span>ممنوع اختيار نفس المطعم دورتين ورا بعض.</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                                    <span>في حال المناسبات الخاصة يمكنك الاستيلاء على الاسبوع، وتتأجل الدورة.</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                                    <span>تقييم أقل من 2 لدورتين متتاليتين يسقط دورك القادم.</span>
-                                </li>
-                            </ul>
+                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl sticky top-8 text-center flex flex-col items-center">
+                            <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mb-4 border border-amber-500/20">
+                                <ScrollText className="w-8 h-8 text-amber-500" />
+                            </div>
+                            <h3 className="font-bold text-xl mb-2 text-slate-200">دستور عرش الخميس</h3>
+                            <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+                                القوانين المنظمة للطلعات الأسبوعية، حقوق وواجبات ملك الخميس، وآلية التصويت وتقييم المطاعم والحضور.
+                            </p>
+                            <button
+                                onClick={() => setIsConstitutionOpen(true)}
+                                className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-amber-500 font-semibold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
+                            >
+                                <BookOpen className="w-5 h-5" />
+                                قراءة الدستور الكامل
+                            </button>
                         </div>
 
                         {/* Leaderboard Section */}
@@ -772,6 +767,11 @@ export default function Dashboard() {
 
                 </div>
             )}
+
+            <ConstitutionModal
+                isOpen={isConstitutionOpen}
+                onClose={() => setIsConstitutionOpen(false)}
+            />
         </div>
     );
 }
