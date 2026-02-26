@@ -11,6 +11,8 @@ import DeanDashboard from "./DeanDashboard";
 import Leaderboard from "./Leaderboard";
 import GlobalLeaderboard from "./GlobalLeaderboard";
 import ConstitutionModal from "./ConstitutionModal";
+import HungryKingsArena from "./HungryKingsArena";
+import { Gamepad2 } from "lucide-react";
 
 export default function Dashboard() {
     const { user, logout } = useAuth();
@@ -35,6 +37,9 @@ export default function Dashboard() {
 
     // Constitution State
     const [isConstitutionOpen, setIsConstitutionOpen] = useState(false);
+
+    // Mini-game State
+    const [isGameOpen, setIsGameOpen] = useState(false);
 
     const fetchPastWeekOnly = async () => {
         const previous = await services.getPreviousWeek();
@@ -732,6 +737,29 @@ export default function Dashboard() {
                     </div>
 
                     <div className="space-y-6">
+                        {/* Mini-Game Banner */}
+                        <div className="bg-gradient-to-br from-amber-900/40 to-slate-900 border border-amber-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
+                            <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500" />
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="bg-amber-500/20 p-2 rounded-xl text-amber-500">
+                                        <Gamepad2 className="w-6 h-6" />
+                                    </div>
+                                    <h3 className="font-bold text-xl text-white">صراع الملوك الجياع</h3>
+                                </div>
+                                <p className="text-sm text-slate-300 mb-5 leading-relaxed">
+                                    لعبة أونلاين جماعية. ادخل الحلبة، اجمع البرجر 🍔، ونافس الشباب على المركز الأول!
+                                </p>
+                                <button
+                                    onClick={() => setIsGameOpen(true)}
+                                    className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+                                >
+                                    <PlayCircle className="w-5 h-5 fill-current" />
+                                    العب الآن
+                                </button>
+                            </div>
+                        </div>
+
                         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl sticky top-8 text-center flex flex-col items-center">
                             <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mb-4 border border-amber-500/20">
                                 <ScrollText className="w-8 h-8 text-amber-500" />
@@ -772,6 +800,14 @@ export default function Dashboard() {
                 isOpen={isConstitutionOpen}
                 onClose={() => setIsConstitutionOpen(false)}
             />
+
+            {user && (
+                <HungryKingsArena
+                    isOpen={isGameOpen}
+                    onClose={() => setIsGameOpen(false)}
+                    userName={user.name}
+                />
+            )}
         </div>
     );
 }
