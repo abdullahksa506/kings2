@@ -106,7 +106,14 @@ export default function Dashboard() {
         if (!user) return;
 
         const checkStandalone = async () => {
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+            // Broader detection for iOS and Android
+            const isMatchMedia = window.matchMedia('(display-mode: standalone)').matches;
+            const isNavigatorStandalone = (window.navigator as any).standalone === true;
+            // Sometimes iOS PWA opens with no referrer or specific state
+            const isIOSPWA = window.navigator.userAgent.match(/(iPad|iPhone|iPod)/) && isNavigatorStandalone;
+
+            const isStandalone = Boolean(isMatchMedia || isNavigatorStandalone || isIOSPWA);
+
             try {
                 await services.updateUserStandaloneStatus(user.name, isStandalone);
             } catch (e) {
