@@ -12,7 +12,9 @@ import Leaderboard from "./Leaderboard";
 import GlobalLeaderboard from "./GlobalLeaderboard";
 import ConstitutionModal from "./ConstitutionModal";
 import HungryKingsArena from "./HungryKingsArena";
-import { Gamepad2 } from "lucide-react";
+import BathroomRatingForm from "./BathroomRatingForm";
+import BathroomRatingsDisplay from "./BathroomRatingsDisplay";
+import { Gamepad2, Bath } from "lucide-react";
 import Link from "next/link";
 
 export default function Dashboard() {
@@ -21,6 +23,11 @@ export default function Dashboard() {
     const [pastWeek, setPastWeek] = useState<WeekSession | null>(null);
     const [hasRatedCurrentWeek, setHasRatedCurrentWeek] = useState(false);
     const [hasRatedPastWeek, setHasRatedPastWeek] = useState(false);
+
+    // Bathroom Rating State
+    const [hasRatedBathroomCurrentWeek, setHasRatedBathroomCurrentWeek] = useState(false);
+    const [hasRatedBathroomPastWeek, setHasRatedBathroomPastWeek] = useState(false);
+
     const [loading, setLoading] = useState(true);
 
     // Forms state
@@ -49,10 +56,14 @@ export default function Dashboard() {
             if (user?.name) {
                 const rated = await services.hasUserRated(previous.id, user.name);
                 setHasRatedPastWeek(rated);
+
+                const bathroomRated = await services.hasUserRatedBathroom(previous.id, user.name);
+                setHasRatedBathroomPastWeek(bathroomRated);
             }
         } else {
             setPastWeek(null);
             setHasRatedPastWeek(false);
+            setHasRatedBathroomPastWeek(false);
         }
     };
 
@@ -71,10 +82,14 @@ export default function Dashboard() {
             if (user?.name) {
                 const rated = await services.hasUserRated(week.id, user.name);
                 setHasRatedCurrentWeek(rated);
+
+                const bathroomRated = await services.hasUserRatedBathroom(week.id, user.name);
+                setHasRatedBathroomCurrentWeek(bathroomRated);
             }
         } else {
             setCurrentWeek(null);
             setHasRatedCurrentWeek(false);
+            setHasRatedBathroomCurrentWeek(false);
         }
         setLoading(false);
     };
@@ -99,10 +114,14 @@ export default function Dashboard() {
                 if (user?.name) {
                     const rated = await services.hasUserRated(week.id, user.name);
                     setHasRatedCurrentWeek(rated);
+
+                    const bathroomRated = await services.hasUserRatedBathroom(week.id, user.name);
+                    setHasRatedBathroomCurrentWeek(bathroomRated);
                 }
             } else {
                 setCurrentWeek(null);
                 setHasRatedCurrentWeek(false);
+                setHasRatedBathroomCurrentWeek(false);
             }
             setLoading(false);
         });
@@ -610,6 +629,30 @@ export default function Dashboard() {
                                 />
                             </div>
                         )}
+
+                        {/* BATHROOM RATING SECTION */}
+                        <div className="space-y-6">
+                            {(currentWeek && !hasRatedBathroomCurrentWeek) && (
+                                <BathroomRatingForm
+                                    weekId={currentWeek.id}
+                                    userName={user?.name || ""}
+                                    onRated={() => setHasRatedBathroomCurrentWeek(true)}
+                                    disabled={!currentWeek.ratingEnabled || currentWeek.king === user?.name || (currentWeek.absentees || []).includes(user?.name || "")}
+                                />
+                            )}
+
+                            {(pastWeek && !hasRatedBathroomPastWeek) && (
+                                <BathroomRatingForm
+                                    weekId={pastWeek.id}
+                                    userName={user?.name || ""}
+                                    onRated={() => setHasRatedBathroomPastWeek(true)}
+                                    disabled={!pastWeek.ratingEnabled || pastWeek.king === user?.name || (pastWeek.absentees || []).includes(user?.name || "")}
+                                />
+                            )}
+
+                            {currentWeek && <BathroomRatingsDisplay weekId={currentWeek.id} />}
+                            {pastWeek && <BathroomRatingsDisplay weekId={pastWeek.id} />}
+                        </div>
 
                         {!currentWeek ? (
                             <div className="text-center p-16 bg-slate-900/50 rounded-3xl border border-slate-800">

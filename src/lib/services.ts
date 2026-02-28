@@ -39,6 +39,14 @@ export interface Rating {
     createdAt: Timestamp;
 }
 
+export interface BathroomRating {
+    id: string;
+    weekId: string;
+    userName: string;
+    score: number; // 1 to 5
+    createdAt: Timestamp;
+}
+
 export const VALID_NAMES = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
 export const MAX_BUDGET = 175;
 
@@ -174,6 +182,34 @@ export const services = {
     async hasUserRated(weekId: string, userName: string): Promise<boolean> {
         const q = query(
             collection(db, "ratings"),
+            where("weekId", "==", weekId),
+            where("userName", "==", userName),
+            limit(1)
+        );
+        const snap = await getDocs(q);
+        return !snap.empty;
+    },
+
+    async submitBathroomRating(weekId: string, userName: string, score: number) {
+        if (score < 1 || score > 5) throw new Error("Invalid score");
+        const docRef = await addDoc(collection(db, "bathroomRatings"), {
+            weekId,
+            userName,
+            score,
+            createdAt: Timestamp.now()
+        });
+        return docRef.id;
+    },
+
+    async getBathroomRatingsForWeek(weekId: string): Promise<BathroomRating[]> {
+        const q = query(collection(db, "bathroomRatings"), where("weekId", "==", weekId));
+        const snap = await getDocs(q);
+        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as BathroomRating));
+    },
+
+    async hasUserRatedBathroom(weekId: string, userName: string): Promise<boolean> {
+        const q = query(
+            collection(db, "bathroomRatings"),
             where("weekId", "==", weekId),
             where("userName", "==", userName),
             limit(1)
