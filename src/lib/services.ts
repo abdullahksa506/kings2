@@ -14,6 +14,7 @@ import {
     Timestamp,
     onSnapshot
 } from "firebase/firestore";
+import { hashPassword, isHashed } from "./hash";
 
 export interface WeekSession {
     id: string;
@@ -339,7 +340,6 @@ export const services = {
 
         await updateDoc(userRef, { resetCode: code, resetCodeTimestamp: Date.now() });
     },
-
     async resetPasswordWithCode(userName: string, code: string, newPassword: string): Promise<void> {
         if (!VALID_NAMES.includes(userName)) throw new Error("اسم غير مصرح به");
 
@@ -362,8 +362,10 @@ export const services = {
             throw new Error("انتهت صلاحية كود الاسترجاع. اطلب كود جديد.");
         }
 
+        const hashedPassword = await hashPassword(newPassword);
+
         await updateDoc(userRef, {
-            password: newPassword,
+            password: hashedPassword,
             resetCode: null,
             resetCodeTimestamp: null
         });
@@ -380,11 +382,23 @@ export const services = {
         }
 
         const data = userDoc.data();
-        if (data.password !== currentPassword) {
+        let valid = false;
+
+        if (data.password === currentPassword) {
+            valid = true;
+        } else if (isHashed(data.password)) {
+            const hashedInput = await hashPassword(currentPassword);
+            if (data.password === hashedInput) {
+                valid = true;
+            }
+        }
+
+        if (!valid) {
             throw new Error("كلمة المرور الحالية خاطئة");
         }
 
-        await updateDoc(userRef, { password: newPassword });
+        const hashedPassword = await hashPassword(newPassword);
+        await updateDoc(userRef, { password: hashedPassword });
     },
 
     async getUsersWithResetCodes(): Promise<{ id: string, name: string, resetCode: string }[]> {

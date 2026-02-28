@@ -7,9 +7,10 @@ import {
     doc,
     getDoc,
     setDoc,
-    getDocs,
-    query,
+    updateDoc,
+    getCountFromServer,
 } from "firebase/firestore";
+import { hashPassword, isHashed } from "@/lib/hash";
 
 export type UserRole = "dean" | "king" | "user";
 
@@ -51,9 +52,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     }
                 }
 
-                // Count registered users
-                const usersSnap = await getDocs(collection(db, "users"));
-                setRegisteredNamesCount(usersSnap.size);
+                // Count registered users securely without fetching all documents
+                const snapshot = await getCountFromServer(collection(db, "users"));
+                setRegisteredNamesCount(snapshot.data().count);
             } catch (error) {
                 console.error("Auth init error:", error);
             } finally {
@@ -74,7 +75,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const userData = userDoc.data();
-        if (userData.password !== password) {
+        let valid = false;
+
+        // Auto-upgrade plain-text passwords
+        if (userData.password === password) {
+            valid = true;
+            if (!isHashed(password)) {
+                // Background upgrade to hash
+                const newHash = await hashPassword(password);
+                await updateDoc(userRef, { password: newHash });
+            }
+        } else if (isHashed(userData.password)) {
+            // Check hash
+            const hashedInput = await hashPassword(password);
+            if (userData.password === hashedInput) {
+                valid = true;
+            }
+        }
+
+        if (!valid) {
             throw new Error("كلمة المرور خاطئة");
         }
 
@@ -103,9 +122,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // "شوكا" is the Dean
         const role: UserRole = name === "شوكا" ? "dean" : "user";
 
+        const hashedPassword = await hashPassword(password);
+
         const newUser = {
             name,
-            password, // Note: In a real app we'd hash this, but we'll use plaintext here for simplicity as requested by the user's specific secret code model.
+            password: hashedPassword,
             role,
             registered: true
         };
