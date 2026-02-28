@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, VALID_NAMES } from "@/lib/services";
-import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen } from "lucide-react";
+import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import RatingForm from "./RatingForm";
@@ -13,6 +13,7 @@ import GlobalLeaderboard from "./GlobalLeaderboard";
 import ConstitutionModal from "./ConstitutionModal";
 import HungryKingsArena from "./HungryKingsArena";
 import { Gamepad2 } from "lucide-react";
+import Link from "next/link";
 
 export default function Dashboard() {
     const { user, logout } = useAuth();
@@ -362,25 +363,7 @@ export default function Dashboard() {
                             {currentWeek ? "إنهاء الأسبوع الحالي وبدء أسبوع جديد" : "بدء أسبوع جديد"}
                         </button>
 
-                        <button
-                            onClick={async () => {
-                                setSaving(true);
-                                try {
-                                    const res = await fetch("/api/reminders/test-push", { method: "POST" });
-                                    const data = await res.json();
-                                    alert(data.message || "Request sent");
-                                } catch (e) {
-                                    console.error("Failed to send test push:", e);
-                                    alert("خطأ في إرسال الإشعار التجريبي");
-                                }
-                                setSaving(false);
-                            }}
-                            disabled={saving}
-                            className="bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/30 text-sky-400 font-semibold py-3 px-6 rounded-xl flex items-center gap-2 transition-all"
-                        >
-                            <Bell className="w-5 h-5" />
-                            اختبار الإشعارات
-                        </button>
+
 
                         {currentWeek && (
                             <div className="flex items-center gap-2 bg-slate-950/40 p-1 rounded-xl border border-amber-500/20">
@@ -496,34 +479,93 @@ export default function Dashboard() {
                                         );
                                     })}
                                 </div>
-                                <div className="mt-4 pt-4 border-t border-amber-500/10">
-                                    <button
-                                        onClick={async () => {
-                                            if (!confirm("هل أنت متأكد من إرسال إشعار تذكير للأعضاء الذين لم يؤكدوا حضورهم؟")) return;
-                                            setSaving(true);
-                                            try {
-                                                const res = await fetch("/api/reminders/attendance-pending", {
-                                                    method: "POST",
-                                                    headers: { "Content-Type": "application/json" },
-                                                    body: JSON.stringify({ weekId: currentWeek.id })
-                                                });
-                                                const data = await res.json();
-                                                alert(data.message || "تم إرسال الإشعارات بنجاح");
-                                            } catch (e) {
-                                                console.error("Failed to send pending notifications:", e);
-                                                alert("خطأ في إرسال الإشعارات");
-                                            }
-                                            setSaving(false);
-                                        }}
-                                        disabled={saving || VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).length === 0}
-                                        className="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-500 font-semibold py-2 px-4 rounded-xl flex items-center gap-2 transition-all w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <Bell className="w-4 h-4" />
-                                        إرسال تذكير لمن لم يرد ({VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).length})
-                                    </button>
-                                </div>
                             </div>
                         )}
+                    </div>
+
+                    {/* Reminders Panel */}
+                    <div className="w-full bg-slate-950/40 p-4 rounded-xl border border-sky-500/20 mt-4">
+                        <h3 className="text-sky-400 font-semibold mb-3 flex items-center gap-2">
+                            <Bell className="w-5 h-5" />
+                            إرسال التنبيهات وإشعارات الجوال
+                        </h3>
+                        <div className="flex flex-col gap-2">
+                            <button
+                                onClick={async () => {
+                                    if (!confirm("هل أنت متأكد من إرسال إشعار تذكير للأعضاء الذين لم يؤكدوا حضورهم؟")) return;
+                                    setSaving(true);
+                                    try {
+                                        const res = await fetch("/api/reminders/attendance-pending", {
+                                            method: "POST",
+                                            headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({ weekId: currentWeek?.id })
+                                        });
+                                        const data = await res.json();
+                                        alert(data.message || "تم إرسال الإشعارات بنجاح");
+                                    } catch (e) {
+                                        console.error("Failed to send pending notifications:", e);
+                                        alert("خطأ في إرسال الإشعارات");
+                                    }
+                                    setSaving(false);
+                                }}
+                                disabled={saving || !currentWeek || VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).length === 0}
+                                className="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-500 font-semibold py-2 px-4 rounded-xl flex items-center gap-2 transition-all w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Bell className="w-4 h-4" />
+                                إرسال تذكير لمن لم يرد {currentWeek ? `(${VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).length})` : ''}
+                            </button>
+
+                            <button
+                                onClick={async () => {
+                                    if (!currentWeek) return;
+                                    if (!confirm(`هل أنت متأكد من إرسال إشعار تذكير للملك (${currentWeek.king})؟`)) return;
+                                    setSaving(true);
+                                    try {
+                                        const res = await fetch("/api/reminders/king-push", {
+                                            method: "POST",
+                                            headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({ weekId: currentWeek.id })
+                                        });
+                                        const data = await res.json();
+                                        alert(data.message || "تم إرسال الإشعار بنجاح");
+                                    } catch (e) {
+                                        console.error("Failed to send King notification:", e);
+                                        alert("خطأ في إرسال الإشعار");
+                                    }
+                                    setSaving(false);
+                                }}
+                                disabled={saving || !currentWeek || !!(currentWeek.day && currentWeek.restaurant) || currentWeek.isRandom}
+                                className="bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/30 text-sky-500 font-semibold py-2 px-4 rounded-xl flex items-center gap-2 transition-all w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Bell className="w-4 h-4" />
+                                تذكير الملك بالاختيار
+                            </button>
+
+                            <button
+                                onClick={async () => {
+                                    if (!confirm("هل أنت متأكد من إرسال إشعار تذكير بالتقييم لجميع الحاضرين؟")) return;
+                                    setSaving(true);
+                                    try {
+                                        const res = await fetch("/api/reminders/rating-unlocked", {
+                                            method: "POST",
+                                            headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({ weekId: currentWeek?.id || pastWeek?.id })
+                                        });
+                                        const data = await res.json();
+                                        alert(data.message || "تم إرسال الإشعارات بنجاح");
+                                    } catch (e) {
+                                        console.error("Failed to send rating notifications:", e);
+                                        alert("خطأ في إرسال الإشعارات");
+                                    }
+                                    setSaving(false);
+                                }}
+                                disabled={saving || !(currentWeek?.ratingEnabled || pastWeek?.ratingEnabled)}
+                                className="bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-500 font-semibold py-2 px-4 rounded-xl flex items-center gap-2 transition-all w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Bell className="w-4 h-4" />
+                                تذكير الحاضرين بالتقييم
+                            </button>
+                        </div>
                     </div>
 
                     {/* Dean can see stats + reset codes + phone numbers */}
@@ -543,8 +585,10 @@ export default function Dashboard() {
 
                         {/* CURRENT WEEK RATING */}
                         {currentWeek && currentWeek.ratingEnabled && !hasRatedCurrentWeek && user?.name !== currentWeek.king && !(currentWeek.absentees || []).includes(user?.name || "") && (
-                            <div className="mb-6">
-                                <h3 className="text-emerald-400 font-bold mb-3 flex items-center gap-2"><Unlock className="w-5 h-5" /> تقييم طلعة هذا الأسبوع متاح الآن</h3>
+                            <div className="mb-6 relative">
+                                <div className="flex justify-between items-center mb-3">
+                                    <h3 className="text-emerald-400 font-bold flex items-center gap-2"><Unlock className="w-5 h-5" /> تقييم طلعة هذا الأسبوع متاح الآن</h3>
+                                </div>
                                 <RatingForm
                                     weekId={currentWeek.id}
                                     userName={user?.name || ""}
@@ -640,34 +684,36 @@ export default function Dashboard() {
                                                 <h3 className="text-lg font-semibold text-slate-300">قائمة الحضور والتأكيد</h3>
                                                 <p className="text-xs text-slate-500 mb-2">أكد حضورك أو اعتذارك عن الطلعة</p>
                                             </div>
-                                            {!isKing && user?.name && (
-                                                <button
-                                                    onClick={async () => {
-                                                        setSaving(true);
-                                                        const isAbsent = currentWeek.absentees?.includes(user!.name) || false;
-                                                        const justCompleted = await services.toggleAttendance(currentWeek.id, user!.name, !isAbsent);
+                                            <div className="flex gap-2">
+                                                {!isKing && user?.name && (
+                                                    <button
+                                                        onClick={async () => {
+                                                            setSaving(true);
+                                                            const isAbsent = currentWeek.absentees?.includes(user!.name) || false;
+                                                            const justCompleted = await services.toggleAttendance(currentWeek.id, user!.name, !isAbsent);
 
-                                                        if (justCompleted) {
-                                                            try {
-                                                                await fetch("/api/reminders/attendance-complete", {
-                                                                    method: "POST",
-                                                                    headers: { "Content-Type": "application/json" },
-                                                                    body: JSON.stringify({ weekId: currentWeek.id })
-                                                                });
-                                                            } catch (e) {
-                                                                console.error("Failed to notify members:", e);
+                                                            if (justCompleted) {
+                                                                try {
+                                                                    await fetch("/api/reminders/attendance-complete", {
+                                                                        method: "POST",
+                                                                        headers: { "Content-Type": "application/json" },
+                                                                        body: JSON.stringify({ weekId: currentWeek.id })
+                                                                    });
+                                                                } catch (e) {
+                                                                    console.error("Failed to notify members:", e);
+                                                                }
                                                             }
-                                                        }
 
-                                                        await fetchWeek();
-                                                        setSaving(false);
-                                                    }}
-                                                    disabled={saving}
-                                                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border shadow-sm ${currentWeek.absentees?.includes(user?.name) ? 'bg-red-500/20 border-red-500/30 text-red-400 hover:bg-red-500/30' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30'}`}
-                                                >
-                                                    {currentWeek.absentees?.includes(user?.name) ? "أنا معتذر ❌" : "سأحضر ✅"}
-                                                </button>
-                                            )}
+                                                            await fetchWeek();
+                                                            setSaving(false);
+                                                        }}
+                                                        disabled={saving}
+                                                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border shadow-sm ${currentWeek.absentees?.includes(user?.name) ? 'bg-red-500/20 border-red-500/30 text-red-400 hover:bg-red-500/30' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30'}`}
+                                                    >
+                                                        {currentWeek.absentees?.includes(user?.name) ? "أنا معتذر ❌" : "سأحضر ✅"}
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
 
                                         <div className="space-y-4">
@@ -794,20 +840,23 @@ export default function Dashboard() {
                     </div>
 
                 </div>
-            )}
+            )
+            }
 
             <ConstitutionModal
                 isOpen={isConstitutionOpen}
                 onClose={() => setIsConstitutionOpen(false)}
             />
 
-            {user && (
-                <HungryKingsArena
-                    isOpen={isGameOpen}
-                    onClose={() => setIsGameOpen(false)}
-                    userName={user.name}
-                />
-            )}
-        </div>
+            {
+                user && (
+                    <HungryKingsArena
+                        isOpen={isGameOpen}
+                        onClose={() => setIsGameOpen(false)}
+                        userName={user.name}
+                    />
+                )
+            }
+        </div >
     );
 }

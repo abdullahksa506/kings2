@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { gameServices, GameState, GamePlayer, Projectile, Enemy, MAP_SIZE, Direction } from "@/lib/gameServices";
+import { gameServices, GameState, GamePlayer, Projectile, Enemy, MAP_SIZE, MAZE_WALLS, Direction } from "@/lib/gameServices";
 import { X, Trophy, Play, Info, Flame } from "lucide-react";
 
 // The local view grid size (how many tiles we see on screen)
 const VIEW_SIZE = 15;
-const TICK_RATE_MS = 250; // Faster tick for better feeling (4 ticks per sec)
+const TICK_RATE_MS = 250; // Slower tick for pac-man style (4 ticks per sec)
 const COLORS = ["#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#a855f7", "#ec4899"];
 
 export default function HungryKingsArena({
@@ -32,8 +32,9 @@ export default function HungryKingsArena({
     const handleJoin = async () => {
         const color = COLORS[Math.floor(Math.random() * COLORS.length)];
         setMyColor(color);
-        const startX = Math.floor(Math.random() * MAP_SIZE);
-        const startY = Math.floor(Math.random() * MAP_SIZE);
+        // Spawn on an open tile (1,1 is always open in our maze)
+        const startX = 1;
+        const startY = 1;
         await gameServices.initGameArea();
         await gameServices.joinGame(userName, color, startX, startY);
         directionRef.current = "NONE";
@@ -195,12 +196,22 @@ export default function HungryKingsArena({
             let nextY = myPlayer.y;
 
             for (let i = 0; i < steps; i++) {
-                if (directionRef.current === "UP") nextY -= 1;
-                if (directionRef.current === "DOWN") nextY += 1;
-                if (directionRef.current === "LEFT") nextX -= 1;
-                if (directionRef.current === "RIGHT") nextX += 1;
-                nextX = Math.max(0, Math.min(MAP_SIZE - 1, nextX));
-                nextY = Math.max(0, Math.min(MAP_SIZE - 1, nextY));
+                let testY = nextY;
+                let testX = nextX;
+                if (directionRef.current === "UP") testY -= 1;
+                if (directionRef.current === "DOWN") testY += 1;
+                if (directionRef.current === "LEFT") testX -= 1;
+                if (directionRef.current === "RIGHT") testX += 1;
+                testX = Math.max(0, Math.min(MAP_SIZE - 1, testX));
+                testY = Math.max(0, Math.min(MAP_SIZE - 1, testY));
+
+                // Check wall collision
+                if (MAZE_WALLS[testY][testX] === "0") {
+                    nextX = testX;
+                    nextY = testY;
+                } else {
+                    break; // stop moving if hit wall
+                }
             }
 
             pUpdates.x = nextX;
@@ -239,16 +250,27 @@ export default function HungryKingsArena({
         if (isHost && (now - gameState.lastHostUpdate > TICK_RATE_MS)) {
             let hostChangedState = false;
 
+            // Helper to get random open tile
+            const getRandomOpenTile = () => {
+                let rx = 1, ry = 1;
+                for (let i = 0; i < 50; i++) {
+                    rx = Math.floor(Math.random() * MAP_SIZE);
+                    ry = Math.floor(Math.random() * MAP_SIZE);
+                    if (MAZE_WALLS[ry] && MAZE_WALLS[ry][rx] === "0") return { x: rx, y: ry };
+                }
+                return { x: 1, y: 1 };
+            };
+
             // Spawn Food
             if (newFoods.length < 15 && Math.random() < 0.3) {
-                newFoods.push({ x: Math.floor(Math.random() * MAP_SIZE), y: Math.floor(Math.random() * MAP_SIZE) });
+                newFoods.push(getRandomOpenTile());
                 hostChangedState = true;
                 itemsChanged = true; // prevent client overwrite below
             }
 
             // Spawn Boost
             if (newBoosts.length < 3 && Math.random() < 0.05) {
-                newBoosts.push({ x: Math.floor(Math.random() * MAP_SIZE), y: Math.floor(Math.random() * MAP_SIZE) });
+                newBoosts.push(getRandomOpenTile());
                 hostChangedState = true;
                 itemsChanged = true;
             }
@@ -260,9 +282,14 @@ export default function HungryKingsArena({
                 let ny = e.y + e.dirY;
 
                 // Randomly change direction occasionally or when hitting walls
-                if (nx < 0 || nx >= MAP_SIZE || ny < 0 || ny >= MAP_SIZE || Math.random() < 0.1) {
+                if (nx < 0 || nx >= MAP_SIZE || ny < 0 || ny >= MAP_SIZE || MAZE_WALLS[ny]?.[nx] !== "0" || Math.random() < 0.05) {
                     const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-                    const randDir = dirs[Math.floor(Math.random() * dirs.length)];
+                    const validDirs = dirs.filter(d => {
+                        const tx = e.x + d[0];
+                        const ty = e.y + d[1];
+                        return tx >= 0 && tx < MAP_SIZE && ty >= 0 && ty < MAP_SIZE && MAZE_WALLS[ty]?.[tx] === "0";
+                    });
+                    const randDir = validDirs.length > 0 ? validDirs[Math.floor(Math.random() * validDirs.length)] : [0, 0];
                     return { ...e, dirX: randDir[0], dirY: randDir[1] };
                 }
 
@@ -276,10 +303,19 @@ export default function HungryKingsArena({
             for (const p of (gameState.projectiles || [])) {
                 if (now - p.createdAt > 3000) continue; // expires after 3 sec
 
-                const nx = p.x + p.dirX * 2;
-                const ny = p.y + p.dirY * 2;
+                let nx = p.x;
+                let ny = p.y;
+                let hitWall = false;
+                for (let s = 0; s < 2; s++) {
+                    nx += p.dirX;
+                    ny += p.dirY;
+                    if (nx < 0 || nx >= MAP_SIZE || ny < 0 || ny >= MAP_SIZE || MAZE_WALLS[ny]?.[nx] !== "0") {
+                        hitWall = true;
+                        break;
+                    }
+                }
 
-                if (nx < 0 || nx >= MAP_SIZE || ny < 0 || ny >= MAP_SIZE) continue; // Hit wall
+                if (hitWall) continue; // break Projectile
 
                 // Check collision with players
                 let hitSomeone = false;
@@ -409,6 +445,26 @@ export default function HungryKingsArena({
         const p1 = toScreen(0, 0);
         const p2 = toScreen(MAP_SIZE, MAP_SIZE);
         ctx.strokeRect(p1.sx, p1.sy, p2.sx - p1.sx, p2.sy - p1.sy);
+
+        // Draw Maze Walls
+        ctx.fillStyle = "#1e3a8a"; // deep blue
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = "#3b82f6";
+        for (let y = 0; y < MAP_SIZE; y++) {
+            for (let x = 0; x < MAP_SIZE; x++) {
+                if (MAZE_WALLS[y] && MAZE_WALLS[y][x] === "1") {
+                    if (isVisible(x, y)) {
+                        const s = toScreen(x, y);
+                        // Slightly inset for modern look
+                        ctx.fillRect(s.sx, s.sy, cellSize, cellSize);
+                        ctx.strokeStyle = "#60a5fa"; // light blue border
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(s.sx + 2, s.sy + 2, cellSize - 4, cellSize - 4);
+                    }
+                }
+            }
+        }
+        ctx.shadowBlur = 0;
 
 
         // Render Things

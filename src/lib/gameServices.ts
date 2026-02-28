@@ -42,21 +42,40 @@ export interface GameState {
     lastHostUpdate: number;
 }
 
-// 60x60 massive map
-export const MAP_SIZE = 60;
-export const GAME_DOC_ID = "hungryKingsStateV2";
+// 15x15 Pac-Man style map
+export const MAP_SIZE = 15;
+export const GAME_DOC_ID = "hungryKingsStateV3";
+
+// 1 = Wall, 0 = Path, 2 = Ghost Spawn
+export const MAZE_WALLS = [
+    "111111111111111",
+    "100000101000001",
+    "101110101011101",
+    "100000000000001",
+    "101110111011101",
+    "100010010010001",
+    "111011000110111",
+    "100000000000001",
+    "111011010110111",
+    "100010010010001",
+    "101110111011101",
+    "100000000000001",
+    "101110101011101",
+    "100000101000001",
+    "111111111111111",
+];
 
 const INITIAL_STATE: GameState = {
     players: {},
     foods: [],
     boosts: [],
-    enemies: Array.from({ length: 5 }).map((_, i) => ({
-        id: `enemy_${i}`,
-        x: Math.floor(Math.random() * MAP_SIZE),
-        y: Math.floor(Math.random() * MAP_SIZE),
-        dirX: Math.random() > 0.5 ? 1 : -1,
-        dirY: Math.random() > 0.5 ? 1 : -1,
-    })),
+    enemies: [
+        { id: "e1", x: 1, y: 1, dirX: 1, dirY: 0 },
+        { id: "e2", x: 13, y: 1, dirX: -1, dirY: 0 },
+        { id: "e3", x: 1, y: 13, dirX: 1, dirY: 0 },
+        { id: "e4", x: 13, y: 13, dirX: -1, dirY: 0 },
+        { id: "e5", x: 7, y: 7, dirX: 0, dirY: 1 },
+    ],
     projectiles: [],
     lastHostUpdate: 0,
 };
