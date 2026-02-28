@@ -14,6 +14,7 @@ import ConstitutionModal from "./ConstitutionModal";
 import HungryKingsArena from "./HungryKingsArena";
 import BathroomRatingForm from "./BathroomRatingForm";
 import BathroomRatingsDisplay from "./BathroomRatingsDisplay";
+import BathroomLeaderboard from "./BathroomLeaderboard";
 import { Gamepad2, Bath } from "lucide-react";
 import Link from "next/link";
 
@@ -630,30 +631,6 @@ export default function Dashboard() {
                             </div>
                         )}
 
-                        {/* BATHROOM RATING SECTION */}
-                        <div className="space-y-6">
-                            {(currentWeek && !hasRatedBathroomCurrentWeek) && (
-                                <BathroomRatingForm
-                                    weekId={currentWeek.id}
-                                    userName={user?.name || ""}
-                                    onRated={() => setHasRatedBathroomCurrentWeek(true)}
-                                    disabled={!currentWeek.ratingEnabled || currentWeek.king === user?.name || (currentWeek.absentees || []).includes(user?.name || "")}
-                                />
-                            )}
-
-                            {(pastWeek && !hasRatedBathroomPastWeek) && (
-                                <BathroomRatingForm
-                                    weekId={pastWeek.id}
-                                    userName={user?.name || ""}
-                                    onRated={() => setHasRatedBathroomPastWeek(true)}
-                                    disabled={!pastWeek.ratingEnabled || pastWeek.king === user?.name || (pastWeek.absentees || []).includes(user?.name || "")}
-                                />
-                            )}
-
-                            {currentWeek && <BathroomRatingsDisplay weekId={currentWeek.id} />}
-                            {pastWeek && <BathroomRatingsDisplay weekId={pastWeek.id} />}
-                        </div>
-
                         {!currentWeek ? (
                             <div className="text-center p-16 bg-slate-900/50 rounded-3xl border border-slate-800">
                                 <AlertTriangle className="w-16 h-16 text-slate-600 mx-auto mb-4" />
@@ -880,6 +857,38 @@ export default function Dashboard() {
 
                         {/* Global Chronological Leaderboard */}
                         <GlobalLeaderboard />
+
+                        {/* BATHROOM RATING SECTION */}
+                        <div className="space-y-6 border-t border-sky-900/30 pt-8 mt-8">
+                            <h2 className="text-2xl font-bold text-sky-400 mb-6 flex items-center justify-center gap-2">
+                                <Bath className="w-6 h-6" />
+                                قسم تقييم حمامات المطاعم
+                            </h2>
+                            {(currentWeek && !hasRatedBathroomCurrentWeek) && (
+                                <BathroomRatingForm
+                                    weekId={currentWeek.id}
+                                    userName={user?.name || ""}
+                                    restaurantName={currentWeek.restaurant || undefined}
+                                    onRated={() => setHasRatedBathroomCurrentWeek(true)}
+                                    disabled={!currentWeek.ratingEnabled || currentWeek.king === user?.name || (currentWeek.absentees || []).includes(user?.name || "")}
+                                />
+                            )}
+
+                            {(pastWeek && !hasRatedBathroomPastWeek) && (
+                                <BathroomRatingForm
+                                    weekId={pastWeek.id}
+                                    userName={user?.name || ""}
+                                    restaurantName={pastWeek.restaurant || undefined}
+                                    onRated={() => setHasRatedBathroomPastWeek(true)}
+                                    disabled={!pastWeek.ratingEnabled || pastWeek.king === user?.name || (pastWeek.absentees || []).includes(user?.name || "")}
+                                />
+                            )}
+
+                            {currentWeek && <BathroomRatingsDisplay weekId={currentWeek.id} restaurantName={currentWeek.restaurant || undefined} />}
+                            {pastWeek && <BathroomRatingsDisplay weekId={pastWeek.id} restaurantName={pastWeek.restaurant || undefined} />}
+
+                            {/* TODO: Add BathroomLeaderboard here next */}
+                        </div>
                     </div>
 
                 </div>

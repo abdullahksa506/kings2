@@ -4,7 +4,7 @@ import { useState } from "react";
 import { services } from "@/lib/services";
 import { Send, Lock, Bath } from "lucide-react";
 
-export default function BathroomRatingForm({ weekId, userName, onRated, disabled = false }: { weekId: string, userName: string, onRated: () => void, disabled?: boolean }) {
+export default function BathroomRatingForm({ weekId, userName, restaurantName, onRated, disabled = false }: { weekId: string, userName: string, restaurantName?: string, onRated: () => void, disabled?: boolean }) {
     const [hoveredScore, setHoveredScore] = useState(0);
     const [score, setScore] = useState(0);
     const [submitting, setSubmitting] = useState(false);
@@ -31,7 +31,9 @@ export default function BathroomRatingForm({ weekId, userName, onRated, disabled
                 <Bath className="w-5 h-5" />
                 حمامات هشام
             </h3>
-            <p className="text-slate-400 text-sm mb-6">تقييمك اختياري لدورات مياه المطعم.</p>
+            <p className="text-slate-400 text-sm mb-6">
+                تقييمك اختياري لدورات مياه {restaurantName ? `مطعم (${restaurantName})` : "المطعم"}.
+            </p>
 
             {disabled && (
                 <div className="flex items-center justify-center gap-2 mb-4 text-slate-500 text-sm">
