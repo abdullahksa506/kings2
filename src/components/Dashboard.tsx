@@ -569,7 +569,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* Dean can see stats + reset codes + phone numbers */}
-                    <DeanDashboard weekId={currentWeek?.id || pastWeek?.id} />
+                    <DeanDashboard currentWeekId={currentWeek?.id} pastWeekId={pastWeek?.id} />
                 </div>
             )}
 

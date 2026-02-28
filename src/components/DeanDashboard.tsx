@@ -5,7 +5,10 @@ import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, Rating, VALID_NAMES } from "@/lib/services";
 import { Star, ShieldAlert, BarChart3, KeyRound, Users, CheckCircle2 } from "lucide-react";
 
-export default function DeanDashboard({ weekId }: { weekId?: string }) {
+export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWeekId?: string, pastWeekId?: string }) {
+    const [selectedWeekType, setSelectedWeekType] = useState<"current" | "past">("current");
+    const weekId = selectedWeekType === "current" ? currentWeekId : pastWeekId;
+
     const [ratings, setRatings] = useState<Rating[]>([]);
     const [resetRequests, setResetRequests] = useState<{ id: string, name: string, resetCode: string }[]>([]);
     const [registeredNames, setRegisteredNames] = useState<string[]>([]);
@@ -14,12 +17,17 @@ export default function DeanDashboard({ weekId }: { weekId?: string }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let unsubscribeRatings: (() => void) | undefined;
+
         const fetchData = async () => {
             setLoading(true);
             try {
                 if (weekId && weekId.length > 0) {
-                    const fetchedRatings = await services.getAllRatingsForWeek(weekId);
-                    setRatings(fetchedRatings);
+                    unsubscribeRatings = services.listenToRatingsForWeek(weekId, (fetchedRatings) => {
+                        setRatings(fetchedRatings);
+                    });
+                } else {
+                    setRatings([]);
                 }
 
                 const reqs = await services.getUsersWithResetCodes();
@@ -34,6 +42,10 @@ export default function DeanDashboard({ weekId }: { weekId?: string }) {
             setLoading(false);
         };
         fetchData();
+
+        return () => {
+            if (unsubscribeRatings) unsubscribeRatings();
+        };
     }, [weekId]);
 
     if (loading) return <div className="text-amber-500 font-mono text-sm animate-pulse">جاري جلب التقييمات السرية...</div>;
@@ -42,10 +54,26 @@ export default function DeanDashboard({ weekId }: { weekId?: string }) {
 
     return (
         <div className="mt-6 pt-6 border-t border-amber-900/50">
-            <h3 className="text-lg font-bold text-amber-500 mb-4 flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
-                تفاصيل تصويت الأسبوع (سرية للغاية)
-            </h3>
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-amber-500 flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5" />
+                    تفاصيل تصويت الأسبوع (سرية للغاية)
+                </h3>
+                <div className="flex bg-slate-900 rounded-lg p-1 border border-slate-700">
+                    <button
+                        onClick={() => setSelectedWeekType("current")}
+                        className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${selectedWeekType === "current" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-slate-200"}`}
+                    >
+                        الحالي
+                    </button>
+                    <button
+                        onClick={() => setSelectedWeekType("past")}
+                        className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${selectedWeekType === "past" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-slate-200"}`}
+                    >
+                        السابق
+                    </button>
+                </div>
+            </div>
 
             {ratings.length === 0 ? (
                 <p className="text-slate-500 text-sm pb-4">لا يوجد تقييمات لهذا الأسبوع حتى الآن.</p>

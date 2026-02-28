@@ -163,6 +163,14 @@ export const services = {
         return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Rating));
     },
 
+    listenToRatingsForWeek(weekId: string, callback: (ratings: Rating[]) => void) {
+        const q = query(collection(db, "ratings"), where("weekId", "==", weekId));
+        return onSnapshot(q, (snap) => {
+            const ratings = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Rating));
+            callback(ratings);
+        });
+    },
+
     async hasUserRated(weekId: string, userName: string): Promise<boolean> {
         const q = query(
             collection(db, "ratings"),
