@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, Rating, VALID_NAMES } from "@/lib/services";
 import { Star, ShieldAlert, BarChart3, KeyRound, Users, CheckCircle2 } from "lucide-react";
+import ExportDataButton from "./ExportDataButton";
 
 export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWeekId?: string, pastWeekId?: string }) {
     const [selectedWeekType, setSelectedWeekType] = useState<"current" | "past">("current");
@@ -228,6 +229,11 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
                     </div>
                 </div>
             )}
+
+            {/* Export Data Section */}
+            <div className="mt-8 pt-6 border-t border-emerald-900/50">
+                <ExportDataButton />
+            </div>
         </div>
     );
 }
