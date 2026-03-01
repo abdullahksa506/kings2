@@ -80,10 +80,9 @@ export default function BathroomLeaderboard() {
             <div className="space-y-4">
                 {stats.map((stat, index) => (
                     <div
-                        key={stat.weekId}
                         className={`bg-slate-950/50 rounded-xl border transition-all ${index === 0 ? "border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)] relative overflow-hidden" :
-                            index === 1 ? "border-slate-400/50" :
-                                index === 2 ? "border-amber-700/50" : "border-slate-800"
+                                index === 1 ? "border-slate-400/50" :
+                                    index === 2 ? "border-amber-700/50" : "border-slate-800"
                             }`}
                     >
                         {index === 0 && (
@@ -94,8 +93,8 @@ export default function BathroomLeaderboard() {
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border-b border-sky-900/20">
                             <div className="flex items-center gap-3 mb-2 sm:mb-0">
                                 <span className={`text-xl font-black ${index === 0 ? "text-amber-500" :
-                                    index === 1 ? "text-slate-300" :
-                                        index === 2 ? "text-amber-700" : "text-sky-700"
+                                        index === 1 ? "text-slate-300" :
+                                            index === 2 ? "text-amber-700" : "text-sky-700"
                                     }`}>
                                     #{index + 1}
                                 </span>
