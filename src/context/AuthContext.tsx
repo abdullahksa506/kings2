@@ -45,10 +45,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const initAuth = async () => {
             try {
                 const storedName = localStorage.getItem("king_user_name");
-                if (storedName) {
+                const storedToken = localStorage.getItem("king_user_token");
+                if (storedName && storedToken) {
                     const userDoc = await getDoc(doc(db, "users", storedName));
                     if (userDoc.exists()) {
-                        setUser(userDoc.data() as UserProfile);
+                        const data = userDoc.data();
+                        if (data.password === storedToken) {
+                            const profile: UserProfile = {
+                                name: data.name,
+                                role: data.role,
+                                registered: data.registered,
+                                phoneNumber: data.phoneNumber
+                            };
+                            setUser(profile);
+                        } else {
+                            // Invalid token, clear storage
+                            localStorage.removeItem("king_user_name");
+                            localStorage.removeItem("king_user_token");
+                        }
                     }
                 }
 
@@ -107,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setUser(profile);
         localStorage.setItem("king_user_name", name);
+        localStorage.setItem("king_user_token", isHashed(userData.password) ? userData.password : await hashPassword(password));
     };
 
     const register = async (name: string, password: string) => {
@@ -142,12 +157,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setUser(profile);
         localStorage.setItem("king_user_name", name);
+        localStorage.setItem("king_user_token", hashedPassword);
         setRegisteredNamesCount(prev => prev + 1);
     };
 
     const logout = () => {
         setUser(null);
         localStorage.removeItem("king_user_name");
+        localStorage.removeItem("king_user_token");
     };
 
     return (
