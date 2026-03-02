@@ -91,19 +91,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userData = userDoc.data();
         let valid = false;
 
-        // Auto-upgrade plain-text passwords
-        if (userData.password === password) {
-            valid = true;
-            if (!isHashed(password)) {
-                // Background upgrade to hash
-                const newHash = await hashPassword(password);
-                await updateDoc(userRef, { password: newHash });
-            }
-        } else if (isHashed(userData.password)) {
+        if (isHashed(userData.password)) {
             // Check hash
             const hashedInput = await hashPassword(password);
             if (userData.password === hashedInput) {
                 valid = true;
+            }
+        } else {
+            // Auto-upgrade plain-text passwords
+            if (userData.password === password) {
+                valid = true;
+                // Background upgrade to hash
+                const newHash = await hashPassword(password);
+                await updateDoc(userRef, { password: newHash });
             }
         }
 
