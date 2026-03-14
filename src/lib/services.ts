@@ -284,7 +284,10 @@ export const services = {
         const weeksSnap = await getDocs(q);
         const weeks = weeksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as WeekSession));
 
-        const leaderboard = await Promise.all(weeks.map(async (week) => {
+        // Filter out explicitly imported historical weeks from the active cycle leaderboard
+        const activeWeeks = weeks.filter((w: any) => w.historicalAverageRating === undefined);
+
+        const leaderboard = await Promise.all(activeWeeks.map(async (week) => {
             const ratings = await this.getAllRatingsForWeek(week.id);
             let averageScore = 0;
             if (ratings.length > 0) {
