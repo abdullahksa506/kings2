@@ -222,11 +222,10 @@ export default function GlobalLeaderboard() {
                                                     <div className="flex flex-wrap gap-2">
                                                         {weekRatings[entry.week.id].map(rating => (
                                                             <div key={rating.id} className="flex items-center gap-1.5 bg-slate-800/50 border border-slate-700/50 px-2 py-1 rounded-lg">
-                                                                <span className="text-xs text-slate-300">{rating.userName}</span>
-                                                                <div className="flex items-center gap-0.5 ml-1">
-                                                                    <span className="text-xs font-mono font-bold text-amber-400">{rating.score}</span>
-                                                                    <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
-                                                                </div>
+                                                                <span className="text-xs text-slate-300 flex items-center gap-1">
+                                                                    <Star className="w-3 h-3 text-amber-500/50" />
+                                                                    {rating.userName}
+                                                                </span>
                                                             </div>
                                                         ))}
                                                     </div>
