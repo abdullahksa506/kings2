@@ -900,7 +900,7 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl sticky top-8 text-center flex flex-col items-center">
+                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl text-center flex flex-col items-center">
                             <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mb-4 border border-amber-500/20">
                                 <ScrollText className="w-8 h-8 text-amber-500" />
                             </div>
