@@ -10,6 +10,7 @@ import RatingForm from "./RatingForm";
 import DeanDashboard from "./DeanDashboard";
 import Leaderboard from "./Leaderboard";
 import GlobalLeaderboard from "./GlobalLeaderboard";
+import KingsLeaderboard from "./KingsLeaderboard";
 import ConstitutionModal from "./ConstitutionModal";
 import HungryKingsArena from "./HungryKingsArena";
 import BathroomRatingForm from "./BathroomRatingForm";
@@ -930,6 +931,9 @@ export default function Dashboard() {
 
                         {/* Global Chronological Leaderboard */}
                         <GlobalLeaderboard />
+
+                        {/* Kings Average Leaderboard */}
+                        <KingsLeaderboard />
 
                         {/* BATHROOM RATING SECTION */}
                         <div className="space-y-6 border-t border-sky-900/30 pt-8 mt-8">
