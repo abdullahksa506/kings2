@@ -1,26 +1,34 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { services, WeekSession, VALID_NAMES } from "@/lib/services";
-import { History, Star, Crown, Download, ListFilter, Calendar } from "lucide-react";
+import { services, WeekSession, VALID_NAMES, Rating } from "@/lib/services";
+import { History, Star, Crown, Download, ListFilter, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as xlsx from "xlsx";
 
 interface LeaderboardEntry {
     week: WeekSession;
     averageScore: number;
+    absoluteIndex: number;
 }
 
 export default function GlobalLeaderboard() {
     const [data, setData] = useState<LeaderboardEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [sortBy, setSortBy] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
+    const [expandedWeek, setExpandedWeek] = useState<string | null>(null);
+    const [weekRatings, setWeekRatings] = useState<Record<string, Rating[]>>({});
+    const [loadingRatings, setLoadingRatings] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             const results = await services.getAllCompletedWeeks();
-            setData(results);
+            const indexedResults = results.map((entry, index) => ({
+                ...entry,
+                absoluteIndex: index + 1
+            }));
+            setData(indexedResults);
             setLoading(false);
         };
         fetchData();
@@ -42,7 +50,6 @@ export default function GlobalLeaderboard() {
                 "رقم الأسبوع": week.weekNumber || 1,
                 "الملك": week.king || "أسبوع عشوائي (بدون ملك)",
                 "المطعم": week.restaurant || "غير محدد",
-                "اليوم": week.day || "غير محدد",
                 "الفعالية": week.activity || "لا يوجد",
                 "الحاضرين": attendees.join("، "),
                 // Purposely leaving out ratings
@@ -130,58 +137,111 @@ export default function GlobalLeaderboard() {
 
             <div className="space-y-3">
                 <AnimatePresence mode="popLayout">
-                    {sortedData.map((entry, index) => (
-                        <motion.div
-                            layout
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            transition={{ duration: 0.2 }}
-                            key={entry.week.id}
-                            className="flex items-center justify-between p-4 rounded-2xl border bg-slate-950/50 border-slate-800/60 hover:bg-slate-800/40 transition-colors"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                                    <span className="text-xs font-mono text-amber-500">{index + 1}</span>
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-white text-sm leading-tight mb-1 flex items-center gap-2">
-                                        {entry.week.restaurant || "مطعم مجهول"}
-                                        {entry.week.day && (
-                                            <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-medium border border-indigo-500/20">
-                                                {entry.week.day}
-                                            </span>
-                                        )}
-                                    </h4>
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <div className="flex items-center gap-1.5">
-                                            <Crown className="w-3 h-3 text-amber-500/60" />
-                                            <span className="text-xs text-slate-400">
-                                                {entry.week.king || "عشوائي"}
+                    {sortedData.map((entry) => {
+                        const isExpanded = expandedWeek === entry.week.id;
+                        return (
+                            <motion.div
+                                layout
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ duration: 0.2 }}
+                                key={entry.week.id}
+                                className="rounded-2xl border bg-slate-950/50 border-slate-800/60 overflow-hidden"
+                            >
+                                <div 
+                                    onClick={async () => {
+                                        if (isExpanded) {
+                                            setExpandedWeek(null);
+                                        } else {
+                                            setExpandedWeek(entry.week.id);
+                                            if (!weekRatings[entry.week.id]) {
+                                                setLoadingRatings(prev => ({ ...prev, [entry.week.id]: true }));
+                                                const ratings = await services.getAllRatingsForWeek(entry.week.id);
+                                                setWeekRatings(prev => ({ ...prev, [entry.week.id]: ratings }));
+                                                setLoadingRatings(prev => ({ ...prev, [entry.week.id]: false }));
+                                            }
+                                        }
+                                    }}
+                                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-800/40 transition-colors"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                                            <span className="text-xs font-mono text-amber-500">{entry.absoluteIndex}</span>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-white text-sm leading-tight mb-1 flex items-center gap-2">
+                                                {entry.week.restaurant || "مطعم مجهول"}
+                                            </h4>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <div className="flex items-center gap-1.5">
+                                                    <Crown className="w-3 h-3 text-amber-500/60" />
+                                                    <span className="text-xs text-slate-400">
+                                                        {entry.week.king || "عشوائي"}
+                                                    </span>
+                                                </div>
+                                                {entry.week.activity && entry.week.activity.length > 0 && (
+                                                    <>
+                                                        <span className="text-xs text-slate-700">•</span>
+                                                        <span className="text-[10px] text-slate-400 bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-700/50 truncate max-w-[100px]">
+                                                            {entry.week.activity}
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col items-end gap-2 shrink-0">
+                                        <div className="flex items-center gap-1 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-800 shadow-inner">
+                                            <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                                            <span className="font-mono text-white text-sm font-bold">
+                                                {entry.averageScore > 0 ? entry.averageScore.toFixed(1) : "—"}
                                             </span>
                                         </div>
-                                        {entry.week.activity && entry.week.activity.length > 0 && (
-                                            <>
-                                                <span className="text-xs text-slate-700">•</span>
-                                                <span className="text-[10px] text-slate-400 bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-700/50 truncate max-w-[100px]">
-                                                    {entry.week.activity}
-                                                </span>
-                                            </>
-                                        )}
+                                        <div className="text-slate-500">
+                                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="flex flex-col items-end gap-1 shrink-0">
-                                <div className="flex items-center gap-1 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-800 shadow-inner">
-                                    <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                                    <span className="font-mono text-white text-sm font-bold">
-                                        {entry.averageScore > 0 ? entry.averageScore.toFixed(1) : "—"}
-                                    </span>
-                                </div>
-                            </div>
-                        </motion.div>
-                    ))}
+                                <AnimatePresence>
+                                    {isExpanded && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="border-t border-slate-800/60 bg-slate-900/30"
+                                        >
+                                            <div className="p-4">
+                                                {loadingRatings[entry.week.id] ? (
+                                                    <div className="text-center text-sm text-slate-500 py-2 animate-pulse">
+                                                        جاري تحميل التقييمات...
+                                                    </div>
+                                                ) : weekRatings[entry.week.id]?.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {weekRatings[entry.week.id].map(rating => (
+                                                            <div key={rating.id} className="flex items-center gap-1.5 bg-slate-800/50 border border-slate-700/50 px-2 py-1 rounded-lg">
+                                                                <span className="text-xs text-slate-300">{rating.userName}</span>
+                                                                <div className="flex items-center gap-0.5 ml-1">
+                                                                    <span className="text-xs font-mono font-bold text-amber-400">{rating.score}</span>
+                                                                    <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center text-sm text-slate-500 py-2">
+                                                        لا يوجد تقييمات فردية مسجلة لهذه الطلعة.
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </motion.div>
+                        );
+                    })}
                 </AnimatePresence>
             </div>
         </div>
