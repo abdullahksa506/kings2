@@ -259,11 +259,32 @@ export default function Dashboard() {
     const isKing = currentWeek?.king === user?.name;
 
     const handleSecretImport = async () => {
-        if (!confirm("تأكيد استيراد البيانات التاريخية؟")) return;
+        if (!confirm("تأكيد استيراد البيانات التاريخية وتحديث السجل؟ سيتم حذف أي استيراد سابق لمنع التكرار.")) return;
         setLoading(true);
         try {
             let added = 0;
-            for (const weekData of historicalWeeks) {
+            let deleted = 0;
+
+            // 1. Delete previous historical imports
+            const { collection, getDocs, deleteDoc } = await import('firebase/firestore');
+            const weeksSnap = await getDocs(collection(db, "weeks"));
+            for (const d of weeksSnap.docs) {
+                if (d.id.startsWith("history_week_")) {
+                    await deleteDoc(doc(db, "weeks", d.id));
+                    deleted++;
+                }
+            }
+            const ratingsSnap = await getDocs(collection(db, "ratings"));
+            for (const r of ratingsSnap.docs) {
+                if (r.id.startsWith("rating_history_week_")) {
+                    await deleteDoc(doc(db, "ratings", r.id));
+                }
+            }
+
+            // 2. Import weeks 1-7
+            const weeksToImport = historicalWeeks.filter(w => w.weekNumber <= 7);
+
+            for (const weekData of weeksToImport) {
                 const createdAtDate = new Date(`2025-01-0${weekData.weekNumber}T00:00:00Z`);
                 const createdAt = Timestamp.fromDate(createdAtDate);
                 const weekRef = doc(db, "weeks", weekData.id);
@@ -293,7 +314,7 @@ export default function Dashboard() {
                 });
                 added++;
             }
-            alert(`تم رفع ${added} أسابيع للسجل الشامل بنجاح! حدث الصفحة.`);
+            alert(`تم تنظيف السجل وإضافة ${added} أسابيع للسجل الشامل بنجاح! حدث الصفحة.`);
         } catch (e: any) {
             alert("خطأ: " + e.message);
         }

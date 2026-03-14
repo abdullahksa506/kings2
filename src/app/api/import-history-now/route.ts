@@ -1,14 +1,38 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { collection, doc, setDoc, Timestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, getDocs, query, Timestamp } from 'firebase/firestore';
 import historicalWeeks from "@/data/historicalWeeks.json";
 
 export async function GET() {
     try {
         let added = 0;
+        let deleted = 0;
         let errors = [];
 
-        for (const weekData of historicalWeeks) {
+        // 1. Delete all previous historical imports to prevent duplicates
+        try {
+            const weeksSnap = await getDocs(collection(db, "weeks"));
+            for (const d of weeksSnap.docs) {
+                if (d.id.startsWith("history_week_")) {
+                    await deleteDoc(doc(db, "weeks", d.id));
+                    deleted++;
+                }
+            }
+
+            const ratingsSnap = await getDocs(collection(db, "ratings"));
+            for (const r of ratingsSnap.docs) {
+                if (r.id.startsWith("rating_history_week_")) {
+                    await deleteDoc(doc(db, "ratings", r.id));
+                }
+            }
+        } catch (delErr: any) {
+            errors.push(`Error during cleanup: ${delErr.message}`);
+        }
+
+        // 2. Import only weeks 1-7 (skip 8 and 9 as they exist legitimately)
+        const weeksToImport = historicalWeeks.filter(w => w.weekNumber <= 7);
+
+        for (const weekData of weeksToImport) {
             try {
                 // A fake old date so they sit at the very bottom of the real history
                 // We space them out slightly just to guarantee sorting if needed
@@ -52,12 +76,12 @@ export async function GET() {
         }
 
         if (errors.length > 0) {
-            return NextResponse.json({ success: false, added, errors });
+            return NextResponse.json({ success: false, added, deleted, errors });
         }
 
         return NextResponse.json({ 
             success: true, 
-            message: `تم استيراد ${added} أسابيع بنجاح للوحة السجل الشامل. يمكنك الآن العودة للصفحة الرئيسية.` 
+            message: `تم تنظيف السجل السابق، واستيراد ${added} أسابيع قديمة (من 1 إلى 7) للوحة السجل الشامل. العبث محذوف.` 
         });
 
     } catch (e: any) {
