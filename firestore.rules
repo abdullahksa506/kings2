@@ -9,23 +9,22 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if true; // They need to read to verify login/count users. We removed getDocs in code and hash passwords, so this leak is mitigated.
-      allow create: if true; 
-      allow update: if true; // To update passwords/reset codes. Normally this requires auth, but KingApp uses custom auth.
+      allow create, update: if true; // No delete allowed
     }
 
     match /weeks/{weekId} {
       allow read: if true;
-      allow write: if true; // Everyone interacts with weeks
+      allow create, update: if true; // No delete allowed
     }
 
     match /ratings/{ratingId} {
       allow read: if true;
-      allow write: if true; // Everyone can submit ratings
+      allow create, update: if true; // No delete allowed
     }
 
     match /bathroomRatings/{ratingId} {
       allow read: if true;
-      allow write: if true;
+      allow create, update: if true; // No delete allowed
     }
   }
 }

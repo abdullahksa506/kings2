@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, Rating, VALID_NAMES } from "@/lib/services";
-import { Star, ShieldAlert, BarChart3, KeyRound, Users, CheckCircle2 } from "lucide-react";
+import { Star, ShieldAlert, BarChart3, KeyRound, Users, CheckCircle2, Bell } from "lucide-react";
+import Link from "next/link";
 import ExportDataButton from "./ExportDataButton";
 
 export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWeekId?: string, pastWeekId?: string }) {
@@ -229,6 +230,18 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
                     </div>
                 </div>
             )}
+
+            {/* Test Notifications Section */}
+            <div className="mt-8 pt-6 border-t border-sky-900/50">
+                <h3 className="text-lg font-bold text-sky-500 mb-4 flex items-center gap-2">
+                    <Bell className="w-5 h-5" />
+                    إدارة وإرسال الإشعارات التجريبية
+                </h3>
+                <Link href="/admin/notifications" className="inline-flex items-center gap-2 bg-sky-500/20 border border-sky-500/30 text-sky-400 hover:bg-sky-500/30 py-3 px-6 rounded-xl font-semibold transition-colors w-full md:w-auto justify-center">
+                    <Bell className="w-5 h-5" />
+                    الانتقال لصفحة اختبار الإشعارات الفردية
+                </Link>
+            </div>
 
             {/* Export Data Section */}
             <div className="mt-8 pt-6 border-t border-emerald-900/50">

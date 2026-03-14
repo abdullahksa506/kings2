@@ -16,6 +16,22 @@ import {
 } from "firebase/firestore";
 import { hashPassword, isHashed } from "./hash";
 
+// Security verification helper
+export async function verifyIdentity(userName: string): Promise<boolean> {
+    if (typeof window === "undefined") return false; // Verify works only on client
+    
+    const storedToken = localStorage.getItem("king_user_token");
+    if (!storedToken) return false;
+
+    const userRef = doc(db, "users", userName);
+    const userDoc = await getDoc(userRef);
+    if (!userDoc.exists()) return false;
+
+    const userData = userDoc.data();
+    // Compare the token exact match (token in local storage should perfectly equal the hashed password in db)
+    return userData.password === storedToken;
+}
+
 export interface WeekSession {
     id: string;
     king: string | null; // null if random week
@@ -103,6 +119,8 @@ export const services = {
     },
 
     async toggleAttendance(weekId: string, userName: string, isAbsent: boolean) {
+        if (!(await verifyIdentity(userName))) throw new Error("Unauthorized - Identity mismatch");
+
         const weekRef = doc(db, "weeks", weekId);
         const weekSnap = await getDoc(weekRef);
         if (!weekSnap.exists()) return false;
@@ -130,9 +148,16 @@ export const services = {
     },
 
     async setWeekChoices(weekId: string, day: "الخميس" | "الجمعة" | null, restaurant: string | null, activity: string | null) {
-        // Note: Wed 8pm/10pm constraints will be validated in the UI before calling this, 
-        // or we can add server-timestamp validation here.
+        // We verify the current user is actually the king making the choice
+        const currentUser = localStorage.getItem("king_user_name");
+        if (!currentUser || !(await verifyIdentity(currentUser))) throw new Error("Unauthorized");
+
         const weekRef = doc(db, "weeks", weekId);
+        const weekSnap = await getDoc(weekRef);
+        if (weekSnap.exists() && weekSnap.data().king !== currentUser) {
+            throw new Error("Only the King can make these choices");
+        }
+
         await updateDoc(weekRef, {
             day,
             restaurant,
@@ -142,6 +167,10 @@ export const services = {
 
     // Secret Dean Power
     async secretlyChangeKing(weekId: string, newKingName: string | null) {
+        const currentUser = localStorage.getItem("king_user_name");
+        if (!currentUser || !(await verifyIdentity(currentUser))) throw new Error("Unauthorized");
+        if (currentUser !== "شوكا") throw new Error("Unauthorized - Dean only");
+
         const weekRef = doc(db, "weeks", weekId);
         await updateDoc(weekRef, {
             king: newKingName,
@@ -150,11 +179,16 @@ export const services = {
     },
 
     async toggleRatingEnabled(weekId: string, enabled: boolean) {
+        const currentUser = localStorage.getItem("king_user_name");
+        if (!currentUser || !(await verifyIdentity(currentUser))) throw new Error("Unauthorized");
+        if (currentUser !== "شوكا") throw new Error("Unauthorized - Dean only");
+
         const weekRef = doc(db, "weeks", weekId);
         await updateDoc(weekRef, { ratingEnabled: enabled });
     },
 
     async submitRating(weekId: string, userName: string, score: number) {
+        if (!(await verifyIdentity(userName))) throw new Error("Unauthorized - Identity mismatch");
         if (score < 1 || score > 5) throw new Error("Invalid score");
         const docRef = await addDoc(collection(db, "ratings"), {
             weekId,
@@ -192,6 +226,7 @@ export const services = {
     },
 
     async submitBathroomRating(weekId: string, userName: string, score: number) {
+        if (!(await verifyIdentity(userName))) throw new Error("Unauthorized - Identity mismatch");
         if (score < 1 || score > 5) throw new Error("Invalid score");
         const docRef = await addDoc(collection(db, "bathroomRatings"), {
             weekId,
@@ -283,6 +318,10 @@ export const services = {
     },
 
     async resetCycleLeaderboard(currentWeekId: string, newCycleNumber: number) {
+        const currentUser = localStorage.getItem("king_user_name");
+        if (!currentUser || !(await verifyIdentity(currentUser))) throw new Error("Unauthorized");
+        if (currentUser !== "شوكا") throw new Error("Unauthorized - Dean only");
+
         const weekRef = doc(db, "weeks", currentWeekId);
         await updateDoc(weekRef, { cycleNumber: newCycleNumber });
     },
@@ -293,11 +332,13 @@ export const services = {
     },
 
     async updateUserStandaloneStatus(userName: string, isStandalone: boolean) {
+        if (!(await verifyIdentity(userName))) return; // silently fail as this is background telemetry
         const userRef = doc(db, "users", userName);
         await updateDoc(userRef, { isStandalone });
     },
 
     async updatePushSubscription(userName: string, subscription: any) {
+        if (!(await verifyIdentity(userName))) throw new Error("Unauthorized - Identity mismatch");
         const userRef = doc(db, "users", userName);
         await updateDoc(userRef, { pushSubscription: JSON.stringify(subscription) });
     },
@@ -327,6 +368,8 @@ export const services = {
 
     async requestPasswordReset(userName: string): Promise<void> {
         if (!VALID_NAMES.includes(userName)) throw new Error("اسم غير مصرح به");
+        
+        // This is the only exception: anyone can request a reset code (they still need the phone to receive it)
 
         const userRef = doc(db, "users", userName);
         const userDoc = await getDoc(userRef);
@@ -372,6 +415,7 @@ export const services = {
     },
 
     async changePassword(userName: string, currentPassword: string, newPassword: string): Promise<void> {
+        if (!(await verifyIdentity(userName))) throw new Error("Unauthorized - Identity mismatch");
         if (!VALID_NAMES.includes(userName)) throw new Error("اسم غير مصرح به");
 
         const userRef = doc(db, "users", userName);
