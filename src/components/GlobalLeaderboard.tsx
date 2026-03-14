@@ -84,11 +84,11 @@ export default function GlobalLeaderboard() {
     }
 
     const sortedData = [...data].sort((a, b) => {
-        const orderA = (a.week.cycleNumber || 1) * 1000 + (a.week.weekNumber || 1);
-        const orderB = (b.week.cycleNumber || 1) * 1000 + (b.week.weekNumber || 1);
+        const timeA = a.week.createdAt.toMillis();
+        const timeB = b.week.createdAt.toMillis();
         
-        if (sortBy === "newest") return orderB - orderA;
-        if (sortBy === "oldest") return orderA - orderB;
+        if (sortBy === "newest") return timeB - timeA;
+        if (sortBy === "oldest") return timeA - timeB;
         if (sortBy === "highest") return b.averageScore - a.averageScore;
         if (sortBy === "lowest") return a.averageScore - b.averageScore;
         return 0;
@@ -158,13 +158,6 @@ export default function GlobalLeaderboard() {
                                             <Crown className="w-3 h-3 text-amber-500/60" />
                                             <span className="text-xs text-slate-400">
                                                 {entry.week.king || "عشوائي"}
-                                            </span>
-                                        </div>
-                                        <span className="text-xs text-slate-700">•</span>
-                                        <div className="flex items-center gap-1.5">
-                                            <Calendar className="w-3 h-3 text-slate-500" />
-                                            <span className="text-xs tracking-wide text-slate-400">
-                                                دورة {entry.week.cycleNumber || 1} أسبوع {entry.week.weekNumber || 1}
                                             </span>
                                         </div>
                                         {entry.week.activity && entry.week.activity.length > 0 && (
