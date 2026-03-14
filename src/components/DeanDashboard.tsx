@@ -78,7 +78,9 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
             </div>
 
             {ratings.length === 0 ? (
-                <p className="text-slate-500 text-sm pb-4">لا يوجد تقييمات لهذا الأسبوع حتى الآن.</p>
+                <div className="pb-4">
+                    <p className="text-slate-500 text-sm mb-4">لا يوجد تقييمات لهذا الأسبوع حتى الآن.</p>
+                </div>
             ) : (
                 <>
                     <div className="flex gap-4 mb-6">

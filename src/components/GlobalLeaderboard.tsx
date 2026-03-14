@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { services, WeekSession } from "@/lib/services";
-import { History, Star, Crown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { services, WeekSession, VALID_NAMES } from "@/lib/services";
+import { History, Star, Crown, Download } from "lucide-react";
 import { motion } from "framer-motion";
+import * as xlsx from "xlsx";
 
 interface LeaderboardEntry {
     week: WeekSession;
@@ -23,6 +24,40 @@ export default function GlobalLeaderboard() {
         };
         fetchData();
     }, []);
+
+    const exportToExcel = () => {
+        if (data.length === 0) return;
+
+        // Map data to a public-safe format (no ratings, no absentees specifically called out, just attendees)
+        const exportData = data.map((entry) => {
+            const week = entry.week;
+
+            // Calculate Attendees: All VALID_NAMES minus absentees
+            const absentees = week.absentees || [];
+            const attendees = VALID_NAMES.filter(name => !absentees.includes(name));
+
+            return {
+                "رقم الدورة": week.cycleNumber || 1,
+                "رقم الأسبوع": week.weekNumber || 1,
+                "الملك": week.king || "أسبوع عشوائي (بدون ملك)",
+                "المطعم": week.restaurant || "غير محدد",
+                "اليوم": week.day || "غير محدد",
+                "الفعالية": week.activity || "لا يوجد",
+                "الحاضرين": attendees.join("، "),
+                // Purposely leaving out ratings
+            };
+        });
+
+        const worksheet = xlsx.utils.json_to_sheet(exportData);
+        // Force right-to-left
+        if (!worksheet["!views"]) worksheet["!views"] = [];
+        worksheet["!views"].push({ rightToLeft: true });
+
+        const workbook = xlsx.utils.book_new();
+        xlsx.utils.book_append_sheet(workbook, worksheet, "السجل الشامل");
+
+        xlsx.writeFile(workbook, "تاريخ_طلعات_الخميس.xlsx");
+    };
 
     if (loading) {
         return (
@@ -48,11 +83,20 @@ export default function GlobalLeaderboard() {
     }
 
     return (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
-            <h3 className="font-semibold text-lg mb-6 text-slate-200 flex items-center gap-2">
-                <History className="w-6 h-6 text-amber-500" />
-                السجل الشامل
-            </h3>
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative">
+            <div className="flex justify-between items-center mb-6">
+                <h3 className="font-semibold text-lg text-slate-200 flex items-center gap-2">
+                    <History className="w-6 h-6 text-amber-500" />
+                    السجل الشامل
+                </h3>
+                <button
+                    onClick={exportToExcel}
+                    className="flex items-center gap-2 text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg hover:bg-emerald-500/30 transition-colors"
+                >
+                    <Download className="w-4 h-4" />
+                    تحميل القائمة
+                </button>
+            </div>
 
             <div className="space-y-3">
                 {data.map((entry, index) => (

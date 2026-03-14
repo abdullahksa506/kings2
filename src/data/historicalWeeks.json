@@ -1,0 +1,161 @@
+[
+  {
+    "id": "history_week_1",
+    "cycleNumber": 1,
+    "weekNumber": 1,
+    "king": "خالد",
+    "isRandom": false,
+    "day": "الخميس",
+    "restaurant": "بافلو",
+    "activity": null,
+    "status": "completed",
+    "ratingEnabled": false,
+    "absentees": [
+      "حكير",
+      "هشام"
+    ],
+    "responded": [],
+    "historicalAverageRating": 4.67
+  },
+  {
+    "id": "history_week_2",
+    "cycleNumber": 1,
+    "weekNumber": 2,
+    "king": "طلال",
+    "isRandom": false,
+    "day": "الخميس",
+    "restaurant": "فلوريا",
+    "activity": null,
+    "status": "completed",
+    "ratingEnabled": false,
+    "absentees": [
+      "نواف"
+    ],
+    "responded": [],
+    "historicalAverageRating": 4.5
+  },
+  {
+    "id": "history_week_3",
+    "cycleNumber": 1,
+    "weekNumber": 3,
+    "king": "حكير",
+    "isRandom": false,
+    "day": "الخميس",
+    "restaurant": "ماما نورة",
+    "activity": null,
+    "status": "completed",
+    "ratingEnabled": false,
+    "absentees": [
+      "خالد",
+      "طلال",
+      "شوكا"
+    ],
+    "responded": [],
+    "historicalAverageRating": 5
+  },
+  {
+    "id": "history_week_4",
+    "cycleNumber": 1,
+    "weekNumber": 4,
+    "king": "شوكا",
+    "isRandom": false,
+    "day": "الخميس",
+    "restaurant": "القصر الكوري",
+    "activity": null,
+    "status": "completed",
+    "ratingEnabled": false,
+    "absentees": [
+      "خالد",
+      "نواف"
+    ],
+    "responded": [],
+    "historicalAverageRating": 3.67
+  },
+  {
+    "id": "history_week_5",
+    "cycleNumber": 1,
+    "weekNumber": 5,
+    "king": "هشام",
+    "isRandom": false,
+    "day": "الخميس",
+    "restaurant": "بيكل",
+    "activity": null,
+    "status": "completed",
+    "ratingEnabled": false,
+    "absentees": [
+      "حكير"
+    ],
+    "responded": [],
+    "historicalAverageRating": 3.33
+  },
+  {
+    "id": "history_week_6",
+    "cycleNumber": 1,
+    "weekNumber": 6,
+    "king": "نواف",
+    "isRandom": false,
+    "day": "الخميس",
+    "restaurant": "سوله",
+    "activity": null,
+    "status": "completed",
+    "ratingEnabled": false,
+    "absentees": [
+      "خالد",
+      "طلال"
+    ],
+    "responded": [],
+    "historicalAverageRating": 4
+  },
+  {
+    "id": "history_week_7",
+    "cycleNumber": 2,
+    "weekNumber": 7,
+    "king": "حكير",
+    "isRandom": false,
+    "day": "الخميس",
+    "restaurant": "فيردي",
+    "activity": null,
+    "status": "completed",
+    "ratingEnabled": false,
+    "absentees": [
+      "طلال",
+      "شوكا",
+      "هشام"
+    ],
+    "responded": [],
+    "historicalAverageRating": 5
+  },
+  {
+    "id": "history_week_8",
+    "cycleNumber": 2,
+    "weekNumber": 8,
+    "king": "خالد",
+    "isRandom": false,
+    "day": "الخميس",
+    "restaurant": "كوجة",
+    "activity": null,
+    "status": "completed",
+    "ratingEnabled": false,
+    "absentees": [],
+    "responded": [],
+    "historicalAverageRating": 4.6
+  },
+  {
+    "id": "history_week_9",
+    "cycleNumber": 2,
+    "weekNumber": 9,
+    "king": "طلال",
+    "isRandom": false,
+    "day": "الخميس",
+    "restaurant": "beefbar",
+    "activity": null,
+    "status": "completed",
+    "ratingEnabled": false,
+    "absentees": [
+      "هشام",
+      "نواف"
+    ],
+    "responded": [],
+    "historicalAverageRating": 3.67
+  }
+]

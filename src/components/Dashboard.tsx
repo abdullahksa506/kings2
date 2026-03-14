@@ -15,8 +15,11 @@ import HungryKingsArena from "./HungryKingsArena";
 import BathroomRatingForm from "./BathroomRatingForm";
 import BathroomRatingsDisplay from "./BathroomRatingsDisplay";
 import BathroomLeaderboard from "./BathroomLeaderboard";
-import { Gamepad2, Bath } from "lucide-react";
+import { Gamepad2, Bath, UploadCloud } from "lucide-react";
 import Link from "next/link";
+import historicalWeeks from "@/data/historicalWeeks.json";
+import { Timestamp, doc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function Dashboard() {
     const { user, logout } = useAuth();
@@ -255,10 +258,59 @@ export default function Dashboard() {
 
     const isKing = currentWeek?.king === user?.name;
 
+    const handleSecretImport = async () => {
+        if (!confirm("تأكيد استيراد البيانات التاريخية؟")) return;
+        setLoading(true);
+        try {
+            let added = 0;
+            for (const weekData of historicalWeeks) {
+                const createdAtDate = new Date(`2025-01-0${weekData.weekNumber}T00:00:00Z`);
+                const createdAt = Timestamp.fromDate(createdAtDate);
+                const weekRef = doc(db, "weeks", weekData.id);
+                
+                await setDoc(weekRef, {
+                    king: weekData.king,
+                    isRandom: weekData.isRandom,
+                    cycleNumber: weekData.cycleNumber,
+                    weekNumber: weekData.weekNumber,
+                    day: weekData.day,
+                    restaurant: weekData.restaurant,
+                    activity: weekData.activity,
+                    status: weekData.status,
+                    ratingEnabled: weekData.ratingEnabled,
+                    absentees: weekData.absentees || [],
+                    responded: weekData.responded || [],
+                    createdAt: createdAt,
+                    historicalAverageRating: weekData.historicalAverageRating
+                });
+
+                const ratingRef = doc(db, "ratings", `rating_${weekData.id}`);
+                await setDoc(ratingRef, {
+                    weekId: weekData.id,
+                    userName: "System_Import",
+                    score: weekData.historicalAverageRating,
+                    createdAt: createdAt
+                });
+                added++;
+            }
+            alert(`تم رفع ${added} أسابيع للسجل الشامل بنجاح! حدث الصفحة.`);
+        } catch (e: any) {
+            alert("خطأ: " + e.message);
+        }
+        setLoading(false);
+    };
+
     return (
         <div className="min-h-screen bg-slate-950 p-4 md:p-8 font-sans relative">
-            {/* Version Badge */}
-            <div className="fixed top-2 left-2 z-50 text-[10px] text-slate-600 font-mono select-none">v10</div>
+            {/* Version Badge & Secret Import */}
+            <div className="fixed top-2 left-2 z-50 flex items-center gap-2">
+                <span className="text-[10px] text-slate-600 font-mono select-none">v10</span>
+                {user?.role === "dean" && (
+                    <button onClick={handleSecretImport} className="text-slate-800 hover:text-amber-500 transition-colors" title="استيراد البيانات السابقة">
+                        <UploadCloud className="w-3 h-3" />
+                    </button>
+                )}
+            </div>
             <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800">
                 <div>
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent flex items-center gap-3">
