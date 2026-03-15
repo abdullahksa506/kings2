@@ -925,6 +925,41 @@ export default function Dashboard() {
                     {/* ===== TAB: المزيد ===== */}
                     {activeTab === "more" && (
                         <div className="space-y-6 max-w-2xl mx-auto">
+
+                            {/* Push Notifications Card */}
+                            {isSupported && (
+                                <div className={`border rounded-3xl p-6 shadow-xl ${isSubscribed ? 'bg-emerald-900/10 border-emerald-500/20' : 'bg-slate-900 border-slate-800'}`}>
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className={`p-2 rounded-xl ${isSubscribed ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-500'}`}>
+                                            <Bell className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-lg text-white">إشعارات الجوال</h3>
+                                            <p className={`text-xs ${isSubscribed ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                                {isSubscribed ? '✅ مفعلة' : '❌ غير مفعلة'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <p className="text-sm text-slate-400 mb-4 leading-relaxed">
+                                        {isSubscribed
+                                            ? 'إذا ما توصلك إشعارات، اضغط الزر تحت عشان تجدد الاشتراك.'
+                                            : 'فعّل الإشعارات عشان يوصلك كل جديد عن الطلعات والتقييمات.'}
+                                    </p>
+                                    <button
+                                        onClick={handleSubscribe}
+                                        disabled={subscribing}
+                                        className={`w-full font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${
+                                            isSubscribed
+                                                ? 'bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-400'
+                                                : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/20'
+                                        }`}
+                                    >
+                                        <Bell className="w-5 h-5" />
+                                        {subscribing ? 'جاري التفعيل...' : isSubscribed ? 'تجديد الاشتراك' : 'تفعيل الإشعارات'}
+                                    </button>
+                                </div>
+                            )}
+
                             {/* Mini-Game Banner */}
                             <div className="bg-gradient-to-br from-amber-900/40 to-slate-900 border border-amber-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
                                 <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500" />
