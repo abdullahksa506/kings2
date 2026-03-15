@@ -19,7 +19,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f59e0b", // Amber 500
+  themeColor: "#f59e0b",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

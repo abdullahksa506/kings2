@@ -64,6 +64,19 @@ export interface BathroomRating {
     createdAt: Timestamp;
 }
 
+export interface Suggestion {
+    id: string;
+    text: string;
+    createdAt: Timestamp;
+}
+
+export interface ChatMessage {
+    id: string;
+    userName: string;
+    text: string;
+    createdAt: Timestamp;
+}
+
 export const VALID_NAMES = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
 export const MAX_BUDGET = 175;
 
@@ -240,6 +253,11 @@ export const services = {
     async getBathroomRatingsForWeek(weekId: string): Promise<BathroomRating[]> {
         const q = query(collection(db, "bathroomRatings"), where("weekId", "==", weekId));
         const snap = await getDocs(q);
+        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as BathroomRating));
+    },
+
+    async getAllBathroomRatings(): Promise<BathroomRating[]> {
+        const snap = await getDocs(collection(db, "bathroomRatings"));
         return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as BathroomRating));
     },
 
@@ -472,5 +490,37 @@ export const services = {
         }
 
         return requests;
+    },
+
+    // --- Suggestions (Anonymous, Dean-only visible) ---
+    async submitSuggestion(text: string) {
+        await addDoc(collection(db, "suggestions"), {
+            text,
+            createdAt: Timestamp.now()
+        });
+    },
+
+    async getAllSuggestions(): Promise<Suggestion[]> {
+        const snap = await getDocs(collection(db, "suggestions"));
+        const suggestions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Suggestion));
+        return suggestions.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+    },
+
+    // --- Public Chat Board ---
+    async sendChatMessage(userName: string, text: string) {
+        if (!(await verifyIdentity(userName))) throw new Error("Unauthorized");
+        await addDoc(collection(db, "chatMessages"), {
+            userName,
+            text,
+            createdAt: Timestamp.now()
+        });
+    },
+
+    listenToChatMessages(callback: (messages: ChatMessage[]) => void) {
+        const q = query(collection(db, "chatMessages"), orderBy("createdAt", "desc"), limit(50));
+        return onSnapshot(q, (snap) => {
+            const messages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
+            callback(messages);
+        });
     }
 };

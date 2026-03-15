@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, VALID_NAMES } from "@/lib/services";
-import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle } from "lucide-react";
+import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import RatingForm from "./RatingForm";
@@ -16,6 +16,8 @@ import HungryKingsArena from "./HungryKingsArena";
 import BathroomRatingForm from "./BathroomRatingForm";
 import BathroomRatingsDisplay from "./BathroomRatingsDisplay";
 import BathroomLeaderboard from "./BathroomLeaderboard";
+import SuggestionBox from "./SuggestionBox";
+import ChatBoard from "./ChatBoard";
 import { Gamepad2, Bath, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import historicalWeeks from "@/data/historicalWeeks.json";
@@ -53,6 +55,10 @@ export default function Dashboard() {
 
     // Mini-game State
     const [isGameOpen, setIsGameOpen] = useState(false);
+
+    // Tab State
+    type TabType = "week" | "leaderboard" | "bathroom" | "more";
+    const [activeTab, setActiveTab] = useState<TabType>("week");
 
     const fetchPastWeekOnly = async () => {
         const previous = await services.getPreviousWeek();
@@ -326,7 +332,7 @@ export default function Dashboard() {
         <div className="min-h-screen bg-slate-950 p-4 md:p-8 font-sans relative">
             {/* Version Badge & Secret Import */}
             <div className="fixed top-2 left-2 z-50 flex items-center gap-2">
-                <span className="text-[10px] text-slate-600 font-mono select-none">v10</span>
+                <span className="text-[10px] text-slate-600 font-mono select-none">v11</span>
                 {user?.role === "dean" && (
                     <button onClick={handleSecretImport} className="text-slate-800 hover:text-amber-500 transition-colors" title="استيراد البيانات السابقة">
                         <UploadCloud className="w-3 h-3" />
@@ -672,305 +678,334 @@ export default function Dashboard() {
                     <div className="w-10 h-10 border-4 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
                 </div>
             ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="pb-24">
 
-                    {/* Main Status Card */}
-                    <div className="lg:col-span-2 space-y-8">
+                    {/* ===== TAB: الأسبوع الحالي ===== */}
+                    {activeTab === "week" && (
+                        <div className="space-y-8 max-w-3xl mx-auto">
 
-                        {/* CURRENT WEEK RATING */}
-                        {currentWeek && currentWeek.ratingEnabled && !hasRatedCurrentWeek && user?.name !== currentWeek.king && !(currentWeek.absentees || []).includes(user?.name || "") && (
-                            <div className="mb-6 relative">
-                                <div className="flex justify-between items-center mb-3">
-                                    <h3 className="text-emerald-400 font-bold flex items-center gap-2"><Unlock className="w-5 h-5" /> تقييم طلعة هذا الأسبوع متاح الآن</h3>
-                                </div>
-                                <RatingForm
-                                    weekId={currentWeek.id}
-                                    userName={user?.name || ""}
-                                    onRated={() => setHasRatedCurrentWeek(true)}
-                                    disabled={false}
-                                />
-                            </div>
-                        )}
-
-                        {/* PAST WEEK RATING (Only if past week exists and user hasn't rated) */}
-                        {pastWeek && pastWeek.ratingEnabled && !hasRatedPastWeek && user?.name !== pastWeek.king && !(pastWeek.absentees || []).includes(user?.name || "") && (
-                            <div className="mb-6">
-                                <h3 className="text-amber-400 font-bold mb-3 flex items-center gap-2"><Unlock className="w-5 h-5" /> تقييم طلعة الأسبوع الماضي متاح</h3>
-                                <RatingForm
-                                    weekId={pastWeek.id}
-                                    userName={user?.name || ""}
-                                    onRated={() => setHasRatedPastWeek(true)}
-                                    disabled={false}
-                                />
-                            </div>
-                        )}
-
-                        {!currentWeek ? (
-                            <div className="text-center p-16 bg-slate-900/50 rounded-3xl border border-slate-800">
-                                <AlertTriangle className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-                                <h3 className="text-2xl font-semibold text-slate-300">لا يوجد أسبوع نشط حالياً</h3>
-                                <p className="text-slate-500 mt-2">ننتظر العميد لبدء الدورة الجديدة.</p>
-                            </div>
-                        ) : (
-                            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
-                                <div className="absolute -top-20 -right-20 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl" />
-
-                                <div className="flex items-start justify-between mb-8 relative z-10">
-                                    <div>
-                                        <h3 className="text-slate-400 font-medium mb-1">دورة هذا الأسبوع</h3>
-                                        <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-                                            ملك الأسبوع: <span className="text-amber-400">{currentWeek.king || "عشوائي"}</span>
-                                            {currentWeek.king === user?.name && (
-                                                <span className="text-xs bg-amber-500/20 text-amber-500 px-3 py-1 rounded-full border border-amber-500/30">
-                                                    أنت الملك!
-                                                </span>
-                                            )}
-                                        </h2>
+                            {/* CURRENT WEEK RATING */}
+                            {currentWeek && currentWeek.ratingEnabled && !hasRatedCurrentWeek && user?.name !== currentWeek.king && !(currentWeek.absentees || []).includes(user?.name || "") && (
+                                <div className="mb-6 relative">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-emerald-400 font-bold flex items-center gap-2"><Unlock className="w-5 h-5" /> تقييم طلعة هذا الأسبوع متاح الآن</h3>
                                     </div>
+                                    <RatingForm
+                                        weekId={currentWeek.id}
+                                        userName={user?.name || ""}
+                                        onRated={() => setHasRatedCurrentWeek(true)}
+                                        disabled={false}
+                                    />
                                 </div>
+                            )}
 
-                                <div className="space-y-6 relative z-10">
-                                    <div className="bg-slate-950/50 rounded-2xl p-5 border border-slate-800 flex items-center gap-4">
-                                        <Calendar className="w-10 h-10 text-slate-500" />
-                                        <div className="flex-1">
-                                            <p className="text-sm text-slate-400 mb-1">يوم الطلعة</p>
-                                            {isKing ? (
-                                                <select
-                                                    value={selectedDay}
-                                                    onChange={e => setSelectedDay(e.target.value as any)}
-                                                    className="bg-slate-900 text-white border border-slate-700 rounded-lg p-2 outline-none w-48 focus:border-amber-500"
-                                                >
-                                                    <option value="الخميس">الخميس</option>
-                                                    <option value="الجمعة">الجمعة</option>
-                                                </select>
-                                            ) : (
-                                                <p className="text-xl font-semibold text-white">
-                                                    {currentWeek.day || <span className="text-slate-600 font-normal">لم يحدد بعد</span>}
-                                                </p>
-                                            )}
+                            {/* PAST WEEK RATING */}
+                            {pastWeek && pastWeek.ratingEnabled && !hasRatedPastWeek && user?.name !== pastWeek.king && !(pastWeek.absentees || []).includes(user?.name || "") && (
+                                <div className="mb-6">
+                                    <h3 className="text-amber-400 font-bold mb-3 flex items-center gap-2"><Unlock className="w-5 h-5" /> تقييم طلعة الأسبوع الماضي متاح</h3>
+                                    <RatingForm
+                                        weekId={pastWeek.id}
+                                        userName={user?.name || ""}
+                                        onRated={() => setHasRatedPastWeek(true)}
+                                        disabled={false}
+                                    />
+                                </div>
+                            )}
+
+                            {!currentWeek ? (
+                                <div className="text-center p-16 bg-slate-900/50 rounded-3xl border border-slate-800">
+                                    <AlertTriangle className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+                                    <h3 className="text-2xl font-semibold text-slate-300">لا يوجد أسبوع نشط حالياً</h3>
+                                    <p className="text-slate-500 mt-2">ننتظر العميد لبدء الدورة الجديدة.</p>
+                                </div>
+                            ) : (
+                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                                    <div className="absolute -top-20 -right-20 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl" />
+
+                                    <div className="flex items-start justify-between mb-8 relative z-10">
+                                        <div>
+                                            <h3 className="text-slate-400 font-medium mb-1">دورة هذا الأسبوع</h3>
+                                            <h2 className="text-3xl font-bold text-white flex items-center gap-3">
+                                                ملك الأسبوع: <span className="text-amber-400">{currentWeek.king || "عشوائي"}</span>
+                                                {currentWeek.king === user?.name && (
+                                                    <span className="text-xs bg-amber-500/20 text-amber-500 px-3 py-1 rounded-full border border-amber-500/30">
+                                                        أنت الملك!
+                                                    </span>
+                                                )}
+                                            </h2>
                                         </div>
                                     </div>
 
-                                    <div className="bg-slate-950/50 rounded-2xl p-5 border border-slate-800 flex items-center gap-4">
-                                        <MapPin className="w-10 h-10 text-slate-500" />
-                                        <div className="flex-1">
-                                            <p className="text-sm text-slate-400 mb-1">المطعم المختار (الميزانية أقل من 175 ريال)</p>
-                                            {isKing ? (
-                                                <input
-                                                    type="text"
-                                                    placeholder="اسم المطعم..."
-                                                    value={restaurant}
-                                                    onChange={e => setRestaurant(e.target.value)}
-                                                    className="bg-slate-900 text-white border border-slate-700 rounded-lg p-3 outline-none w-full max-w-sm focus:border-amber-500"
-                                                />
-                                            ) : (
-                                                <p className="text-xl font-semibold text-white">
-                                                    {currentWeek.restaurant || <span className="text-slate-600 font-normal">لم يحدد بعد</span>}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Attendance Section */}
-                                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-inner">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div>
-                                                <h3 className="text-lg font-semibold text-slate-300">قائمة الحضور والتأكيد</h3>
-                                                <p className="text-xs text-slate-500 mb-2">أكد حضورك أو اعتذارك عن الطلعة</p>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                {!isKing && user?.name && (
-                                                    <button
-                                                        onClick={async () => {
-                                                            setSaving(true);
-                                                            const isAbsent = currentWeek.absentees?.includes(user!.name) || false;
-                                                            const justCompleted = await services.toggleAttendance(currentWeek.id, user!.name, !isAbsent);
-
-                                                            if (justCompleted) {
-                                                                try {
-                                                                    await fetch("/api/reminders/attendance-complete", {
-                                                                        method: "POST",
-                                                                        headers: { "Content-Type": "application/json" },
-                                                                        body: JSON.stringify({ weekId: currentWeek.id })
-                                                                    });
-                                                                } catch (e) {
-                                                                    console.error("Failed to notify members:", e);
-                                                                }
-                                                            }
-
-                                                            await fetchWeek();
-                                                            setSaving(false);
-                                                        }}
-                                                        disabled={saving}
-                                                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border shadow-sm ${currentWeek.absentees?.includes(user?.name) ? 'bg-red-500/20 border-red-500/30 text-red-400 hover:bg-red-500/30' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30'}`}
+                                    <div className="space-y-6 relative z-10">
+                                        <div className="bg-slate-950/50 rounded-2xl p-5 border border-slate-800 flex items-center gap-4">
+                                            <Calendar className="w-10 h-10 text-slate-500" />
+                                            <div className="flex-1">
+                                                <p className="text-sm text-slate-400 mb-1">يوم الطلعة</p>
+                                                {isKing ? (
+                                                    <select
+                                                        value={selectedDay}
+                                                        onChange={e => setSelectedDay(e.target.value as any)}
+                                                        className="bg-slate-900 text-white border border-slate-700 rounded-lg p-2 outline-none w-48 focus:border-amber-500"
                                                     >
-                                                        {currentWeek.absentees?.includes(user?.name) ? "أنا معتذر ❌" : "سأحضر ✅"}
-                                                    </button>
+                                                        <option value="الخميس">الخميس</option>
+                                                        <option value="الجمعة">الجمعة</option>
+                                                    </select>
+                                                ) : (
+                                                    <p className="text-xl font-semibold text-white">
+                                                        {currentWeek.day || <span className="text-slate-600 font-normal">لم يحدد بعد</span>}
+                                                    </p>
                                                 )}
                                             </div>
                                         </div>
 
-                                        <div className="space-y-4">
-                                            {/* Attendees Section */}
-                                            <div>
-                                                <p className="text-sm text-emerald-500 mb-2 font-semibold">
-                                                    الحاضرين ({VALID_NAMES.filter(n => (currentWeek.responded || []).includes(n) && !(currentWeek.absentees || []).includes(n) || n === currentWeek.king).length}):
-                                                </p>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {VALID_NAMES.filter(n => (currentWeek.responded || []).includes(n) && !(currentWeek.absentees || []).includes(n) || n === currentWeek.king).map(name => (
-                                                        <span key={name} className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm rounded-lg flex items-center gap-1">
-                                                            {name} {name === currentWeek.king ? "👑" : "✅"}
-                                                        </span>
-                                                    ))}
+                                        <div className="bg-slate-950/50 rounded-2xl p-5 border border-slate-800 flex items-center gap-4">
+                                            <MapPin className="w-10 h-10 text-slate-500" />
+                                            <div className="flex-1">
+                                                <p className="text-sm text-slate-400 mb-1">المطعم المختار (الميزانية أقل من 175 ريال)</p>
+                                                {isKing ? (
+                                                    <input
+                                                        type="text"
+                                                        placeholder="اسم المطعم..."
+                                                        value={restaurant}
+                                                        onChange={e => setRestaurant(e.target.value)}
+                                                        className="bg-slate-900 text-white border border-slate-700 rounded-lg p-3 outline-none w-full max-w-sm focus:border-amber-500"
+                                                    />
+                                                ) : (
+                                                    <p className="text-xl font-semibold text-white">
+                                                        {currentWeek.restaurant || <span className="text-slate-600 font-normal">لم يحدد بعد</span>}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Attendance Section */}
+                                        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-inner">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div>
+                                                    <h3 className="text-lg font-semibold text-slate-300">قائمة الحضور والتأكيد</h3>
+                                                    <p className="text-xs text-slate-500 mb-2">أكد حضورك أو اعتذارك عن الطلعة</p>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    {!isKing && user?.name && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                setSaving(true);
+                                                                const isAbsent = currentWeek.absentees?.includes(user!.name) || false;
+                                                                const justCompleted = await services.toggleAttendance(currentWeek.id, user!.name, !isAbsent);
+
+                                                                if (justCompleted) {
+                                                                    try {
+                                                                        await fetch("/api/reminders/attendance-complete", {
+                                                                            method: "POST",
+                                                                            headers: { "Content-Type": "application/json" },
+                                                                            body: JSON.stringify({ weekId: currentWeek.id })
+                                                                        });
+                                                                    } catch (e) {
+                                                                        console.error("Failed to notify members:", e);
+                                                                    }
+                                                                }
+
+                                                                await fetchWeek();
+                                                                setSaving(false);
+                                                            }}
+                                                            disabled={saving}
+                                                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border shadow-sm ${currentWeek.absentees?.includes(user?.name) ? 'bg-red-500/20 border-red-500/30 text-red-400 hover:bg-red-500/30' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30'}`}
+                                                        >
+                                                            {currentWeek.absentees?.includes(user?.name) ? "أنا معتذر ❌" : "سأحضر ✅"}
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
 
-                                            {/* Waiting Response Section */}
-                                            {VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).length > 0 && (
-                                                <div className="pt-2 border-t border-slate-800/50">
-                                                    <p className="text-sm text-slate-400 mb-2 font-semibold">
-                                                        بانتظار الرد ({VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).length}):
+                                            <div className="space-y-4">
+                                                {/* Attendees Section */}
+                                                <div>
+                                                    <p className="text-sm text-emerald-500 mb-2 font-semibold">
+                                                        الحاضرين ({VALID_NAMES.filter(n => (currentWeek.responded || []).includes(n) && !(currentWeek.absentees || []).includes(n) || n === currentWeek.king).length}):
                                                     </p>
                                                     <div className="flex flex-wrap gap-2">
-                                                        {VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).map(name => (
-                                                            <span key={name} className="px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-400 text-sm rounded-lg flex items-center gap-1 opacity-70">
-                                                                {name} ⏳
+                                                        {VALID_NAMES.filter(n => (currentWeek.responded || []).includes(n) && !(currentWeek.absentees || []).includes(n) || n === currentWeek.king).map(name => (
+                                                            <span key={name} className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm rounded-lg flex items-center gap-1">
+                                                                {name} {name === currentWeek.king ? "👑" : "✅"}
                                                             </span>
                                                         ))}
                                                     </div>
                                                 </div>
-                                            )}
 
-                                            {/* Absentees Section */}
-                                            {(currentWeek.absentees || []).length > 0 && (
-                                                <div className="pt-2 border-t border-slate-800/50">
-                                                    <p className="text-sm text-red-500 mb-2 font-semibold">
-                                                        المعتذرين ({(currentWeek.absentees || []).length}):
-                                                    </p>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {(currentWeek.absentees || []).map(name => (
-                                                            <span key={name} className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg flex items-center gap-1">
-                                                                {name} ❌
-                                                            </span>
-                                                        ))}
+                                                {/* Waiting Response Section */}
+                                                {VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).length > 0 && (
+                                                    <div className="pt-2 border-t border-slate-800/50">
+                                                        <p className="text-sm text-slate-400 mb-2 font-semibold">
+                                                            بانتظار الرد ({VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).length}):
+                                                        </p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).map(name => (
+                                                                <span key={name} className="px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-400 text-sm rounded-lg flex items-center gap-1 opacity-70">
+                                                                    {name} ⏳
+                                                                </span>
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
+                                                )}
+
+                                                {/* Absentees Section */}
+                                                {(currentWeek.absentees || []).length > 0 && (
+                                                    <div className="pt-2 border-t border-slate-800/50">
+                                                        <p className="text-sm text-red-500 mb-2 font-semibold">
+                                                            المعتذرين ({(currentWeek.absentees || []).length}):
+                                                        </p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {(currentWeek.absentees || []).map(name => (
+                                                                <span key={name} className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg flex items-center gap-1">
+                                                                    {name} ❌
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
+
+                                        {isKing && (
+                                            <div className="pt-4 border-t border-slate-800">
+                                                <button
+                                                    onClick={handleSetChoices}
+                                                    disabled={saving}
+                                                    className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-semibold py-3 px-8 rounded-xl flex items-center gap-2 transition-all w-full md:w-auto justify-center"
+                                                >
+                                                    {saving ? "جاري الحفظ..." : "حفظ القرارات"}
+                                                    <CheckCircle className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
-
-                                    {isKing && (
-                                        <div className="pt-4 border-t border-slate-800">
-                                            <button
-                                                onClick={handleSetChoices}
-                                                disabled={saving}
-                                                className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-semibold py-3 px-8 rounded-xl flex items-center gap-2 transition-all w-full md:w-auto justify-center"
-                                            >
-                                                {saving ? "جاري الحفظ..." : "حفظ القرارات"}
-                                                <CheckCircle className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                    )}
                                 </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="space-y-6">
-                        {/* Mini-Game Banner */}
-                        <div className="bg-gradient-to-br from-amber-900/40 to-slate-900 border border-amber-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
-                            <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500" />
-                            <div className="relative z-10">
-                                <div className="flex items-center gap-3 mb-3">
-                                    <div className="bg-amber-500/20 p-2 rounded-xl text-amber-500">
-                                        <Gamepad2 className="w-6 h-6" />
-                                    </div>
-                                    <h3 className="font-bold text-xl text-white">صراع الملوك الجياع</h3>
-                                </div>
-                                <p className="text-sm text-slate-300 mb-5 leading-relaxed">
-                                    لعبة أونلاين جماعية. ادخل الحلبة، اجمع البرجر 🍔، ونافس الشباب على المركز الأول!
-                                </p>
-                                <button
-                                    onClick={() => setIsGameOpen(true)}
-                                    className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
-                                >
-                                    <PlayCircle className="w-5 h-5 fill-current" />
-                                    العب الآن
-                                </button>
-                            </div>
+                            )}
                         </div>
+                    )}
 
-                        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl text-center flex flex-col items-center">
-                            <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mb-4 border border-amber-500/20">
-                                <ScrollText className="w-8 h-8 text-amber-500" />
-                            </div>
-                            <h3 className="font-bold text-xl mb-2 text-slate-200">دستور عرش الخميس</h3>
-                            <p className="text-sm text-slate-400 mb-6 leading-relaxed">
-                                القوانين المنظمة للطلعات الأسبوعية، حقوق وواجبات ملك الخميس، وآلية التصويت وتقييم المطاعم والحضور.
-                            </p>
-                            <button
-                                onClick={() => setIsConstitutionOpen(true)}
-                                className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-amber-500 font-semibold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
-                            >
-                                <BookOpen className="w-5 h-5" />
-                                قراءة الدستور الكامل
-                            </button>
+                    {/* ===== TAB: لوحة المتصدرين ===== */}
+                    {activeTab === "leaderboard" && (
+                        <div className="space-y-6 max-w-2xl mx-auto">
+                            <KingsLeaderboard />
+                            <Leaderboard
+                                cycleNumber={currentWeek ? currentWeek.cycleNumber : (pastWeek ? pastWeek.cycleNumber : 1)}
+                                isDean={user?.role === "dean"}
+                                onReset={currentWeek ? async () => {
+                                    setSaving(true);
+                                    await services.resetCycleLeaderboard(currentWeek.id, currentWeek.cycleNumber + 1);
+                                    await fetchWeek();
+                                    setSaving(false);
+                                } : undefined}
+                            />
+                            <GlobalLeaderboard />
                         </div>
+                    )}
 
-                        {/* Leaderboard Section */}
-                        <Leaderboard
-                            cycleNumber={currentWeek ? currentWeek.cycleNumber : (pastWeek ? pastWeek.cycleNumber : 1)}
-                            isDean={user?.role === "dean"}
-                            onReset={currentWeek ? async () => {
-                                setSaving(true);
-                                await services.resetCycleLeaderboard(currentWeek.id, currentWeek.cycleNumber + 1);
-                                await fetchWeek();
-                                setSaving(false);
-                            } : undefined}
-                        />
-
-                        {/* Global Chronological Leaderboard */}
-                        <GlobalLeaderboard />
-
-                        {/* Kings Average Leaderboard */}
-                        <KingsLeaderboard />
-
-                        {/* BATHROOM RATING SECTION */}
-                        <div className="space-y-6 border-t border-sky-900/30 pt-8 mt-8">
-                            <h2 className="text-2xl font-bold text-sky-400 mb-6 flex items-center justify-center gap-2">
+                    {/* ===== TAB: تقييم الحمامات ===== */}
+                    {activeTab === "bathroom" && (
+                        <div className="space-y-6 max-w-2xl mx-auto">
+                            <h2 className="text-2xl font-bold text-sky-400 flex items-center justify-center gap-2">
                                 <Bath className="w-6 h-6" />
                                 قسم تقييم حمامات المطاعم
                             </h2>
-                            {(currentWeek && !hasRatedBathroomCurrentWeek) && (
+                            {(currentWeek && !hasRatedBathroomCurrentWeek && user?.name === "هشام") && (
                                 <BathroomRatingForm
                                     weekId={currentWeek.id}
                                     userName={user?.name || ""}
                                     restaurantName={currentWeek.restaurant || undefined}
                                     onRated={() => setHasRatedBathroomCurrentWeek(true)}
-                                    disabled={!currentWeek.ratingEnabled || currentWeek.king === user?.name || (currentWeek.absentees || []).includes(user?.name || "")}
+                                    disabled={!currentWeek.ratingEnabled || (currentWeek.absentees || []).includes(user?.name || "")}
                                 />
                             )}
-
-                            {(pastWeek && !hasRatedBathroomPastWeek) && (
-                                <BathroomRatingForm
-                                    weekId={pastWeek.id}
-                                    userName={user?.name || ""}
-                                    restaurantName={pastWeek.restaurant || undefined}
-                                    onRated={() => setHasRatedBathroomPastWeek(true)}
-                                    disabled={!pastWeek.ratingEnabled || pastWeek.king === user?.name || (pastWeek.absentees || []).includes(user?.name || "")}
-                                />
-                            )}
-
-                            {currentWeek && <BathroomRatingsDisplay weekId={currentWeek.id} restaurantName={currentWeek.restaurant || undefined} />}
-                            {pastWeek && <BathroomRatingsDisplay weekId={pastWeek.id} restaurantName={pastWeek.restaurant || undefined} />}
-
-                            {/* TODO: Add BathroomLeaderboard here next */}
+                            <BathroomRatingsDisplay />
                         </div>
-                    </div>
+                    )}
+
+                    {/* ===== TAB: المزيد ===== */}
+                    {activeTab === "more" && (
+                        <div className="space-y-6 max-w-2xl mx-auto">
+                            {/* Mini-Game Banner */}
+                            <div className="bg-gradient-to-br from-amber-900/40 to-slate-900 border border-amber-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
+                                <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500" />
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="bg-amber-500/20 p-2 rounded-xl text-amber-500">
+                                            <Gamepad2 className="w-6 h-6" />
+                                        </div>
+                                        <h3 className="font-bold text-xl text-white">صراع الملوك الجياع</h3>
+                                    </div>
+                                    <p className="text-sm text-slate-300 mb-5 leading-relaxed">
+                                        لعبة أونلاين جماعية. ادخل الحلبة، اجمع البرجر 🍔، ونافس الشباب على المركز الأول!
+                                    </p>
+                                    <button
+                                        onClick={() => setIsGameOpen(true)}
+                                        className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+                                    >
+                                        <PlayCircle className="w-5 h-5 fill-current" />
+                                        العب الآن
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Constitution */}
+                            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl text-center flex flex-col items-center">
+                                <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mb-4 border border-amber-500/20">
+                                    <ScrollText className="w-8 h-8 text-amber-500" />
+                                </div>
+                                <h3 className="font-bold text-xl mb-2 text-slate-200">دستور عرش الخميس</h3>
+                                <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+                                    القوانين المنظمة للطلعات الأسبوعية، حقوق وواجبات ملك الخميس، وآلية التصويت وتقييم المطاعم والحضور.
+                                </p>
+                                <button
+                                    onClick={() => setIsConstitutionOpen(true)}
+                                    className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-amber-500 font-semibold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
+                                >
+                                    <BookOpen className="w-5 h-5" />
+                                    قراءة الدستور الكامل
+                                </button>
+                            </div>
+
+                            {/* Suggestion Box */}
+                            <SuggestionBox isDean={user?.role === "dean"} />
+
+                            {/* Chat Board */}
+                            <ChatBoard userName={user?.name || ""} />
+                        </div>
+                    )}
 
                 </div>
-            )
-            }
+            )}
+
+            {/* ===== BOTTOM TAB BAR ===== */}
+            {!loading && (
+                <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 pb-safe">
+                    <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-2">
+                        {[
+                            { id: "week" as TabType, icon: Calendar, label: "الأسبوع" },
+                            { id: "leaderboard" as TabType, icon: Trophy, label: "المتصدرين" },
+                            { id: "bathroom" as TabType, icon: Bath, label: "الحمامات" },
+                            { id: "more" as TabType, icon: Ellipsis, label: "المزيد" },
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all duration-200 min-w-[64px] ${
+                                    activeTab === tab.id
+                                        ? "text-amber-500 scale-105"
+                                        : "text-slate-500 hover:text-slate-300"
+                                }`}
+                            >
+                                <tab.icon className={`w-5 h-5 transition-all ${activeTab === tab.id ? "drop-shadow-[0_0_6px_rgba(245,158,11,0.5)]" : ""}`} />
+                                <span className={`text-[10px] font-medium transition-all ${activeTab === tab.id ? "text-amber-400" : ""}`}>{tab.label}</span>
+                                {activeTab === tab.id && (
+                                    <div className="absolute bottom-1 w-6 h-0.5 bg-amber-500 rounded-full" />
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <ConstitutionModal
                 isOpen={isConstitutionOpen}
