@@ -522,5 +522,195 @@ export const services = {
             const messages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
             callback(messages);
         });
+    },
+
+    // --- Visit Tracking ---
+    async recordVisit() {
+        const today = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
+        await addDoc(collection(db, "siteVisits"), {
+            date: today,
+            timestamp: Timestamp.now()
+        });
+    },
+
+    async getVisitStats(): Promise<{ total: number; today: number; thisWeek: number; thisMonth: number }> {
+        const snap = await getDocs(collection(db, "siteVisits"));
+        const total = snap.size;
+        const today = new Date().toISOString().split("T")[0];
+        
+        const now = new Date();
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+        const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+
+        let todayCount = 0;
+        let weekCount = 0;
+        let monthCount = 0;
+
+        snap.forEach(doc => {
+            const d = doc.data().date;
+            if (d === today) todayCount++;
+            if (d >= weekAgo) weekCount++;
+            if (d >= monthStart) monthCount++;
+        });
+
+        return { total, today: todayCount, thisWeek: weekCount, thisMonth: monthCount };
+    },
+
+    // --- Comprehensive Statistics ---
+    async getStatistics() {
+        // 1. Get all weeks
+        const weeksSnap = await getDocs(collection(db, "weeks"));
+        const allWeeks = weeksSnap.docs.map(d => ({ id: d.id, ...d.data() } as WeekSession));
+        const completedWeeks = allWeeks.filter(w => w.status === "completed");
+        const pendingWeeks = allWeeks.filter(w => w.status === "pending");
+
+        // 2. Get all ratings
+        const ratingsSnap = await getDocs(collection(db, "ratings"));
+        const allRatings = ratingsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Rating));
+
+        // 3. Get chat messages count
+        const chatSnap = await getDocs(collection(db, "chatMessages"));
+        const chatCount = chatSnap.size;
+        
+        // 4. Get suggestions count
+        const suggestionsSnap = await getDocs(collection(db, "suggestions"));
+        const suggestionsCount = suggestionsSnap.size;
+
+        // 5. Visit stats
+        const visitStats = await this.getVisitStats();
+
+        // --- Compute member stats ---
+        const memberStats: Record<string, {
+            timesAsKing: number;
+            attended: number;
+            absent: number;
+            totalWeeks: number;
+            ratingsGiven: number;
+        }> = {};
+
+        for (const name of VALID_NAMES) {
+            memberStats[name] = { timesAsKing: 0, attended: 0, absent: 0, totalWeeks: 0, ratingsGiven: 0 };
+        }
+
+        for (const week of completedWeeks) {
+            if (week.king && memberStats[week.king]) {
+                memberStats[week.king].timesAsKing++;
+            }
+            for (const name of VALID_NAMES) {
+                if (name === week.king) {
+                    memberStats[name].attended++;
+                    memberStats[name].totalWeeks++;
+                } else if ((week.responded || []).includes(name)) {
+                    memberStats[name].totalWeeks++;
+                    if ((week.absentees || []).includes(name)) {
+                        memberStats[name].absent++;
+                    } else {
+                        memberStats[name].attended++;
+                    }
+                }
+            }
+        }
+
+        // Count ratings per user
+        for (const rating of allRatings) {
+            if (rating.userName !== "System_Import" && memberStats[rating.userName]) {
+                memberStats[rating.userName].ratingsGiven++;
+            }
+        }
+
+        // --- Restaurant stats ---
+        const restaurantCounts: Record<string, number> = {};
+        for (const week of completedWeeks) {
+            if (week.restaurant) {
+                restaurantCounts[week.restaurant] = (restaurantCounts[week.restaurant] || 0) + 1;
+            }
+        }
+        const sortedRestaurants = Object.entries(restaurantCounts).sort((a, b) => b[1] - a[1]);
+        const uniqueRestaurants = Object.keys(restaurantCounts).length;
+
+        // --- Day preference stats ---
+        let thursdayCount = 0;
+        let fridayCount = 0;
+        for (const week of completedWeeks) {
+            if (week.day === "الخميس") thursdayCount++;
+            else if (week.day === "الجمعة") fridayCount++;
+        }
+
+        // --- Cycle stats ---
+        const maxCycle = completedWeeks.reduce((max, w) => Math.max(max, w.cycleNumber || 1), 1);
+
+        // --- Fun facts ---
+        const mostAttendant = Object.entries(memberStats).sort((a, b) => b[1].attended - a[1].attended)[0];
+        const mostAbsent = Object.entries(memberStats).sort((a, b) => b[1].absent - a[1].absent)[0];
+        const mostKing = Object.entries(memberStats).sort((a, b) => b[1].timesAsKing - a[1].timesAsKing)[0];
+        
+        const avgAttendancePerWeek = completedWeeks.length > 0
+            ? VALID_NAMES.reduce((sum, name) => sum + memberStats[name].attended, 0) / completedWeeks.length
+            : 0;
+
+        // --- Streaks ---
+        const streaks: Record<string, { current: number; max: number }> = {};
+        for (const name of VALID_NAMES) {
+            streaks[name] = { current: 0, max: 0 };
+        }
+        const sortedWeeks = [...completedWeeks].sort((a, b) => a.createdAt.toMillis() - b.createdAt.toMillis());
+        for (const week of sortedWeeks) {
+            for (const name of VALID_NAMES) {
+                const wasPresent = name === week.king || 
+                    ((week.responded || []).includes(name) && !(week.absentees || []).includes(name));
+                if (wasPresent) {
+                    streaks[name].current++;
+                    streaks[name].max = Math.max(streaks[name].max, streaks[name].current);
+                } else {
+                    streaks[name].current = 0;
+                }
+            }
+        }
+
+        const longestStreak = Object.entries(streaks).sort((a, b) => b[1].max - a[1].max)[0];
+
+        // --- Chat activity per user ---
+        const chatPerUser: Record<string, number> = {};
+        chatSnap.forEach(d => {
+            const name = d.data().userName;
+            if (name) chatPerUser[name] = (chatPerUser[name] || 0) + 1;
+        });
+        const mostChatActive = Object.entries(chatPerUser).sort((a, b) => b[1] - a[1])[0];
+
+        // --- First and last outing dates ---
+        const firstOuting = sortedWeeks.length > 0 ? sortedWeeks[0] : null;
+        const lastOuting = sortedWeeks.length > 0 ? sortedWeeks[sortedWeeks.length - 1] : null;
+
+        // --- Days since first outing ---
+        const daysSinceFirst = firstOuting 
+            ? Math.floor((Date.now() - firstOuting.createdAt.toMillis()) / (1000 * 60 * 60 * 24))
+            : 0;
+
+        return {
+            visitStats,
+            totalOutings: completedWeeks.length,
+            currentWeekActive: pendingWeeks.length > 0,
+            totalCycles: maxCycle,
+            memberStats,
+            sortedRestaurants,
+            uniqueRestaurants,
+            thursdayCount,
+            fridayCount,
+            chatCount,
+            suggestionsCount,
+            avgAttendancePerWeek: Math.round(avgAttendancePerWeek * 10) / 10,
+            funFacts: {
+                mostAttendant: mostAttendant ? { name: mostAttendant[0], count: mostAttendant[1].attended } : null,
+                mostAbsent: mostAbsent ? { name: mostAbsent[0], count: mostAbsent[1].absent } : null,
+                mostKing: mostKing ? { name: mostKing[0], count: mostKing[1].timesAsKing } : null,
+                longestStreak: longestStreak ? { name: longestStreak[0], streak: longestStreak[1].max } : null,
+                mostChatActive: mostChatActive ? { name: mostChatActive[0], count: mostChatActive[1] } : null,
+            },
+            streaks,
+            chatPerUser,
+            daysSinceFirst,
+            firstOutingDate: firstOuting?.createdAt || null,
+            lastOutingDate: lastOuting?.createdAt || null,
+        };
     }
 };

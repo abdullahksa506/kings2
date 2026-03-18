@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 export default function ClientSecurity() {
     const isClient = typeof window !== "undefined";
     const debuggerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const devtoolsCheckRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         if (!isClient) return;
@@ -39,23 +40,69 @@ export default function ClientSecurity() {
         };
 
         // 3. Debugger Trap (Anti-debugging loop)
-        // If they open DevTools from the browser menu, this will freeze the console
-        // making it very difficult to execute commands or inspect elements comfortably.
         const startDebuggerTrap = () => {
-             // We use a self-invoking function to make it slightly harder to bypass via simple console overrides
             (function trap() {
                 try {
-                    // This causes the browser to pause execution if DevTools is open
                     // eslint-disable-next-line no-debugger
                     debugger;
-                } catch (err) {
-                    // Ignore
-                }
+                } catch (err) { /* Ignore */ }
             })();
         };
 
-        // Start the trap loop every 100ms
+        // 4. DevTools Detection via window size difference
+        // When DevTools is docked, window.outerWidth/Height differs significantly from innerWidth/Height
+        const checkDevToolsBySize = () => {
+            const widthThreshold = window.outerWidth - window.innerWidth > 160;
+            const heightThreshold = window.outerHeight - window.innerHeight > 160;
+            if (widthThreshold || heightThreshold) {
+                document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#ef4444;font-size:24px;font-weight:bold;text-align:center;direction:rtl;padding:20px;">⛔ تم رصد محاولة فحص غير مصرح بها<br/><span style="font-size:14px;color:#64748b;margin-top:12px;display:block;">أغلق أدوات المطور وأعد تحميل الصفحة</span></div>';
+            }
+        };
+
+        // 5. DevTools Detection via console timing
+        // console.log with a getter fires only when DevTools console is open
+        const checkDevToolsByConsole = () => {
+            const element = new Image();
+            let devtoolsOpen = false;
+            Object.defineProperty(element, 'id', {
+                get: function() {
+                    devtoolsOpen = true;
+                    return '';
+                }
+            });
+            // Clear console to trigger the getter
+            console.log('%c', element as any);
+            if (devtoolsOpen) {
+                document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#ef4444;font-size:24px;font-weight:bold;text-align:center;direction:rtl;padding:20px;">⛔ تم رصد محاولة فحص غير مصرح بها<br/><span style="font-size:14px;color:#64748b;margin-top:12px;display:block;">أغلق أدوات المطور وأعد تحميل الصفحة</span></div>';
+            }
+        };
+
+        // 6. Block paste into console (override console methods)
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        const warningMessage = '⛔ هذه المنطقة مقيدة. أي محاولة تلاعب ستؤدي لحظر حسابك.';
+        
+        console.log = function(...args: any[]) {
+            if (args.length === 1 && args[0] === '%c') {
+                // Allow our detection to work
+                originalLog.apply(console, args);
+                return;
+            }
+            originalLog.call(console, warningMessage);
+        };
+        console.warn = function() { originalWarn.call(console, warningMessage); };
+        console.error = function() { originalError.call(console, warningMessage); };
+
+        // Start intervals
         debuggerIntervalRef.current = setInterval(startDebuggerTrap, 100);
+        devtoolsCheckRef.current = setInterval(() => {
+            checkDevToolsBySize();
+            checkDevToolsByConsole();
+        }, 1000);
+
+        // Run immediately too
+        checkDevToolsBySize();
 
         // Attach listeners
         window.addEventListener("keydown", handleKeyDown, { capture: true });
@@ -64,11 +111,14 @@ export default function ClientSecurity() {
         return () => {
             window.removeEventListener("keydown", handleKeyDown, { capture: true });
             window.removeEventListener("contextmenu", handleContextMenu, { capture: true });
-            if (debuggerIntervalRef.current) {
-                clearInterval(debuggerIntervalRef.current);
-            }
+            if (debuggerIntervalRef.current) clearInterval(debuggerIntervalRef.current);
+            if (devtoolsCheckRef.current) clearInterval(devtoolsCheckRef.current);
+            // Restore console
+            console.log = originalLog;
+            console.warn = originalWarn;
+            console.error = originalError;
         };
     }, [isClient]);
 
-    return null; // This component doesn't render anything visually
+    return null;
 }

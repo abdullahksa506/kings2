@@ -18,7 +18,8 @@ import BathroomRatingsDisplay from "./BathroomRatingsDisplay";
 import BathroomLeaderboard from "./BathroomLeaderboard";
 import SuggestionBox from "./SuggestionBox";
 import ChatBoard from "./ChatBoard";
-import { Gamepad2, Bath, UploadCloud } from "lucide-react";
+import StatisticsPanel from "./StatisticsPanel";
+import { Gamepad2, Bath, UploadCloud, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import historicalWeeks from "@/data/historicalWeeks.json";
 import { Timestamp, doc, setDoc } from "firebase/firestore";
@@ -55,6 +56,9 @@ export default function Dashboard() {
 
     // Mini-game State
     const [isGameOpen, setIsGameOpen] = useState(false);
+
+    // Statistics State
+    const [isStatsOpen, setIsStatsOpen] = useState(false);
 
     // Tab State
     type TabType = "week" | "leaderboard" | "bathroom" | "more";
@@ -162,6 +166,9 @@ export default function Dashboard() {
         };
 
         checkStandalone();
+
+        // Record site visit
+        services.recordVisit().catch(e => console.error("Failed to record visit:", e));
     }, [user]);
 
     const handleSubscribe = async () => {
@@ -926,6 +933,29 @@ export default function Dashboard() {
                     {activeTab === "more" && (
                         <div className="space-y-6 max-w-2xl mx-auto">
 
+                            {/* Statistics Button */}
+                            <div className="bg-gradient-to-br from-violet-900/40 to-slate-900 border border-violet-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group cursor-pointer" onClick={() => setIsStatsOpen(true)}>
+                                <div className="absolute -right-10 -top-10 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl group-hover:bg-violet-500/20 transition-all duration-500" />
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="bg-violet-500/20 p-2 rounded-xl text-violet-400">
+                                            <BarChart3 className="w-6 h-6" />
+                                        </div>
+                                        <h3 className="font-bold text-xl text-white">إحصائيات</h3>
+                                    </div>
+                                    <p className="text-sm text-slate-300 mb-5 leading-relaxed">
+                                        شف أرقام وإحصائيات شاملة عن الطلعات والأعضاء والمطاعم والزيارات وأكثر! 📊
+                                    </p>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setIsStatsOpen(true); }}
+                                        className="w-full bg-violet-500 hover:bg-violet-400 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20"
+                                    >
+                                        <BarChart3 className="w-5 h-5" />
+                                        عرض الإحصائيات
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* Push Notifications Card */}
                             {isSupported && (
                                 <div className={`border rounded-3xl p-6 shadow-xl ${isSubscribed ? 'bg-emerald-900/10 border-emerald-500/20' : 'bg-slate-900 border-slate-800'}`}>
@@ -1056,6 +1086,11 @@ export default function Dashboard() {
                     />
                 )
             }
+
+            <StatisticsPanel
+                isOpen={isStatsOpen}
+                onClose={() => setIsStatsOpen(false)}
+            />
         </div >
     );
 }
