@@ -3,15 +3,17 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, Rating, VALID_NAMES } from "@/lib/services";
-import { Star, ShieldAlert, BarChart3, KeyRound, Users, CheckCircle2, Bell } from "lucide-react";
+import { Star, ShieldAlert, BarChart3, KeyRound, Users, CheckCircle2, Bell, Lock } from "lucide-react";
 import Link from "next/link";
 import ExportDataButton from "./ExportDataButton";
 
 export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWeekId?: string, pastWeekId?: string }) {
+    const { user } = useAuth();
     const [selectedWeekType, setSelectedWeekType] = useState<"current" | "past">("current");
     const weekId = selectedWeekType === "current" ? currentWeekId : pastWeekId;
 
     const [ratings, setRatings] = useState<Rating[]>([]);
+    const [trustedDevices, setTrustedDevices] = useState<{id: string, name: string, addedAt: number}[]>([]);
     const [resetRequests, setResetRequests] = useState<{ id: string, name: string, resetCode: string }[]>([]);
     const [registeredNames, setRegisteredNames] = useState<string[]>([]);
     const [usersData, setUsersData] = useState<any[]>([]);
@@ -38,6 +40,11 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
                 const allUsers = await services.getAllUsers();
                 setRegisteredNames(allUsers.map((u: any) => u.name || u.id));
                 setUsersData(allUsers);
+
+                if (user?.role === "dean" || localStorage.getItem("king_user_name") === "شوكا") {
+                    const devices = await services.getDeanDevices();
+                    setTrustedDevices(devices);
+                }
             } catch (err) {
                 console.error(err);
             }
@@ -229,6 +236,53 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Trusted Devices Section */}
+            {trustedDevices.length > 0 && (
+                <div className="mt-8 pt-6 border-t border-purple-900/50">
+                    <h3 className="text-lg font-bold text-purple-500 mb-4 flex items-center gap-2">
+                        <Lock className="w-5 h-5" />
+                        أجهزة العميد الموثوقة النشطة
+                    </h3>
+                    <div className="space-y-3">
+                        {trustedDevices.map(device => {
+                            const isCurrentDevice = device.id === localStorage.getItem("dean_device_id");
+                            return (
+                                <div key={device.id} className={`flex justify-between items-center bg-slate-900/80 p-4 rounded-lg border ${isCurrentDevice ? 'border-amber-500/50' : 'border-purple-500/30'}`}>
+                                    <div>
+                                        <span className="text-slate-300 font-medium flex items-center gap-2">
+                                            {device.name}
+                                            {isCurrentDevice && <span className="text-[10px] bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full border border-amber-500/30">هذا الجهاز</span>}
+                                        </span>
+                                        <span className="text-xs text-slate-500">
+                                            تمت الإضافة: {new Date(device.addedAt).toLocaleDateString("ar-SA", { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={async () => {
+                                                if (isCurrentDevice && !confirm("إنتباه: أنت تحاول حظر الجهاز الذي تستخدمه حالياً! سيؤدي هذا إلى طردك من الحساب فوراً. هل تريد الاستمرار؟")) return;
+                                                else if (!isCurrentDevice && !confirm(`هل أنت متأكد من حظر جهاز "${device.name}"؟`)) return;
+                                                
+                                                try {
+                                                    await services.revokeDeanDevice(device.id);
+                                                    setTrustedDevices(prev => prev.filter(d => d.id !== device.id));
+                                                } catch (e) {
+                                                    console.error(e);
+                                                    alert("حدث خطأ أثناء الحظر");
+                                                }
+                                            }}
+                                            className="bg-red-500/20 text-red-500 hover:bg-red-500/30 font-medium px-3 py-1 rounded-md text-sm transition-colors"
+                                        >
+                                            إلغاء التوثيق وحظر
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}

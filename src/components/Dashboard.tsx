@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { services, WeekSession, VALID_NAMES } from "@/lib/services";
+import { services, WeekSession, VALID_NAMES, invokeRpc } from "@/lib/services";
 import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -276,58 +276,13 @@ export default function Dashboard() {
         if (!confirm("تأكيد استيراد البيانات التاريخية وتحديث السجل؟ سيتم حذف أي استيراد سابق لمنع التكرار.")) return;
         setLoading(true);
         try {
-            let added = 0;
-            let deleted = 0;
-
-            // 1. Delete previous historical imports
-            const { collection, getDocs, deleteDoc } = await import('firebase/firestore');
-            const weeksSnap = await getDocs(collection(db, "weeks"));
-            for (const d of weeksSnap.docs) {
-                if (d.id.startsWith("history_week_")) {
-                    await deleteDoc(doc(db, "weeks", d.id));
-                    deleted++;
-                }
+            const passcode = prompt("أدخل مفتاح العميد:");
+            if (!passcode) {
+                setLoading(false);
+                return;
             }
-            const ratingsSnap = await getDocs(collection(db, "ratings"));
-            for (const r of ratingsSnap.docs) {
-                if (r.id.startsWith("rating_history_week_")) {
-                    await deleteDoc(doc(db, "ratings", r.id));
-                }
-            }
-
-            // 2. Import weeks 1-7
             const weeksToImport = historicalWeeks.filter(w => w.weekNumber <= 7);
-
-            for (const weekData of weeksToImport) {
-                const createdAtDate = new Date(`2025-01-0${weekData.weekNumber}T00:00:00Z`);
-                const createdAt = Timestamp.fromDate(createdAtDate);
-                const weekRef = doc(db, "weeks", weekData.id);
-                
-                await setDoc(weekRef, {
-                    king: weekData.king,
-                    isRandom: weekData.isRandom,
-                    cycleNumber: weekData.cycleNumber,
-                    weekNumber: weekData.weekNumber,
-                    day: weekData.day,
-                    restaurant: weekData.restaurant,
-                    activity: weekData.activity,
-                    status: weekData.status,
-                    ratingEnabled: weekData.ratingEnabled,
-                    absentees: weekData.absentees || [],
-                    responded: weekData.responded || [],
-                    createdAt: createdAt,
-                    historicalAverageRating: weekData.historicalAverageRating
-                });
-
-                const ratingRef = doc(db, "ratings", `rating_${weekData.id}`);
-                await setDoc(ratingRef, {
-                    weekId: weekData.id,
-                    userName: "System_Import",
-                    score: weekData.historicalAverageRating,
-                    createdAt: createdAt
-                });
-                added++;
-            }
+            const added = await invokeRpc("importHistory", { weeksToImport, deanPasscode: passcode });
             alert(`تم تنظيف السجل وإضافة ${added} أسابيع للسجل الشامل بنجاح! حدث الصفحة.`);
         } catch (e: any) {
             alert("خطأ: " + e.message);

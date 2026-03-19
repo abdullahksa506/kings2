@@ -80,6 +80,24 @@ export interface ChatMessage {
 export const VALID_NAMES = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
 export const MAX_BUDGET = 175;
 
+export async function invokeRpc(action: string, payload: any = {}) {
+    if (typeof window === "undefined") return null;
+    const name = localStorage.getItem("king_user_name");
+    const token = localStorage.getItem("king_user_token");
+
+    const res = await fetch("/api/rpc", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, payload, auth: { name, token } })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+        throw new Error(data.error || "حدث خطأ غير معروف");
+    }
+    return data.result;
+}
+
 export const services = {
     // Get active week or create new one if none exists
     async getCurrentWeek(): Promise<WeekSession | null> {
@@ -112,109 +130,28 @@ export const services = {
     },
 
     async startNewWeek(kingName: string | null, isRandom: boolean, cycleNumber: number, weekNumber: number) {
-        const newWeekRef = doc(collection(db, "weeks"));
-        const newWeek: Omit<WeekSession, "id"> = {
-            king: kingName,
-            isRandom,
-            cycleNumber,
-            weekNumber,
-            day: null,
-            restaurant: null,
-            activity: null,
-            status: "pending",
-            ratingEnabled: false,
-            absentees: [],
-            responded: [],
-            createdAt: Timestamp.now()
-        };
-        await setDoc(newWeekRef, newWeek);
-        return { id: newWeekRef.id, ...newWeek };
+        return invokeRpc("startNewWeek", { kingName, isRandom, cycleNumber, weekNumber });
     },
 
     async toggleAttendance(weekId: string, userName: string, isAbsent: boolean) {
-        const currentUser = localStorage.getItem("king_user_name");
-        if (!currentUser || !(await verifyIdentity(currentUser))) throw new Error("Unauthorized");
-        
-        if (currentUser !== userName && currentUser !== "شوكا") {
-            throw new Error("Unauthorized - Can only change your own attendance or you must be the Dean");
-        }
-
-        const weekRef = doc(db, "weeks", weekId);
-        const weekSnap = await getDoc(weekRef);
-        if (!weekSnap.exists()) return false;
-        const data = weekSnap.data();
-        const absentees = data.absentees || [];
-        const responded = data.responded || [];
-
-        let newAbsentees = [...absentees];
-        if (isAbsent && !newAbsentees.includes(userName)) {
-            newAbsentees.push(userName);
-        } else if (!isAbsent) {
-            newAbsentees = newAbsentees.filter((n: string) => n !== userName);
-        }
-
-        let newResponded = [...responded];
-        if (!newResponded.includes(userName)) {
-            newResponded.push(userName);
-        }
-
-        await updateDoc(weekRef, { absentees: newAbsentees, responded: newResponded });
-
-        const requiredCount = VALID_NAMES.length - 1; // King doesn't have to respond
-        const justCompleted = newResponded.length >= requiredCount && responded.length < requiredCount;
-        return justCompleted;
+        return invokeRpc("toggleAttendance", { weekId, userName, isAbsent });
     },
 
     async setWeekChoices(weekId: string, day: "الخميس" | "الجمعة" | null, restaurant: string | null, activity: string | null) {
-        // We verify the current user is actually the king making the choice
-        const currentUser = localStorage.getItem("king_user_name");
-        if (!currentUser || !(await verifyIdentity(currentUser))) throw new Error("Unauthorized");
-
-        const weekRef = doc(db, "weeks", weekId);
-        const weekSnap = await getDoc(weekRef);
-        if (weekSnap.exists() && weekSnap.data().king !== currentUser) {
-            throw new Error("Only the King can make these choices");
-        }
-
-        await updateDoc(weekRef, {
-            day,
-            restaurant,
-            activity
-        });
+        return invokeRpc("setWeekChoices", { weekId, day, restaurant, activity });
     },
 
     // Secret Dean Power
     async secretlyChangeKing(weekId: string, newKingName: string | null) {
-        const currentUser = localStorage.getItem("king_user_name");
-        if (!currentUser || !(await verifyIdentity(currentUser))) throw new Error("Unauthorized");
-        if (currentUser !== "شوكا") throw new Error("Unauthorized - Dean only");
-
-        const weekRef = doc(db, "weeks", weekId);
-        await updateDoc(weekRef, {
-            king: newKingName,
-            isRandom: newKingName === null
-        });
+        return invokeRpc("secretlyChangeKing", { weekId, newKingName });
     },
 
     async toggleRatingEnabled(weekId: string, enabled: boolean) {
-        const currentUser = localStorage.getItem("king_user_name");
-        if (!currentUser || !(await verifyIdentity(currentUser))) throw new Error("Unauthorized");
-        if (currentUser !== "شوكا") throw new Error("Unauthorized - Dean only");
-
-        const weekRef = doc(db, "weeks", weekId);
-        await updateDoc(weekRef, { ratingEnabled: enabled });
+        return invokeRpc("toggleRatingEnabled", { weekId, enabled });
     },
 
     async submitRating(weekId: string, userName: string, score: number) {
-        if (!(await verifyIdentity(userName))) throw new Error("Unauthorized - Identity mismatch");
-        if (score < 1 || score > 5) throw new Error("Invalid score");
-        const docRef = await addDoc(collection(db, "ratings"), {
-            weekId,
-            userName,
-            score,
-            createdAt: Timestamp.now()
-        });
-        return docRef.id;
+        return invokeRpc("submitRating", { weekId, userName, score });
     },
 
     // Dean only
@@ -244,15 +181,7 @@ export const services = {
     },
 
     async submitBathroomRating(weekId: string, userName: string, score: number) {
-        if (!(await verifyIdentity(userName))) throw new Error("Unauthorized - Identity mismatch");
-        if (score < 1 || score > 5) throw new Error("Invalid score");
-        const docRef = await addDoc(collection(db, "bathroomRatings"), {
-            weekId,
-            userName,
-            score,
-            createdAt: Timestamp.now()
-        });
-        return docRef.id;
+        return invokeRpc("submitBathroomRating", { weekId, userName, score });
     },
 
     async getBathroomRatingsForWeek(weekId: string): Promise<BathroomRating[]> {
@@ -278,8 +207,7 @@ export const services = {
     },
 
     async completeWeek(weekId: string) {
-        const weekRef = doc(db, "weeks", weekId);
-        await updateDoc(weekRef, { status: "completed" });
+        return invokeRpc("completeWeek", { weekId });
     },
 
     // Get previous week to check for consecutive restaurant rule
@@ -344,12 +272,7 @@ export const services = {
     },
 
     async resetCycleLeaderboard(currentWeekId: string, newCycleNumber: number) {
-        const currentUser = localStorage.getItem("king_user_name");
-        if (!currentUser || !(await verifyIdentity(currentUser))) throw new Error("Unauthorized");
-        if (currentUser !== "شوكا") throw new Error("Unauthorized - Dean only");
-
-        const weekRef = doc(db, "weeks", currentWeekId);
-        await updateDoc(weekRef, { cycleNumber: newCycleNumber });
+        return invokeRpc("resetCycleLeaderboard", { weekId: currentWeekId, newCycleNumber });
     },
 
     async getAllUsers() {
@@ -358,15 +281,11 @@ export const services = {
     },
 
     async updateUserStandaloneStatus(userName: string, isStandalone: boolean) {
-        if (!(await verifyIdentity(userName))) return; // silently fail as this is background telemetry
-        const userRef = doc(db, "users", userName);
-        await updateDoc(userRef, { isStandalone });
+        return invokeRpc("updateUserStandaloneStatus", { userName, isStandalone });
     },
 
     async updatePushSubscription(userName: string, subscription: any) {
-        if (!(await verifyIdentity(userName))) throw new Error("Unauthorized - Identity mismatch");
-        const userRef = doc(db, "users", userName);
-        await updateDoc(userRef, { pushSubscription: JSON.stringify(subscription) });
+        return invokeRpc("updatePushSubscription", { userName, subscription });
     },
 
     async getPushSubscriptions(usernames?: string[]): Promise<any[]> {
@@ -393,82 +312,14 @@ export const services = {
     // --- Password Management Features ---
 
     async requestPasswordReset(userName: string): Promise<void> {
-        if (!VALID_NAMES.includes(userName)) throw new Error("اسم غير مصرح به");
-        
-        // This is the only exception: anyone can request a reset code (they still need the phone to receive it)
-
-        const userRef = doc(db, "users", userName);
-        const userDoc = await getDoc(userRef);
-
-        if (!userDoc.exists()) {
-            throw new Error("المستخدم غير مسجل بعد");
-        }
-
-        // Generate a 4-digit code
-        const code = Math.floor(1000 + Math.random() * 9000).toString();
-
-        await updateDoc(userRef, { resetCode: code, resetCodeTimestamp: Date.now() });
+        await invokeRpc("requestPasswordReset", { userName });
     },
     async resetPasswordWithCode(userName: string, code: string, newPassword: string): Promise<void> {
-        if (!VALID_NAMES.includes(userName)) throw new Error("اسم غير مصرح به");
-
-        const userRef = doc(db, "users", userName);
-        const userDoc = await getDoc(userRef);
-
-        if (!userDoc.exists()) {
-            throw new Error("المستخدم غير مسجل بعد");
-        }
-
-        const data = userDoc.data();
-        if (data.resetCode !== code) {
-            throw new Error("رمز الاسترجاع خاطئ");
-        }
-
-        // Check if code is expired (15 minutes)
-        const FIFTEEN_MINUTES = 15 * 60 * 1000;
-        if (data.resetCodeTimestamp && (Date.now() - data.resetCodeTimestamp > FIFTEEN_MINUTES)) {
-            await updateDoc(userRef, { resetCode: null, resetCodeTimestamp: null });
-            throw new Error("انتهت صلاحية كود الاسترجاع. اطلب كود جديد.");
-        }
-
-        const hashedPassword = await hashPassword(newPassword);
-
-        await updateDoc(userRef, {
-            password: hashedPassword,
-            resetCode: null,
-            resetCodeTimestamp: null
-        });
+        await invokeRpc("resetPasswordWithCode", { userName, code, newPassword });
     },
 
     async changePassword(userName: string, currentPassword: string, newPassword: string): Promise<void> {
-        if (!(await verifyIdentity(userName))) throw new Error("Unauthorized - Identity mismatch");
-        if (!VALID_NAMES.includes(userName)) throw new Error("اسم غير مصرح به");
-
-        const userRef = doc(db, "users", userName);
-        const userDoc = await getDoc(userRef);
-
-        if (!userDoc.exists()) {
-            throw new Error("المستخدم غير موجود");
-        }
-
-        const data = userDoc.data();
-        let valid = false;
-
-        if (data.password === currentPassword) {
-            valid = true;
-        } else if (isHashed(data.password)) {
-            const hashedInput = await hashPassword(currentPassword);
-            if (data.password === hashedInput) {
-                valid = true;
-            }
-        }
-
-        if (!valid) {
-            throw new Error("كلمة المرور الحالية خاطئة");
-        }
-
-        const hashedPassword = await hashPassword(newPassword);
-        await updateDoc(userRef, { password: hashedPassword });
+        await invokeRpc("changePassword", { userName, currentPassword, newPassword });
     },
 
     async getUsersWithResetCodes(): Promise<{ id: string, name: string, resetCode: string }[]> {
@@ -499,10 +350,7 @@ export const services = {
 
     // --- Suggestions (Anonymous, Dean-only visible) ---
     async submitSuggestion(text: string) {
-        await addDoc(collection(db, "suggestions"), {
-            text,
-            createdAt: Timestamp.now()
-        });
+        return invokeRpc("submitSuggestion", { text });
     },
 
     async getAllSuggestions(): Promise<Suggestion[]> {
@@ -513,12 +361,7 @@ export const services = {
 
     // --- Public Chat Board ---
     async sendChatMessage(userName: string, text: string) {
-        if (!(await verifyIdentity(userName))) throw new Error("Unauthorized");
-        await addDoc(collection(db, "chatMessages"), {
-            userName,
-            text,
-            createdAt: Timestamp.now()
-        });
+        return invokeRpc("sendChatMessage", { userName, text });
     },
 
     listenToChatMessages(callback: (messages: ChatMessage[]) => void) {
@@ -531,11 +374,7 @@ export const services = {
 
     // --- Visit Tracking ---
     async recordVisit() {
-        const today = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
-        await addDoc(collection(db, "siteVisits"), {
-            date: today,
-            timestamp: Timestamp.now()
-        });
+        return invokeRpc("recordVisit");
     },
 
     async getVisitStats(): Promise<{ total: number; today: number; thisWeek: number; thisMonth: number }> {
@@ -717,5 +556,32 @@ export const services = {
             firstOutingDate: firstOuting?.createdAt || null,
             lastOutingDate: lastOuting?.createdAt || null,
         };
+    },
+
+    // --- Device Fingerprinting for Dean ---
+    async authorizeDeanDevice(deviceId: string, deviceName: string, passcode: string) {
+        const res = await fetch("/api/dean/authorize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ deviceId, deviceName, passcode }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || "كود التوثيق غير صحيح!");
+        }
+    },
+
+    async revokeDeanDevice(deviceId: string) {
+        return invokeRpc("revokeDeanDevice", { deviceId });
+    },
+
+    async getDeanDevices(): Promise<{id: string, name: string, addedAt: number}[]> {
+        const currentUser = localStorage.getItem("king_user_name");
+        if (currentUser !== "شوكا" || !(await verifyIdentity(currentUser))) throw new Error("Unauthorized");
+        
+        const deanRef = doc(db, "users", "شوكا");
+        const deanDoc = await getDoc(deanRef);
+        return deanDoc.exists() ? (deanDoc.data().trustedDevices || []) : [];
     }
 };

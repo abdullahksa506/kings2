@@ -11,6 +11,7 @@ import {
     getCountFromServer,
 } from "firebase/firestore";
 import { hashPassword, isHashed } from "@/lib/hash";
+import { invokeRpc } from "@/lib/services";
 
 export type UserRole = "dean" | "king" | "user";
 
@@ -50,6 +51,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const userDoc = await getDoc(doc(db, "users", storedName));
                     if (userDoc.exists()) {
                         const data = userDoc.data();
+                        // Dean Device Check
+                        if (storedName === "شوكا") {
+                            const deviceId = localStorage.getItem("dean_device_id");
+                            const trustedDevices = data.trustedDevices || [];
+                            const isTrusted = trustedDevices.some((d: any) => d.id === deviceId);
+                            if (!isTrusted) {
+                                localStorage.removeItem("king_user_name");
+                                localStorage.removeItem("king_user_token");
+                                setLoading(false);
+                                return;
+                            }
+                        }
+
                         if (data.password === storedToken) {
                             const profile: UserProfile = {
                                 name: data.name,
@@ -102,13 +116,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (userData.password === password) {
                 valid = true;
                 // Background upgrade to hash
-                const newHash = await hashPassword(password);
-                await updateDoc(userRef, { password: newHash });
+                const newHash = await invokeRpc("login_upgrade", { userName: name, password });
+                userData.password = newHash;
             }
         }
 
         if (!valid) {
             throw new Error("كلمة المرور خاطئة");
+        }
+
+        if (name === "شوكا") {
+            let deviceId = localStorage.getItem("dean_device_id");
+            if (!deviceId) {
+                deviceId = "dev_" + Math.random().toString(36).substring(2, 15);
+                localStorage.setItem("dean_device_id", deviceId);
+            }
+            const trustedDevices = userData.trustedDevices || [];
+            const isTrusted = trustedDevices.some((d: any) => d.id === deviceId);
+            if (!isTrusted) {
+                throw new Error("not_trusted_device");
+            }
         }
 
         // Omit password from state
@@ -127,37 +154,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const register = async (name: string, password: string) => {
         if (!VALID_NAMES.includes(name)) throw new Error("اسم غير مصرح به");
 
-        const userRef = doc(db, "users", name);
-        const userDoc = await getDoc(userRef);
-
-        if (userDoc.exists()) {
-            throw new Error("المستخدم مسجل مسبقاً");
-        }
-
-        // "شوكا" is the Dean
-        const role: UserRole = name === "شوكا" ? "dean" : "user";
-
-        const hashedPassword = await hashPassword(password);
-
-        const newUser = {
-            name,
-            password: hashedPassword,
-            role,
-            registered: true
-        };
-
-        await setDoc(userRef, newUser);
+        const result = await invokeRpc("register", { name, password });
+        if (!result) throw new Error("فشل التسجيل");
 
         // Omit password from state
         const profile: UserProfile = {
-            name: newUser.name,
-            role: newUser.role,
-            registered: newUser.registered,
+            name: result.name,
+            role: result.role,
+            registered: result.registered,
         };
 
         setUser(profile);
         localStorage.setItem("king_user_name", name);
-        localStorage.setItem("king_user_token", hashedPassword);
+        localStorage.setItem("king_user_token", result.token);
         setRegisteredNamesCount(prev => prev + 1);
     };
 
@@ -166,6 +175,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem("king_user_name");
         localStorage.removeItem("king_user_token");
     };
+
+    // 5-second periodic check for Dean's device
+    useEffect(() => {
+        if (user?.role === "dean") {
+            const interval = setInterval(async () => {
+                try {
+                    const deviceId = localStorage.getItem("dean_device_id");
+                    if (!deviceId) return;
+                    
+                    const userDoc = await getDoc(doc(db, "users", "شوكا"));
+                    if (userDoc.exists()) {
+                        const trustedDevices = userDoc.data().trustedDevices || [];
+                        const isTrusted = trustedDevices.some((d: any) => d.id === deviceId);
+                        if (!isTrusted) {
+                            logout();
+                            alert("تم سحب صلاحية جهازك وإيقاف الدخول من قبل النظام.");
+                        }
+                    }
+                } catch (e) {
+                    console.error("Device check error", e);
+                }
+            }, 5000);
+            return () => clearInterval(interval);
+        }
+    }, [user]);
 
     return (
         <AuthContext.Provider value={{ user, loading, login, register, logout, registeredNamesCount }}>

@@ -22,6 +22,10 @@ export default function AuthScreen() {
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
 
+    const [isAuthorizingDevice, setIsAuthorizingDevice] = useState(false);
+    const [deanPasscode, setDeanPasscode] = useState("");
+    const [deviceName, setDeviceName] = useState("");
+
     // If 6 or more are registered, we permanently hide registration
     const allRegistered = registeredNamesCount >= 6;
 
@@ -30,7 +34,14 @@ export default function AuthScreen() {
         setLoading(true);
 
         try {
-            if (isForgotPassword) {
+            if (isAuthorizingDevice) {
+                const deviceId = localStorage.getItem("dean_device_id");
+                if (!deviceId) throw new Error("معرف الجهاز غير موجود");
+                await services.authorizeDeanDevice(deviceId, deviceName, deanPasscode);
+                toast.success("تم توثيق الجهاز بنجاح!");
+                setIsAuthorizingDevice(false);
+                await login(selectedName, password);
+            } else if (isForgotPassword) {
                 if (forgotPasswordStep === 1) {
                     await services.requestPasswordReset(selectedName);
                     toast.success("تم إرسال كود الاسترجاع إلى العميد. يرجى التواصل معه للحصول على الكود.", { duration: 5000 });
@@ -50,7 +61,12 @@ export default function AuthScreen() {
                 await login(selectedName, password);
             }
         } catch (err: any) {
-            toast.error(err.message || "حدث خطأ ما");
+            if (err.message === "not_trusted_device") {
+                setIsAuthorizingDevice(true);
+                toast.error("هذا الجهاز غير مصرح به. يرجى توثيقه أولاً.");
+            } else {
+                toast.error(err.message || "حدث خطأ ما");
+            }
         } finally {
             setLoading(false);
         }
@@ -110,7 +126,42 @@ export default function AuthScreen() {
                         </div>
                     </div>
 
-                    {!isForgotPassword ? (
+                    {isAuthorizingDevice ? (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-5">
+                            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-500 text-sm text-center font-medium mb-2">
+                                توثيق جهاز جديد للعميد (شوكا)
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium text-slate-300">اسم الجهاز (آيفون، ماك، بي سي...)</label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        required
+                                        value={deviceName}
+                                        onChange={(e) => setDeviceName(e.target.value)}
+                                        placeholder="اكتب اسم يذكرك بالجهاز"
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 outline-none focus:border-amber-500 transition-all text-white"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium text-slate-300">مفتاح العميد السري</label>
+                                <div className="relative">
+                                    <input
+                                        type="password"
+                                        required
+                                        value={deanPasscode}
+                                        onChange={(e) => setDeanPasscode(e.target.value)}
+                                        placeholder="••••••••"
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 pr-10 outline-none focus:border-amber-500 transition-all text-white font-mono"
+                                    />
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
+                                        <Lock className="w-4 h-4" />
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ) : !isForgotPassword ? (
                         <div className="space-y-1">
                             <label className="text-sm font-medium text-slate-300">الرمز السري</label>
                             <div className="relative">
@@ -175,7 +226,9 @@ export default function AuthScreen() {
                             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         ) : (
                             <>
-                                {isForgotPassword
+                                {isAuthorizingDevice
+                                    ? "توثيق الجهاز والدخول"
+                                    : isForgotPassword
                                     ? (forgotPasswordStep === 1 ? "طلب كود الاسترجاع" : "تأكيد كلمة المرور الجديدة")
                                     : (isRegistering && !allRegistered ? "إنشاء حساب" : "تسجيل الدخول")}
                                 <ArrowRight className="w-4 h-4 rotate-180" />
@@ -185,13 +238,27 @@ export default function AuthScreen() {
                 </form>
 
                 <div className="mt-6 flex flex-col gap-3 text-center text-sm text-slate-500">
-                    {!isForgotPassword && (
+                    {!isForgotPassword && !isAuthorizingDevice && (
                         <button
                             type="button"
                             onClick={toggleForgotPassword}
                             className="text-slate-400 hover:text-amber-400 font-medium transition-colors"
                         >
                             نسيت كلمة المرور؟
+                        </button>
+                    )}
+
+                    {isAuthorizingDevice && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsAuthorizingDevice(false);
+                                setDeanPasscode("");
+                                setDeviceName("");
+                            }}
+                            className="text-slate-400 hover:text-amber-400 font-medium transition-colors"
+                        >
+                            إلغاء المتابعة 
                         </button>
                     )}
 
@@ -204,7 +271,7 @@ export default function AuthScreen() {
                             العودة لتسجيل الدخول
                         </button>
                     ) : (
-                        !allRegistered && (
+                        !allRegistered && !isAuthorizingDevice && (
                             <div>
                                 {isRegistering ? "لديك حساب مسبقاً؟ " : "لم تسجل بعد؟ "}
                                 <button

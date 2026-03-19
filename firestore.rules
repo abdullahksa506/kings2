@@ -2,29 +2,13 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Only logged in and validated users can interact
-    // In our model we don't use Firebase Auth, so we secure users by allowing 
-    // reads only if they know the username (document ID). 
+    // All read operations are allowed for the client to render UI.
+    // However, ALL write operations are strictly blocked.
+    // Mutations must go through the secure Next.js /api/rpc server routes.
 
-    match /users/{userId} {
-      allow read: if true; // They need to read to verify login/count users. We removed getDocs in code and hash passwords, so this leak is mitigated.
-      allow create, update: if true; // No delete allowed
-    }
-
-    match /weeks/{weekId} {
+    match /{document=**} {
       allow read: if true;
-      allow create, update: if true; // No delete allowed
-    }
-
-    match /ratings/{ratingId} {
-      allow read: if true;
-      allow create, update: if true; // No delete allowed
-    }
-
-    match /bathroomRatings/{ratingId} {
-      allow read: if true;
-      allow create, update: if true; // No delete allowed
+      allow write: if false;
     }
   }
 }
