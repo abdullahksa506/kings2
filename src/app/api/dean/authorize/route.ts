@@ -6,7 +6,7 @@ export async function POST(request: Request) {
         const { deviceId, deviceName, passcode } = await request.json();
 
         // 🛡️ Secret passcode isolated on the server-side! F12 won't see this.
-        if (passcode !== "theoneandonlyshoka") {
+        if (passcode !== "عبدالله") {
             return NextResponse.json({ error: "كود التوثيق غير صحيح!" }, { status: 401 });
         }
 

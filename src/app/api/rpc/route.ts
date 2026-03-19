@@ -192,7 +192,7 @@ export async function POST(request: Request) {
                 return NextResponse.json({ result: true });
                 
             case "importHistory":
-                if (payload.deanPasscode !== "theoneandonlyshoka") throw new Error("Unauthorized");
+                if (payload.deanPasscode !== "عبدالله") throw new Error("Unauthorized");
                 const { weeksToImport } = payload;
                 // Cleanup existing
                 const wSnap = await adminDb.collection("weeks").get();
