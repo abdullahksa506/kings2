@@ -132,7 +132,12 @@ export const services = {
     },
 
     async toggleAttendance(weekId: string, userName: string, isAbsent: boolean) {
-        if (!(await verifyIdentity(userName))) throw new Error("Unauthorized - Identity mismatch");
+        const currentUser = localStorage.getItem("king_user_name");
+        if (!currentUser || !(await verifyIdentity(currentUser))) throw new Error("Unauthorized");
+        
+        if (currentUser !== userName && currentUser !== "شوكا") {
+            throw new Error("Unauthorized - Can only change your own attendance or you must be the Dean");
+        }
 
         const weekRef = doc(db, "weeks", weekId);
         const weekSnap = await getDoc(weekRef);

@@ -561,22 +561,28 @@ export default function Dashboard() {
                                                         setAbsent = false;
                                                     }
 
-                                                    const justCompleted = await services.toggleAttendance(currentWeek.id, name, setAbsent);
+                                                    try {
+                                                        const justCompleted = await services.toggleAttendance(currentWeek.id, name, setAbsent);
 
-                                                    if (justCompleted) {
-                                                        try {
-                                                            await fetch("/api/reminders/attendance-complete", {
-                                                                method: "POST",
-                                                                headers: { "Content-Type": "application/json" },
-                                                                body: JSON.stringify({ weekId: currentWeek.id })
-                                                            });
-                                                        } catch (e) {
-                                                            console.error("Failed to notify members about attendance:", e);
+                                                        if (justCompleted) {
+                                                            try {
+                                                                await fetch("/api/reminders/attendance-complete", {
+                                                                    method: "POST",
+                                                                    headers: { "Content-Type": "application/json" },
+                                                                    body: JSON.stringify({ weekId: currentWeek.id })
+                                                                });
+                                                            } catch (e) {
+                                                                console.error("Failed to notify members about attendance:", e);
+                                                            }
                                                         }
-                                                    }
 
-                                                    await fetchWeek();
-                                                    setSaving(false);
+                                                        await fetchWeek();
+                                                    } catch (e: any) {
+                                                        console.error("Toggle attendance error:", e);
+                                                        alert(e.message || "حدث خطأ أثناء تغيير الحضور");
+                                                    } finally {
+                                                        setSaving(false);
+                                                    }
                                                 }}
                                                 disabled={saving}
                                                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${(!currentWeek.responded?.includes(name)) ? 'bg-slate-800 border-slate-700 text-slate-400 opacity-70' : isAbsent ? 'bg-red-500/20 border-red-500/30 text-red-400' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'}`}
@@ -798,22 +804,28 @@ export default function Dashboard() {
                                                             onClick={async () => {
                                                                 setSaving(true);
                                                                 const isAbsent = currentWeek.absentees?.includes(user!.name) || false;
-                                                                const justCompleted = await services.toggleAttendance(currentWeek.id, user!.name, !isAbsent);
+                                                                try {
+                                                                    const justCompleted = await services.toggleAttendance(currentWeek.id, user!.name, !isAbsent);
 
-                                                                if (justCompleted) {
-                                                                    try {
-                                                                        await fetch("/api/reminders/attendance-complete", {
-                                                                            method: "POST",
-                                                                            headers: { "Content-Type": "application/json" },
-                                                                            body: JSON.stringify({ weekId: currentWeek.id })
-                                                                        });
-                                                                    } catch (e) {
-                                                                        console.error("Failed to notify members:", e);
+                                                                    if (justCompleted) {
+                                                                        try {
+                                                                            await fetch("/api/reminders/attendance-complete", {
+                                                                                method: "POST",
+                                                                                headers: { "Content-Type": "application/json" },
+                                                                                body: JSON.stringify({ weekId: currentWeek.id })
+                                                                            });
+                                                                        } catch (e) {
+                                                                            console.error("Failed to notify members:", e);
+                                                                        }
                                                                     }
-                                                                }
 
-                                                                await fetchWeek();
-                                                                setSaving(false);
+                                                                    await fetchWeek();
+                                                                } catch (e: any) {
+                                                                    console.error("Toggle attendance error:", e);
+                                                                    alert(e.message || "حدث خطأ أثناء تغيير الحضور");
+                                                                } finally {
+                                                                    setSaving(false);
+                                                                }
                                                             }}
                                                             disabled={saving}
                                                             className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border shadow-sm ${currentWeek.absentees?.includes(user?.name) ? 'bg-red-500/20 border-red-500/30 text-red-400 hover:bg-red-500/30' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30'}`}
