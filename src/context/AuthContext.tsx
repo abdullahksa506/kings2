@@ -51,19 +51,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const userDoc = await getDoc(doc(db, "users", storedName));
                     if (userDoc.exists()) {
                         const data = userDoc.data();
-                        // Dean Device Check
-                        if (storedName === "شوكا") {
-                            const deviceId = localStorage.getItem("dean_device_id");
-                            const trustedDevices = data.trustedDevices || [];
-                            const isTrusted = trustedDevices.some((d: any) => d.id === deviceId);
-                            if (!isTrusted) {
-                                localStorage.removeItem("king_user_name");
-                                localStorage.removeItem("king_user_token");
-                                setLoading(false);
-                                return;
-                            }
-                        }
-
                         if (data.password === storedToken) {
                             const profile: UserProfile = {
                                 name: data.name,
@@ -121,23 +108,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         }
 
-        if (!valid) {
-            throw new Error("كلمة المرور خاطئة");
-        }
-
-        if (name === "شوكا" && !skipDeviceCheck) {
-            let deviceId = localStorage.getItem("dean_device_id");
-            if (!deviceId) {
-                deviceId = "dev_" + Math.random().toString(36).substring(2, 15);
-                localStorage.setItem("dean_device_id", deviceId);
-            }
-            const trustedDevices = userData.trustedDevices || [];
-            const isTrusted = trustedDevices.some((d: any) => d.id === deviceId);
-            if (!isTrusted) {
-                throw new Error("not_trusted_device");
-            }
-        }
-
         // Omit password from state
         const profile: UserProfile = {
             name: userData.name,
@@ -175,31 +145,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem("king_user_name");
         localStorage.removeItem("king_user_token");
     };
-
-    // 5-second periodic check for Dean's device
-    useEffect(() => {
-        if (user?.role === "dean") {
-            const interval = setInterval(async () => {
-                try {
-                    const deviceId = localStorage.getItem("dean_device_id");
-                    if (!deviceId) return;
-                    
-                    const userDoc = await getDoc(doc(db, "users", "شوكا"));
-                    if (userDoc.exists()) {
-                        const trustedDevices = userDoc.data().trustedDevices || [];
-                        const isTrusted = trustedDevices.some((d: any) => d.id === deviceId);
-                        if (!isTrusted) {
-                            logout();
-                            alert("تم سحب صلاحية جهازك وإيقاف الدخول من قبل النظام.");
-                        }
-                    }
-                } catch (e) {
-                    console.error("Device check error", e);
-                }
-            }, 5000);
-            return () => clearInterval(interval);
-        }
-    }, [user]);
 
     return (
         <AuthContext.Provider value={{ user, loading, login, register, logout, registeredNamesCount }}>

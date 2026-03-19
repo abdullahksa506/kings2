@@ -556,32 +556,5 @@ export const services = {
             firstOutingDate: firstOuting?.createdAt || null,
             lastOutingDate: lastOuting?.createdAt || null,
         };
-    },
-
-    // --- Device Fingerprinting for Dean ---
-    async authorizeDeanDevice(deviceId: string, deviceName: string, passcode: string) {
-        const res = await fetch("/api/dean/authorize", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ deviceId, deviceName, passcode }),
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-            throw new Error(data.error || "كود التوثيق غير صحيح!");
-        }
-    },
-
-    async revokeDeanDevice(deviceId: string) {
-        return invokeRpc("revokeDeanDevice", { deviceId });
-    },
-
-    async getDeanDevices(): Promise<{id: string, name: string, addedAt: number}[]> {
-        const currentUser = localStorage.getItem("king_user_name");
-        if (currentUser !== "شوكا" || !(await verifyIdentity(currentUser))) throw new Error("Unauthorized");
-        
-        const deanRef = doc(db, "users", "شوكا");
-        const deanDoc = await getDoc(deanRef);
-        return deanDoc.exists() ? (deanDoc.data().trustedDevices || []) : [];
     }
 };
