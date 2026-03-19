@@ -40,7 +40,7 @@ export default function AuthScreen() {
                 await services.authorizeDeanDevice(deviceId, deviceName, deanPasscode);
                 toast.success("تم توثيق الجهاز بنجاح!");
                 setIsAuthorizingDevice(false);
-                await login(selectedName, password);
+                await login(selectedName, password, true);
             } else if (isForgotPassword) {
                 if (forgotPasswordStep === 1) {
                     await services.requestPasswordReset(selectedName);

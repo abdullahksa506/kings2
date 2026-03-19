@@ -26,7 +26,7 @@ export interface UserProfile {
 interface AuthContextType {
     user: UserProfile | null;
     loading: boolean;
-    login: (name: string, password: string) => Promise<void>;
+    login: (name: string, password: string, skipDeviceCheck?: boolean) => Promise<void>;
     register: (name: string, password: string) => Promise<void>;
     logout: () => void;
     registeredNamesCount: number;
@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         initAuth();
     }, []);
 
-    const login = async (name: string, password: string) => {
+    const login = async (name: string, password: string, skipDeviceCheck = false) => {
         if (!VALID_NAMES.includes(name)) throw new Error("اسم غير مصرح به");
 
         const userRef = doc(db, "users", name);
@@ -125,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             throw new Error("كلمة المرور خاطئة");
         }
 
-        if (name === "شوكا") {
+        if (name === "شوكا" && !skipDeviceCheck) {
             let deviceId = localStorage.getItem("dean_device_id");
             if (!deviceId) {
                 deviceId = "dev_" + Math.random().toString(36).substring(2, 15);
