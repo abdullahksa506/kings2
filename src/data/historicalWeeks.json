@@ -11,10 +11,17 @@
     "status": "completed",
     "ratingEnabled": false,
     "absentees": [
-      "حكير",
-      "هشام"
+      "شوكا",
+      "طلال"
     ],
-    "responded": [],
+    "responded": [
+      "خالد",
+      "طلال",
+      "شوكا",
+      "حكير",
+      "هشام",
+      "نواف"
+    ],
     "historicalAverageRating": 4.67
   },
   {
@@ -31,7 +38,14 @@
     "absentees": [
       "نواف"
     ],
-    "responded": [],
+    "responded": [
+      "خالد",
+      "طلال",
+      "شوكا",
+      "حكير",
+      "هشام",
+      "نواف"
+    ],
     "historicalAverageRating": 4.5
   },
   {
@@ -50,7 +64,14 @@
       "طلال",
       "شوكا"
     ],
-    "responded": [],
+    "responded": [
+      "خالد",
+      "طلال",
+      "شوكا",
+      "حكير",
+      "هشام",
+      "نواف"
+    ],
     "historicalAverageRating": 5
   },
   {
@@ -68,7 +89,14 @@
       "خالد",
       "نواف"
     ],
-    "responded": [],
+    "responded": [
+      "خالد",
+      "طلال",
+      "شوكا",
+      "حكير",
+      "هشام",
+      "نواف"
+    ],
     "historicalAverageRating": 3.67
   },
   {
@@ -85,7 +113,14 @@
     "absentees": [
       "حكير"
     ],
-    "responded": [],
+    "responded": [
+      "خالد",
+      "طلال",
+      "شوكا",
+      "حكير",
+      "هشام",
+      "نواف"
+    ],
     "historicalAverageRating": 3.33
   },
   {
@@ -103,7 +138,14 @@
       "خالد",
       "طلال"
     ],
-    "responded": [],
+    "responded": [
+      "خالد",
+      "طلال",
+      "شوكا",
+      "حكير",
+      "هشام",
+      "نواف"
+    ],
     "historicalAverageRating": 4
   },
   {
@@ -122,7 +164,14 @@
       "شوكا",
       "هشام"
     ],
-    "responded": [],
+    "responded": [
+      "خالد",
+      "طلال",
+      "شوكا",
+      "حكير",
+      "هشام",
+      "نواف"
+    ],
     "historicalAverageRating": 5
   },
   {
