@@ -94,15 +94,20 @@ export default function ClientSecurity() {
         console.warn = function() { originalWarn.call(console, warningMessage); };
         console.error = function() { originalError.call(console, warningMessage); };
 
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
         // Start intervals
         debuggerIntervalRef.current = setInterval(startDebuggerTrap, 100);
-        devtoolsCheckRef.current = setInterval(() => {
-            checkDevToolsBySize();
-            checkDevToolsByConsole();
-        }, 1000);
+        
+        if (!isMobile) {
+            devtoolsCheckRef.current = setInterval(() => {
+                checkDevToolsBySize();
+                checkDevToolsByConsole();
+            }, 1000);
 
-        // Run immediately too
-        checkDevToolsBySize();
+            // Run immediately too
+            checkDevToolsBySize();
+        }
 
         // Attach listeners
         window.addEventListener("keydown", handleKeyDown, { capture: true });
