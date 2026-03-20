@@ -12,7 +12,6 @@ export default function RatingsExplorer() {
     const [sortBy, setSortBy] = useState<SortType>("newest");
     const [selectedKing, setSelectedKing] = useState("all");
     const [selectedRater, setSelectedRater] = useState("all");
-    const [selectedCycle, setSelectedCycle] = useState("all");
     const [minScore, setMinScore] = useState("all");
     const [searchText, setSearchText] = useState("");
 
@@ -26,17 +25,11 @@ export default function RatingsExplorer() {
         run();
     }, []);
 
-    const cycles = useMemo(() => {
-        const unique = Array.from(new Set(data.map(d => String(d.week.cycleNumber || 1))));
-        return unique.sort((a, b) => Number(a) - Number(b));
-    }, [data]);
-
     const filtered = useMemo(() => {
         const normalizedSearch = searchText.trim().toLowerCase();
         const rows = data.filter(row => {
             if (selectedKing !== "all" && (row.week.king || "عشوائي") !== selectedKing) return false;
             if (selectedRater !== "all" && !row.ratings.some(r => r.userName === selectedRater)) return false;
-            if (selectedCycle !== "all" && String(row.week.cycleNumber || 1) !== selectedCycle) return false;
             if (minScore !== "all" && row.averageScore < Number(minScore)) return false;
             if (normalizedSearch.length > 0) {
                 const hay = `${row.week.restaurant || ""} ${row.week.activity || ""}`.toLowerCase();
@@ -54,7 +47,7 @@ export default function RatingsExplorer() {
             return a.averageScore - b.averageScore;
         });
         return rows;
-    }, [data, selectedKing, selectedRater, selectedCycle, minScore, searchText, sortBy]);
+    }, [data, selectedKing, selectedRater, minScore, searchText, sortBy]);
 
     return (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-6 shadow-xl">
@@ -79,10 +72,6 @@ export default function RatingsExplorer() {
                     <option value="all">كل المقيمين</option>
                     {VALID_NAMES.map(name => <option key={name} value={name}>{name}</option>)}
                 </select>
-                <select value={selectedCycle} onChange={e => setSelectedCycle(e.target.value)} className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200">
-                    <option value="all">كل الدورات</option>
-                    {cycles.map(cycle => <option key={cycle} value={cycle}>الدورة {cycle}</option>)}
-                </select>
                 <select value={minScore} onChange={e => setMinScore(e.target.value)} className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200">
                     <option value="all">أي تقييم</option>
                     <option value="4">4.0+ ⭐</option>
@@ -106,13 +95,23 @@ export default function RatingsExplorer() {
                             <div className="flex items-start justify-between gap-2">
                                 <div>
                                     <p className="text-white font-semibold text-sm">{row.week.restaurant || "غير محدد"}</p>
-                                    <p className="text-xs text-slate-400">الدورة {row.week.cycleNumber || 1} - الأسبوع {row.week.weekNumber || 1} - الملك: {row.week.king || "عشوائي"}</p>
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                        <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300">
+                                            {row.week.day || "يوم غير محدد"}
+                                        </span>
+                                        <span className="text-[11px] text-slate-500">
+                                            - الملك: {row.week.king || "عشوائي"}
+                                        </span>
+                                    </div>
                                 </div>
                                 <div className="text-amber-400 text-sm font-bold flex items-center gap-1">
                                     <Star className="w-3.5 h-3.5 fill-amber-400" />
                                     {row.averageScore > 0 ? row.averageScore.toFixed(1) : "—"}
                                 </div>
                             </div>
+                            <p className="text-[11px] text-slate-500 mt-2">
+                                تاريخ الطلعة: {new Date(row.week.createdAt.toMillis()).toLocaleDateString("ar-SA")}
+                            </p>
                         </div>
                     ))}
                 </div>
