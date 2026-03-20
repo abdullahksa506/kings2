@@ -294,7 +294,7 @@ export default function Dashboard() {
         <div className="min-h-screen bg-slate-950 p-4 md:p-8 font-sans relative">
             {/* Version Badge & Secret Import */}
             <div className="fixed top-2 left-2 z-50 flex items-center gap-2">
-                <span className="text-[10px] text-slate-600 font-mono select-none">v11</span>
+                <span className="text-[10px] text-slate-600 font-mono select-none">v12</span>
                 {user?.role === "dean" && (
                     <button onClick={handleSecretImport} className="text-slate-800 hover:text-amber-500 transition-colors" title="استيراد البيانات السابقة">
                         <UploadCloud className="w-3 h-3" />

@@ -483,7 +483,7 @@ export const services = {
         // --- Cycle stats ---
         const maxCycle = completedWeeks.reduce((max, w) => Math.max(max, w.cycleNumber || 1), 1);
 
-        // --- Fun facts ---
+        // --- Fun facts & Detailed Ratings Stats ---
         const mostAttendant = Object.entries(memberStats).sort((a, b) => b[1].attended - a[1].attended)[0];
         const mostAbsent = Object.entries(memberStats).sort((a, b) => b[1].absent - a[1].absent)[0];
         const mostKing = Object.entries(memberStats).sort((a, b) => b[1].timesAsKing - a[1].timesAsKing)[0];
@@ -491,6 +491,67 @@ export const services = {
         const avgAttendancePerWeek = completedWeeks.length > 0
             ? VALID_NAMES.reduce((sum, name) => sum + memberStats[name].attended, 0) / completedWeeks.length
             : 0;
+
+        // Calculate Week Averages
+        const weekAverages: Record<string, number> = {};
+        for (const week of completedWeeks) {
+            const weekRt = allRatings.filter(r => r.weekId === week.id);
+            if (weekRt.length > 0) {
+                weekAverages[week.id] = weekRt.reduce((acc, r) => acc + r.score, 0) / weekRt.length;
+            }
+        }
+
+        // Calculate King Averages
+        const kingAverageScores: Record<string, { sum: number; count: number }> = {};
+        for (const week of completedWeeks) {
+            if (week.king && weekAverages[week.id] !== undefined) {
+                if (!kingAverageScores[week.king]) kingAverageScores[week.king] = { sum: 0, count: 0 };
+                kingAverageScores[week.king].sum += weekAverages[week.id];
+                kingAverageScores[week.king].count++;
+            }
+        }
+
+        let highestRatedKing = null;
+        let lowestRatedKing = null;
+        let maxAvg = -1;
+        let minAvg = 999;
+        for (const [king, data] of Object.entries(kingAverageScores)) {
+            if (data.count === 0) continue;
+            const avg = data.sum / data.count;
+            if (avg > maxAvg) { maxAvg = avg; highestRatedKing = { name: king, score: avg }; }
+            if (avg < minAvg) { minAvg = avg; lowestRatedKing = { name: king, score: avg }; }
+        }
+
+        // Calculate Rater Habits
+        const raterPicky: Record<string, { sum: number; count: number }> = {};
+        
+        for (const rating of allRatings) {
+            if (rating.userName !== "System_Import") {
+                if (VALID_NAMES.includes(rating.userName)) {
+                    if (!raterPicky[rating.userName]) raterPicky[rating.userName] = { sum: 0, count: 0 };
+                    raterPicky[rating.userName].sum += rating.score;
+                    raterPicky[rating.userName].count++;
+                }
+            }
+        }
+
+        // Global outings average: each outing has equal weight (not each individual rating).
+        const completedWeekAverages = Object.values(weekAverages);
+        const globalAverageRating = completedWeekAverages.length > 0
+            ? completedWeekAverages.reduce((sum, value) => sum + value, 0) / completedWeekAverages.length
+            : 0;
+
+        let mostCriticalRater = null;
+        let mostGenerousRater = null;
+        let minRaterAvg = 999;
+        let maxRaterAvg = -1;
+        for (const [name, data] of Object.entries(raterPicky)) {
+            if (data.count >= 2) { // minimum 2 ratings to be judged accurately
+                const avg = data.sum / data.count;
+                if (avg < minRaterAvg) { minRaterAvg = avg; mostCriticalRater = { name, score: avg }; }
+                if (avg > maxRaterAvg) { maxRaterAvg = avg; mostGenerousRater = { name, score: avg }; }
+            }
+        }
 
         // --- Streaks ---
         const streaks: Record<string, { current: number; max: number }> = {};
@@ -549,6 +610,11 @@ export const services = {
                 mostKing: mostKing ? { name: mostKing[0], count: mostKing[1].timesAsKing } : null,
                 longestStreak: longestStreak ? { name: longestStreak[0], streak: longestStreak[1].max } : null,
                 mostChatActive: mostChatActive ? { name: mostChatActive[0], count: mostChatActive[1] } : null,
+                highestRatedKing: highestRatedKing ? { name: highestRatedKing.name, score: Math.round(highestRatedKing.score * 10) / 10 } : null,
+                lowestRatedKing: lowestRatedKing && lowestRatedKing.name !== highestRatedKing?.name ? { name: lowestRatedKing.name, score: Math.round(lowestRatedKing.score * 10) / 10 } : null,
+                mostCriticalRater: mostCriticalRater ? { name: mostCriticalRater.name, score: Math.round(mostCriticalRater.score * 10) / 10 } : null,
+                mostGenerousRater: mostGenerousRater && mostGenerousRater.name !== mostCriticalRater?.name ? { name: mostGenerousRater.name, score: Math.round(mostGenerousRater.score * 10) / 10 } : null,
+                globalAverageRating: Math.round(globalAverageRating * 10) / 10
             },
             streaks,
             chatPerUser,

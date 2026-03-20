@@ -252,6 +252,21 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                                 <h3 className="font-bold text-yellow-300 text-lg">أرقام ممتعة 🎯</h3>
                             </div>
                             <div className="space-y-2 relative z-10">
+                                {stats.funFacts.highestRatedKing && (
+                                    <FunFactRow icon="🌟" label="الملك المحبوب (أعلى تقييم لطلعته)" value={`${stats.funFacts.highestRatedKing.name} (${stats.funFacts.highestRatedKing.score} ⭐)`} />
+                                )}
+                                {stats.funFacts.lowestRatedKing && (
+                                    <FunFactRow icon="📉" label="أسوأ ملك (أقل تقييم لطلعته)" value={`${stats.funFacts.lowestRatedKing.name} (${stats.funFacts.lowestRatedKing.score} ⭐)`} />
+                                )}
+                                {stats.funFacts.mostGenerousRater && (
+                                    <FunFactRow icon="💖" label="الذوّيق (أعلى متوسط يعطيه)" value={`${stats.funFacts.mostGenerousRater.name} (${stats.funFacts.mostGenerousRater.score} ⭐)`} />
+                                )}
+                                {stats.funFacts.mostCriticalRater && (
+                                    <FunFactRow icon="⚖️" label="الجلّاد (أقل متوسط يعطيه)" value={`${stats.funFacts.mostCriticalRater.name} (${stats.funFacts.mostCriticalRater.score} ⭐)`} />
+                                )}
+                                {stats.funFacts.globalAverageRating > 0 && (
+                                    <FunFactRow icon="🌍" label="متوسط تقييم كل الطلعات" value={`${stats.funFacts.globalAverageRating} ⭐`} />
+                                )}
                                 {stats.funFacts.mostKing && (
                                     <FunFactRow icon="👑" label="أكثر واحد صار ملك" value={`${stats.funFacts.mostKing.name} (${stats.funFacts.mostKing.count} مرة)`} />
                                 )}

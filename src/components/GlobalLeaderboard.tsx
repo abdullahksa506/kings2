@@ -218,22 +218,28 @@ export default function GlobalLeaderboard() {
                                                     <div className="text-center text-sm text-slate-500 py-2 animate-pulse">
                                                         جاري تحميل التقييمات...
                                                     </div>
-                                                ) : weekRatings[entry.week.id]?.length > 0 ? (
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {weekRatings[entry.week.id].map(rating => (
-                                                            <div key={rating.id} className="flex items-center gap-1.5 bg-slate-800/50 border border-slate-700/50 px-2 py-1 rounded-lg">
-                                                                <span className="text-xs text-slate-300 flex items-center gap-1">
-                                                                    <Star className="w-3 h-3 text-amber-500/50" />
-                                                                    {rating.userName}
-                                                                </span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <div className="text-center text-sm text-slate-500 py-2">
-                                                        لا يوجد تقييمات فردية مسجلة لهذه الطلعة.
-                                                    </div>
-                                                )}
+                                                ) : (() => {
+                                                    const ratersNames = entry.week.id.startsWith("history_week_")
+                                                        ? VALID_NAMES.filter(n => (entry.week.responded || []).includes(n) && !(entry.week.absentees || []).includes(n) || n === entry.week.king)
+                                                        : (weekRatings[entry.week.id]?.map(r => r.userName) || []);
+                                                    
+                                                    return ratersNames.length > 0 ? (
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {ratersNames.map(name => (
+                                                                <div key={name} className="flex items-center gap-1.5 bg-slate-800/50 border border-slate-700/50 px-2 py-1 rounded-lg">
+                                                                    <span className="text-xs text-slate-300 flex items-center gap-1">
+                                                                        <Star className="w-3 h-3 text-amber-500/50" />
+                                                                        {name}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-center text-sm text-slate-500 py-2">
+                                                            لا يوجد تقييمات فردية مسجلة لهذه الطلعة.
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
                                         </motion.div>
                                     )}
