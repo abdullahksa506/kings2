@@ -77,6 +77,28 @@ export interface ChatMessage {
     createdAt: Timestamp;
 }
 
+export interface RatingExplorerWeek {
+    week: WeekSession;
+    averageScore: number;
+    ratings: Rating[];
+}
+
+export interface MemberProfileData {
+    name: string;
+    totalWeeksParticipated: number;
+    attendanceRate: number;
+    attendedCount: number;
+    absentCount: number;
+    timesAsKing: number;
+    ratingsGiven: number;
+    averageRatingGiven: number;
+    averageWeekScoreAsKing: number;
+    bestWeekAsKing: { weekId: string; restaurant: string | null; score: number } | null;
+    worstWeekAsKing: { weekId: string; restaurant: string | null; score: number } | null;
+    favoriteDay: "الخميس" | "الجمعة" | "تعادل";
+    lastSeenOutingAt: Timestamp | null;
+}
+
 export const VALID_NAMES = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
 export const MAX_BUDGET = 175;
 
@@ -269,6 +291,91 @@ export const services = {
         }));
 
         return results.sort((a, b) => a.week.createdAt.toMillis() - b.week.createdAt.toMillis());
+    },
+
+    async getRatingsExplorerData(): Promise<RatingExplorerWeek[]> {
+        const completed = await this.getAllCompletedWeeks();
+        const withRatings = await Promise.all(completed.map(async ({ week, averageScore }) => {
+            const ratings = await this.getAllRatingsForWeek(week.id);
+            return { week, averageScore, ratings };
+        }));
+        return withRatings;
+    },
+
+    async getMemberProfile(memberName: string): Promise<MemberProfileData> {
+        const [allWeeksWithAvg, ratingsSnap] = await Promise.all([
+            this.getAllCompletedWeeks(),
+            getDocs(collection(db, "ratings")),
+        ]);
+
+        const allRatings = ratingsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Rating));
+        const completedWeeks = allWeeksWithAvg.map(w => w.week);
+        const memberWeeks = completedWeeks.filter(week => {
+            if (week.king === memberName) return true;
+            if ((week.responded || []).includes(memberName)) return true;
+            return false;
+        });
+
+        const attendedWeeks = memberWeeks.filter(week =>
+            week.king === memberName || ((week.responded || []).includes(memberName) && !(week.absentees || []).includes(memberName))
+        );
+        const absentWeeks = memberWeeks.filter(week =>
+            (week.responded || []).includes(memberName) && (week.absentees || []).includes(memberName)
+        );
+        const attendanceRate = memberWeeks.length > 0 ? Math.round((attendedWeeks.length / memberWeeks.length) * 100) : 0;
+
+        const kingWeeks = allWeeksWithAvg.filter(({ week }) => week.king === memberName && week.status === "completed");
+        const kingWeekScores = kingWeeks.filter(w => w.averageScore > 0);
+        const averageWeekScoreAsKing = kingWeekScores.length > 0
+            ? Math.round((kingWeekScores.reduce((sum, w) => sum + w.averageScore, 0) / kingWeekScores.length) * 10) / 10
+            : 0;
+
+        const bestKingWeek = kingWeekScores.length > 0
+            ? [...kingWeekScores].sort((a, b) => b.averageScore - a.averageScore)[0]
+            : null;
+        const worstKingWeek = kingWeekScores.length > 0
+            ? [...kingWeekScores].sort((a, b) => a.averageScore - b.averageScore)[0]
+            : null;
+
+        const memberGivenRatings = allRatings.filter(r => r.userName === memberName);
+        const averageRatingGiven = memberGivenRatings.length > 0
+            ? Math.round((memberGivenRatings.reduce((sum, r) => sum + r.score, 0) / memberGivenRatings.length) * 10) / 10
+            : 0;
+
+        let thursdayCount = 0;
+        let fridayCount = 0;
+        for (const week of memberWeeks) {
+            if (week.day === "الخميس") thursdayCount++;
+            if (week.day === "الجمعة") fridayCount++;
+        }
+        const favoriteDay: "الخميس" | "الجمعة" | "تعادل" =
+            thursdayCount === fridayCount ? "تعادل" : thursdayCount > fridayCount ? "الخميس" : "الجمعة";
+
+        const lastSeenWeek = [...attendedWeeks].sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())[0];
+
+        return {
+            name: memberName,
+            totalWeeksParticipated: memberWeeks.length,
+            attendanceRate,
+            attendedCount: attendedWeeks.length,
+            absentCount: absentWeeks.length,
+            timesAsKing: kingWeeks.length,
+            ratingsGiven: memberGivenRatings.length,
+            averageRatingGiven,
+            averageWeekScoreAsKing,
+            bestWeekAsKing: bestKingWeek ? {
+                weekId: bestKingWeek.week.id,
+                restaurant: bestKingWeek.week.restaurant || null,
+                score: Math.round(bestKingWeek.averageScore * 10) / 10
+            } : null,
+            worstWeekAsKing: worstKingWeek ? {
+                weekId: worstKingWeek.week.id,
+                restaurant: worstKingWeek.week.restaurant || null,
+                score: Math.round(worstKingWeek.averageScore * 10) / 10
+            } : null,
+            favoriteDay,
+            lastSeenOutingAt: lastSeenWeek?.createdAt || null,
+        };
     },
 
     async resetCycleLeaderboard(currentWeekId: string, newCycleNumber: number) {

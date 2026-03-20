@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, VALID_NAMES, invokeRpc } from "@/lib/services";
-import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis } from "lucide-react";
+import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import RatingForm from "./RatingForm";
@@ -20,6 +20,8 @@ import SuggestionBox from "./SuggestionBox";
 import ChatBoard from "./ChatBoard";
 import StatisticsPanel from "./StatisticsPanel";
 import { Gamepad2, Bath, UploadCloud, BarChart3 } from "lucide-react";
+import RatingsExplorer from "./RatingsExplorer";
+import MemberProfilePanel from "./MemberProfilePanel";
 import Link from "next/link";
 import historicalWeeks from "@/data/historicalWeeks.json";
 import { Timestamp, doc, setDoc } from "firebase/firestore";
@@ -59,6 +61,7 @@ export default function Dashboard() {
 
     // Statistics State
     const [isStatsOpen, setIsStatsOpen] = useState(false);
+    const [isMemberProfileOpen, setIsMemberProfileOpen] = useState(false);
 
     // Tab State
     type TabType = "week" | "leaderboard" | "bathroom" | "more";
@@ -873,6 +876,7 @@ export default function Dashboard() {
                                 } : undefined}
                             />
                             <GlobalLeaderboard />
+                            <RatingsExplorer />
                         </div>
                     )}
 
@@ -919,6 +923,29 @@ export default function Dashboard() {
                                     >
                                         <BarChart3 className="w-5 h-5" />
                                         عرض الإحصائيات
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Member Profile Button */}
+                            <div className="bg-gradient-to-br from-cyan-900/40 to-slate-900 border border-cyan-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group cursor-pointer" onClick={() => setIsMemberProfileOpen(true)}>
+                                <div className="absolute -right-10 -top-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl group-hover:bg-cyan-500/20 transition-all duration-500" />
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="bg-cyan-500/20 p-2 rounded-xl text-cyan-400">
+                                            <Users className="w-6 h-6" />
+                                        </div>
+                                        <h3 className="font-bold text-xl text-white">الملف الشخصي للعضو</h3>
+                                    </div>
+                                    <p className="text-sm text-slate-300 mb-5 leading-relaxed">
+                                        اختر أي عضو وشوف إحصائياته الشخصية بسرعة: حضوره، تقييماته، وأداؤه كملك.
+                                    </p>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setIsMemberProfileOpen(true); }}
+                                        className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20"
+                                    >
+                                        <Users className="w-5 h-5" />
+                                        فتح الملف الشخصي
                                     </button>
                                 </div>
                             </div>
@@ -1057,6 +1084,11 @@ export default function Dashboard() {
             <StatisticsPanel
                 isOpen={isStatsOpen}
                 onClose={() => setIsStatsOpen(false)}
+            />
+
+            <MemberProfilePanel
+                isOpen={isMemberProfileOpen}
+                onClose={() => setIsMemberProfileOpen(false)}
             />
         </div >
     );

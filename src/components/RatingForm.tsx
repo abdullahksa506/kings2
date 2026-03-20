@@ -24,9 +24,9 @@ export default function RatingForm({ weekId, userName, onRated, disabled = false
     };
 
     return (
-        <div className={`bg-slate-900 border rounded-2xl p-6 text-center ${disabled ? "border-slate-800/50 opacity-60" : "border-slate-800"}`}>
-            <h3 className="text-xl font-bold text-white mb-2">كيف كانت طلعة هذا الأسبوع؟</h3>
-            <p className="text-slate-400 text-sm mb-6">تقييمك سري ولن يراه سوى عميد الدستور.</p>
+        <div className={`bg-slate-900 border rounded-2xl p-4 md:p-6 text-center ${disabled ? "border-slate-800/50 opacity-60" : "border-slate-800"}`}>
+            <h3 className="text-lg md:text-xl font-bold text-white mb-2">كيف كانت طلعة هذا الأسبوع؟</h3>
+            <p className="text-slate-400 text-xs md:text-sm mb-5">تقييمك سري ولن يراه سوى عميد الدستور.</p>
 
             {disabled && (
                 <div className="flex items-center justify-center gap-2 mb-4 text-slate-500 text-sm">
@@ -35,7 +35,7 @@ export default function RatingForm({ weekId, userName, onRated, disabled = false
                 </div>
             )}
 
-            <div className="flex justify-center gap-2 mb-8" dir="ltr">
+            <div className="flex justify-center gap-1.5 md:gap-2 mb-6" dir="ltr">
                 {[1, 2, 3, 4, 5].map(star => (
                     <button
                         key={star}
@@ -47,16 +47,19 @@ export default function RatingForm({ weekId, userName, onRated, disabled = false
                         disabled={disabled}
                     >
                         <Star
-                            className={`w-12 h-12 transition-colors duration-200 ${!disabled && (hoveredStar || score) >= star ? "fill-amber-500 text-amber-500" : "text-slate-700"}`}
+                            className={`w-10 h-10 md:w-12 md:h-12 transition-colors duration-200 ${!disabled && (hoveredStar || score) >= star ? "fill-amber-500 text-amber-500" : "text-slate-700"}`}
                         />
                     </button>
                 ))}
             </div>
+            {score > 0 && (
+                <p className="text-sm text-amber-400 mb-4">اخترت: {score} من 5 ⭐</p>
+            )}
 
             <button
                 onClick={handleSubmit}
                 disabled={score === 0 || submitting || disabled}
-                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-8 rounded-xl transition-all shadow-lg hover:shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 mx-auto"
+                className="w-full md:w-auto bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-6 md:px-8 rounded-xl transition-all shadow-lg hover:shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 mx-auto"
             >
                 {disabled ? "التقييم مقفل" : submitting ? "جاري الإرسال..." : "إرسال التقييم"}
                 {disabled ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4 rotate-180" />}

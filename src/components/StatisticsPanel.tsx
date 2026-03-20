@@ -32,16 +32,16 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-start justify-center p-3 bg-slate-950/90 backdrop-blur-md overflow-y-auto">
-            <div className="w-full max-w-2xl my-4 animate-[slideUp_0.4s_ease-out]">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-2 md:p-3 bg-slate-950/90 backdrop-blur-md overflow-y-auto">
+            <div className="w-full max-w-2xl my-2 md:my-4 animate-[slideUp_0.4s_ease-out]">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="sticky top-0 z-20 flex items-center justify-between mb-4 md:mb-6 bg-slate-950/80 backdrop-blur-sm rounded-xl p-2">
                     <div className="flex items-center gap-3">
                         <div className="bg-gradient-to-br from-violet-500/30 to-purple-600/30 p-3 rounded-2xl border border-violet-500/30">
                             <BarChart3 className="w-7 h-7 text-violet-400" />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-300 to-purple-400 bg-clip-text text-transparent">
+                            <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-violet-300 to-purple-400 bg-clip-text text-transparent">
                                 إحصائيات عرش الخميس
                             </h2>
                             <p className="text-xs text-slate-500 mt-0.5">أرقام وتفاصيل عن كل شي</p>
@@ -70,7 +70,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                                 <Eye className="w-5 h-5 text-violet-400" />
                                 <h3 className="font-bold text-violet-300 text-lg">زيارات الموقع</h3>
                             </div>
-                            <div className="grid grid-cols-2 gap-3 relative z-10">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10">
                                 <StatBox label="إجمالي الزيارات" value={stats.visitStats.total} color="violet" icon="📊" />
                                 <StatBox label="زيارات اليوم" value={stats.visitStats.today} color="purple" icon="📅" />
                                 <StatBox label="هذا الأسبوع" value={stats.visitStats.thisWeek} color="fuchsia" icon="📆" />
@@ -85,7 +85,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                                 <Castle className="w-5 h-5 text-amber-400" />
                                 <h3 className="font-bold text-amber-300 text-lg">الطلعات</h3>
                             </div>
-                            <div className="grid grid-cols-2 gap-3 relative z-10">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10">
                                 <StatBox label="عدد الطلعات" value={stats.totalOutings} color="amber" icon="🏰" />
                                 <StatBox label="عدد الدورات" value={stats.totalCycles} color="yellow" icon="🔄" />
                                 <StatBox label="أيام الخميس" value={stats.thursdayCount} color="orange" icon="📅" />
@@ -188,7 +188,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                                 <UtensilsCrossed className="w-5 h-5 text-sky-400" />
                                 <h3 className="font-bold text-sky-300 text-lg">المطاعم</h3>
                             </div>
-                            <div className="grid grid-cols-2 gap-3 mb-3 relative z-10">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 relative z-10">
                                 <StatBox label="مطاعم مختلفة" value={stats.uniqueRestaurants} color="sky" icon="🍽️" />
                                 <StatBox label="إجمالي الزيارات" value={stats.totalOutings} color="cyan" icon="📋" />
                             </div>
@@ -222,7 +222,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                                 <MessageSquare className="w-5 h-5 text-pink-400" />
                                 <h3 className="font-bold text-pink-300 text-lg">النشاط والتفاعل</h3>
                             </div>
-                            <div className="grid grid-cols-2 gap-3 mb-3 relative z-10">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 relative z-10">
                                 <StatBox label="رسائل الشات" value={stats.chatCount} color="pink" icon="💬" />
                                 <StatBox label="اقتراحات" value={stats.suggestionsCount} color="rose" icon="💡" />
                             </div>
