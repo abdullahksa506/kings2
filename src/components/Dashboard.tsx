@@ -28,6 +28,7 @@ import { Timestamp, doc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export default function Dashboard() {
+    const WEEK_DAYS: Exclude<WeekSession["day"], null>[] = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
     const { user, logout } = useAuth();
     const [currentWeek, setCurrentWeek] = useState<WeekSession | null>(null);
     const [pastWeek, setPastWeek] = useState<WeekSession | null>(null);
@@ -41,7 +42,8 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
 
     // Forms state
-    const [selectedDay, setSelectedDay] = useState<"الخميس" | "الجمعة">("الخميس");
+    const [selectedDay, setSelectedDay] = useState<Exclude<WeekSession["day"], null>>("الخميس");
+    const [deanSelectedDay, setDeanSelectedDay] = useState<Exclude<WeekSession["day"], null>>("الخميس");
     const [restaurant, setRestaurant] = useState("");
     const [saving, setSaving] = useState(false);
 
@@ -96,6 +98,7 @@ export default function Dashboard() {
         if (week) {
             setCurrentWeek(week);
             if (week.day) setSelectedDay(week.day);
+            if (week.day) setDeanSelectedDay(week.day);
             if (week.restaurant) setRestaurant(week.restaurant);
             if (user?.name) {
                 const rated = await services.hasUserRated(week.id, user.name);
@@ -128,6 +131,7 @@ export default function Dashboard() {
             if (week) {
                 setCurrentWeek(week);
                 if (week.day) setSelectedDay(week.day);
+                if (week.day) setDeanSelectedDay(week.day);
                 if (week.restaurant) setRestaurant(week.restaurant);
                 if (user?.name) {
                     const rated = await services.hasUserRated(week.id, user.name);
@@ -274,6 +278,7 @@ export default function Dashboard() {
     };
 
     const isKing = currentWeek?.king === user?.name;
+    const isDean = user?.role === "dean";
 
     const handleSecretImport = async () => {
         if (!confirm("تأكيد استيراد البيانات التاريخية وتحديث السجل؟ سيتم حذف أي استيراد سابق لمنع التكرار.")) return;
@@ -450,6 +455,48 @@ export default function Dashboard() {
                                         <option key={name} value={name}>{name}</option>
                                     ))}
                                 </select>
+                            </div>
+                        )}
+
+                        {currentWeek && (
+                            <div className="w-full bg-slate-950/40 p-4 rounded-xl border border-amber-500/20 mt-4">
+                                <h3 className="text-amber-500 font-semibold mb-3">تغيير يوم الطلعة (سري - عميد فقط)</h3>
+                                <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                                    <select
+                                        value={deanSelectedDay}
+                                        onChange={(e) => setDeanSelectedDay(e.target.value as Exclude<WeekSession["day"], null>)}
+                                        className="bg-slate-900 text-amber-500 border border-slate-700/50 rounded-lg p-2 text-sm outline-none w-full sm:w-44 focus:border-amber-500"
+                                        disabled={saving}
+                                    >
+                                        {WEEK_DAYS.map(day => (
+                                            <option key={day} value={day}>{day}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        onClick={async () => {
+                                            if (!currentWeek) return;
+                                            setSaving(true);
+                                            try {
+                                                await services.setWeekChoices(
+                                                    currentWeek.id,
+                                                    deanSelectedDay,
+                                                    currentWeek.restaurant || null,
+                                                    currentWeek.activity || null
+                                                );
+                                                await fetchWeek();
+                                            } catch (e) {
+                                                console.error(e);
+                                                alert("تعذّر تغيير اليوم من لوحة العميد");
+                                            } finally {
+                                                setSaving(false);
+                                            }
+                                        }}
+                                        disabled={saving}
+                                        className="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-400 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                                    >
+                                        حفظ يوم الطلعة
+                                    </button>
+                                </div>
                             </div>
                         )}
 
@@ -715,11 +762,12 @@ export default function Dashboard() {
                                                 {isKing ? (
                                                     <select
                                                         value={selectedDay}
-                                                        onChange={e => setSelectedDay(e.target.value as any)}
+                                                        onChange={e => setSelectedDay(e.target.value as Exclude<WeekSession["day"], null>)}
                                                         className="bg-slate-900 text-white border border-slate-700 rounded-lg p-2 outline-none w-48 focus:border-amber-500"
                                                     >
-                                                        <option value="الخميس">الخميس</option>
-                                                        <option value="الجمعة">الجمعة</option>
+                                                        {(["الخميس", "الجمعة"] as Exclude<WeekSession["day"], null>[]).map(day => (
+                                                            <option key={day} value={day}>{day}</option>
+                                                        ))}
                                                     </select>
                                                 ) : (
                                                     <p className="text-xl font-semibold text-white">

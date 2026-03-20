@@ -4,6 +4,8 @@ import * as admin from 'firebase-admin';
 import { hashPassword } from "@/lib/hash";
 
 const VALID_NAMES_RPC = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
+const WEEK_DAYS = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"] as const;
+const STANDARD_OUTING_DAYS = ["الخميس", "الجمعة"] as const;
 const Timestamp = admin.firestore.Timestamp;
 
 export async function POST(request: Request) {
@@ -77,6 +79,13 @@ export async function POST(request: Request) {
                 const weekChoicesSnap = await weekChoicesRef.get();
                 if (!weekChoicesSnap.exists || (weekChoicesSnap.data() as any).king !== authName) {
                     if (!isAdmin) throw new Error("Only the King can make choices");
+                }
+                if (payload.day !== null && !WEEK_DAYS.includes(payload.day)) {
+                    throw new Error("Invalid day");
+                }
+                // Only Dean can choose any day. Others are limited to Thursday/Friday.
+                if (!isAdmin && payload.day !== null && !STANDARD_OUTING_DAYS.includes(payload.day)) {
+                    throw new Error("Only the Dean can pick a non-standard day");
                 }
                 await weekChoicesRef.update({ day: payload.day, restaurant: payload.restaurant, activity: payload.activity });
                 return NextResponse.json({ result: true });

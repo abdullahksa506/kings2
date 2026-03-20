@@ -38,7 +38,7 @@ export interface WeekSession {
     isRandom: boolean;
     cycleNumber: number; // e.g. cycle 1 is weeks 1-6
     weekNumber: number; // overall week number
-    day: "الخميس" | "الجمعة" | null;
+    day: "السبت" | "الأحد" | "الإثنين" | "الثلاثاء" | "الأربعاء" | "الخميس" | "الجمعة" | null;
     restaurant: string | null;
     activity: string | null;
     status: "pending" | "completed" | "skipped";
@@ -159,7 +159,7 @@ export const services = {
         return invokeRpc("toggleAttendance", { weekId, userName, isAbsent });
     },
 
-    async setWeekChoices(weekId: string, day: "الخميس" | "الجمعة" | null, restaurant: string | null, activity: string | null) {
+    async setWeekChoices(weekId: string, day: WeekSession["day"], restaurant: string | null, activity: string | null) {
         return invokeRpc("setWeekChoices", { weekId, day, restaurant, activity });
     },
 
