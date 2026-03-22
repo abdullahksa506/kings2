@@ -8,6 +8,17 @@ const WEEK_DAYS = ["السبت", "الأحد", "الإثنين", "الثلاثا
 const STANDARD_OUTING_DAYS = ["الخميس", "الجمعة"] as const;
 const Timestamp = admin.firestore.Timestamp;
 
+/** يطابق التوكن مع كلمة المرور المخزنة (SHA-256 hex قد يختلف حرف كبير/صغير بين العميل والخادم) */
+function authPasswordMatches(dbPassword: unknown, clientToken: unknown): boolean {
+    if (typeof dbPassword !== "string" || typeof clientToken !== "string") return false;
+    if (dbPassword === clientToken) return true;
+    const isHex64 = (s: string) => s.length === 64 && /^[a-f0-9]+$/i.test(s);
+    if (isHex64(dbPassword) && isHex64(clientToken)) {
+        return dbPassword.toLowerCase() === clientToken.toLowerCase();
+    }
+    return false;
+}
+
 export async function POST(request: Request) {
     try {
         const body = await request.json();
@@ -25,7 +36,7 @@ export async function POST(request: Request) {
             }
             const userRef = adminDb.collection("users").doc(auth.name);
             const userSnap = await userRef.get();
-            if (!userSnap.exists || userSnap.data()?.password !== auth.token) {
+            if (!userSnap.exists || !authPasswordMatches(userSnap.data()?.password, auth.token)) {
                 return NextResponse.json({ error: "Unauthorized - Invalid Token" }, { status: 401 });
             }
             userDocData = userSnap.data();

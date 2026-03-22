@@ -28,8 +28,12 @@ export async function verifyIdentity(userName: string): Promise<boolean> {
     if (!userDoc.exists()) return false;
 
     const userData = userDoc.data();
-    // Compare the token exact match (token in local storage should perfectly equal the hashed password in db)
-    return userData.password === storedToken;
+    const dbPass = typeof userData.password === "string" ? userData.password : "";
+    const token = typeof storedToken === "string" ? storedToken : "";
+    if (dbPass === token) return true;
+    const isHex64 = (s: string) => s.length === 64 && /^[a-f0-9]+$/i.test(s);
+    if (isHex64(dbPass) && isHex64(token)) return dbPass.toLowerCase() === token.toLowerCase();
+    return false;
 }
 
 export interface WeekSession {

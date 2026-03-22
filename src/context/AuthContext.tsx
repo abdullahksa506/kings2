@@ -51,7 +51,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const userDoc = await getDoc(doc(db, "users", storedName));
                     if (userDoc.exists()) {
                         const data = userDoc.data();
-                        if (data.password === storedToken) {
+                        const dbPass = typeof data.password === "string" ? data.password : "";
+                        const tokenMatch =
+                            dbPass === storedToken ||
+                            (isHashed(dbPass) &&
+                                isHashed(storedToken) &&
+                                dbPass.toLowerCase() === storedToken.toLowerCase());
+                        if (tokenMatch) {
+                            // RPC يقارن التوكن مع كلمة المرور في DB حرفياً — نوحّد التخزين إن اختلف الحرف الكبير/الصغير في الهاش
+                            if (isHashed(dbPass) && isHashed(storedToken) && dbPass !== storedToken) {
+                                localStorage.setItem("king_user_token", dbPass);
+                            }
                             const profile: UserProfile = {
                                 name: data.name,
                                 role: data.role,
@@ -89,23 +99,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             throw new Error("المستخدم غير مسجل بعد");
         }
 
-        const userData = userDoc.data();
+        const raw = userDoc.data() as Record<string, unknown>;
+        const storedPassword = typeof raw.password === "string" ? raw.password : "";
+        const userData = { ...raw, password: storedPassword } as {
+            name: string;
+            role: UserRole;
+            registered: boolean;
+            phoneNumber?: string;
+            password: string;
+        };
+
         let valid = false;
 
-        if (isHashed(userData.password)) {
-            // Check hash
+        if (!storedPassword) {
+            throw new Error("بيانات الحساب ناقصة. تواصل مع العميد.");
+        }
+
+        if (isHashed(storedPassword)) {
             const hashedInput = await hashPassword(password);
-            if (userData.password === hashedInput) {
+            if (storedPassword.toLowerCase() === hashedInput.toLowerCase()) {
                 valid = true;
             }
         } else {
-            // Auto-upgrade plain-text passwords
-            if (userData.password === password) {
+            if (storedPassword === password) {
                 valid = true;
-                // Background upgrade to hash
                 const newHash = await invokeRpc("login_upgrade", { userName: name, password });
-                userData.password = newHash;
+                userData.password = typeof newHash === "string" ? newHash : await hashPassword(password);
             }
+        }
+
+        if (!valid) {
+            throw new Error("كلمة المرور غير صحيحة");
         }
 
         // Omit password from state
@@ -116,9 +140,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             phoneNumber: userData.phoneNumber
         };
 
+        const tokenToStore = isHashed(userData.password)
+            ? userData.password
+            : await hashPassword(password);
+
         setUser(profile);
         localStorage.setItem("king_user_name", name);
-        localStorage.setItem("king_user_token", isHashed(userData.password) ? userData.password : await hashPassword(password));
+        localStorage.setItem("king_user_token", tokenToStore);
     };
 
     const register = async (name: string, password: string) => {
