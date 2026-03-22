@@ -1,4 +1,7 @@
 export async function hashPassword(password: string): Promise<string> {
+    if (typeof crypto === 'undefined' || !crypto.subtle) {
+        throw new Error("تأكد من استخدام التصفح الآمن (HTTPS) لأن التشفير غير مدعوم في هذا المتصفح.");
+    }
     const msgUint8 = new TextEncoder().encode(password);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
     const hashArray = Array.from(new Uint8Array(hashBuffer));

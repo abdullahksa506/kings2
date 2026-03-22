@@ -3,10 +3,11 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import ClientSecurity from "@/components/ClientSecurity";
+import { Toaster } from "sonner";
+import { Viewport } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
 
-import { Viewport } from "next";
 
 export const metadata: Metadata = {
   title: "ملك الخميس | King of Thursday",
@@ -32,6 +33,7 @@ export default function RootLayout({
     <html lang="ar" dir="rtl">
       <body className={`${inter.className} bg-slate-950 text-slate-50 min-h-screen selection:bg-amber-500/30 pb-safe pt-safe pl-safe pr-safe`}>
         <ClientSecurity />
+        <Toaster position="top-center" theme="dark" />
         <AuthProvider>
           {children}
         </AuthProvider>
