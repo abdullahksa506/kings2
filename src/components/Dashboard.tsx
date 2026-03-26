@@ -47,6 +47,10 @@ export default function Dashboard() {
     const [restaurant, setRestaurant] = useState("");
     const [saving, setSaving] = useState(false);
 
+    // Restaurant selection cooldown state
+    const [lastRestaurantChoiceTime, setLastRestaurantChoiceTime] = useState<number | null>(null);
+    const [restaurantChoiceCooldown, setRestaurantChoiceCooldown] = useState(0);
+
     // Change Password State
     const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
     const [currentPassword, setCurrentPassword] = useState("");
@@ -152,6 +156,25 @@ export default function Dashboard() {
         return () => unsubscribe();
     }, [user]);
 
+    // Cooldown timer effect
+    useEffect(() => {
+        if (!lastRestaurantChoiceTime) return;
+
+        const interval = setInterval(() => {
+            const elapsed = Date.now() - lastRestaurantChoiceTime;
+            const remaining = Math.max(0, 120000 - elapsed); // 120 seconds in milliseconds
+            
+            setRestaurantChoiceCooldown(Math.ceil(remaining / 1000));
+            
+            if (remaining === 0) {
+                setLastRestaurantChoiceTime(null);
+                clearInterval(interval);
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [lastRestaurantChoiceTime]);
+
     // Detect and log if user is using the standalone PWA 
     useEffect(() => {
         if (!user) return;
@@ -189,9 +212,40 @@ export default function Dashboard() {
 
     const handleSetChoices = async () => {
         if (!currentWeek || !user) return;
+        
+        // Check if user is king and if they're on cooldown for restaurant selection
+        if (currentWeek.king === user?.name && lastRestaurantChoiceTime) {
+            const elapsed = Date.now() - lastRestaurantChoiceTime;
+            if (elapsed < 120000) { // 120 seconds cooldown
+                const remainingSeconds = Math.ceil((120000 - elapsed) / 1000);
+                alert(`يجب الانتظار ${remainingSeconds} ثانية قبل تغيير المطعم مرة أخرى`);
+                return;
+            }
+        }
+        
         setSaving(true);
         try {
             await services.setWeekChoices(currentWeek.id, selectedDay, restaurant, null);
+
+            // Set cooldown for restaurant selection if user is king and restaurant was changed
+            if (currentWeek.king === user?.name && restaurant !== currentWeek.restaurant) {
+                setLastRestaurantChoiceTime(Date.now());
+                
+                // Send special notification for restaurant change
+                try {
+                    await fetch("/api/reminders/restaurant-change", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ 
+                            weekId: currentWeek.id,
+                            kingName: user.name,
+                            newRestaurant: restaurant
+                        })
+                    });
+                } catch (e) {
+                    console.error("Failed to send restaurant change notification:", e);
+                }
+            }
 
             // Notify members (Web Push)
             try {
@@ -893,10 +947,21 @@ export default function Dashboard() {
 
                                         {isKing && (
                                             <div className="pt-4 border-t border-slate-800">
+                                                {/* Cooldown Display */}
+                                                {restaurantChoiceCooldown > 0 && (
+                                                    <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                                                        <div className="flex items-center gap-2 text-amber-400">
+                                                            <AlertTriangle className="w-4 h-4" />
+                                                            <span className="text-sm font-medium">
+                                                        يجب الانتظار {restaurantChoiceCooldown} ثانية قبل تغيير المطعم مرة أخرى
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 <button
                                                     onClick={handleSetChoices}
-                                                    disabled={saving}
-                                                    className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-semibold py-3 px-8 rounded-xl flex items-center gap-2 transition-all w-full md:w-auto justify-center"
+                                                    disabled={saving || (restaurantChoiceCooldown > 0)}
+                                                    className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-semibold py-3 px-8 rounded-xl flex items-center gap-2 transition-all w-full md:w-auto justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                     {saving ? "جاري الحفظ..." : "حفظ القرارات"}
                                                     <CheckCircle className="w-5 h-5" />
