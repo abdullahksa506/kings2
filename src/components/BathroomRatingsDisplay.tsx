@@ -50,20 +50,43 @@ export default function BathroomRatingsDisplay() {
         </div>
     );
 
-    // Group ratings by weekId
-    const grouped = new Map<string, BathroomRating[]>();
+    const resolveBathroomLabel = (rating: BathroomRating): string => {
+        const fromRating = typeof rating.bathroomName === "string" ? rating.bathroomName.trim() : "";
+        if (fromRating) return fromRating;
+
+        const fromRestaurant = typeof rating.restaurantName === "string" ? rating.restaurantName.trim() : "";
+        if (fromRestaurant) return `حمام ${fromRestaurant}`;
+
+        const weekRestaurant = weeks.get(rating.weekId)?.restaurant?.trim() || "";
+        if (weekRestaurant) return `حمام ${weekRestaurant}`;
+
+        return "حمام غير محدد";
+    };
+
+    type BathroomGroup = {
+        key: string;
+        weekId: string;
+        label: string;
+        ratings: BathroomRating[];
+        latestAt: number;
+    };
+
+    // Group ratings by (week + bathroom label) so custom bathroom names appear separately.
+    const grouped = new Map<string, BathroomGroup>();
     for (const r of bathroomRatings) {
-        if (!grouped.has(r.weekId)) grouped.set(r.weekId, []);
-        grouped.get(r.weekId)!.push(r);
+        const label = resolveBathroomLabel(r);
+        const key = `${r.weekId}::${label}`;
+        const createdAtMs = r.createdAt?.toMillis?.() ?? 0;
+        if (!grouped.has(key)) {
+            grouped.set(key, { key, weekId: r.weekId, label, ratings: [], latestAt: createdAtMs });
+        }
+
+        const group = grouped.get(key)!;
+        group.ratings.push(r);
+        if (createdAtMs > group.latestAt) group.latestAt = createdAtMs;
     }
 
-    // Sort groups by week creation time (newest first)
-    const sortedGroups = [...grouped.entries()].sort((a, b) => {
-        const wA = weeks.get(a[0]);
-        const wB = weeks.get(b[0]);
-        if (wA && wB) return wB.createdAt.toMillis() - wA.createdAt.toMillis();
-        return 0;
-    });
+    const sortedGroups = [...grouped.values()].sort((a, b) => b.latestAt - a.latestAt);
 
     const EMOJIS = ["🤢", "😕", "😐", "🙂", "✨"];
 
@@ -73,23 +96,25 @@ export default function BathroomRatingsDisplay() {
                 <Bath className="w-5 h-5" />
                 جميع تقييمات حمامات هشام
             </h3>
-            {sortedGroups.map(([weekId, ratings]) => {
-                const week = weeks.get(weekId);
-                const restaurantName = week?.restaurant;
-                const average = ratings.reduce((acc, r) => acc + r.score, 0) / ratings.length;
+            {sortedGroups.map((group) => {
+                const week = weeks.get(group.weekId);
+                const average = group.ratings.reduce((acc, r) => acc + r.score, 0) / group.ratings.length;
 
                 return (
-                    <div key={weekId} className="bg-slate-900/50 border border-sky-900/30 rounded-2xl p-5">
+                    <div key={group.key} className="bg-slate-900/50 border border-sky-900/30 rounded-2xl p-5">
                         <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
                             <span className="text-slate-300 font-medium">
-                                {restaurantName ? <>مطعم: <span className="text-sky-300 font-bold">{restaurantName}</span></> : <span className="text-slate-500">مطعم غير محدد</span>}
+                                <span className="text-sky-300 font-bold">{group.label}</span>
+                                {week?.restaurant && (
+                                    <span className="text-xs text-slate-500 mr-2">({week.restaurant})</span>
+                                )}
                             </span>
                             <span className="text-sm bg-sky-900/30 text-sky-400 px-3 py-1 rounded-full border border-sky-800/50">
                                 متوسط: {average.toFixed(1)} / 5
                             </span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {ratings.map(r => (
+                            {group.ratings.map(r => (
                                 <div key={r.id} className="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-sky-800/30">
                                     <span className="text-slate-300 font-medium">{r.userName}</span>
                                     <span className="text-2xl drop-shadow-md">
