@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, VALID_NAMES, invokeRpc } from "@/lib/services";
-import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users } from "lucide-react";
+import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users, KeyRound, LogOut, Palette } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import RatingForm from "./RatingForm";
@@ -27,9 +27,120 @@ import historicalWeeks from "@/data/historicalWeeks.json";
 import { Timestamp, doc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+type ThemeKey =
+    | "royal-amber"
+    | "ocean-cyan"
+    | "emerald-night"
+    | "sunset-fire"
+    | "rose-neon"
+    | "arctic-ice"
+    | "forest-olive"
+    | "midnight-indigo";
+
+const THEME_OPTIONS: {
+    id: ThemeKey;
+    name: string;
+    appBgClass: string;
+    headerGradientClass: string;
+    headerIconClass: string;
+    tabActiveClass: string;
+    tabIndicatorClass: string;
+    previewA: string;
+    previewB: string;
+}[] = [
+        {
+            id: "royal-amber",
+            name: "ملكي ذهبي",
+            appBgClass: "bg-slate-950",
+            headerGradientClass: "from-amber-200 to-amber-500",
+            headerIconClass: "text-amber-500",
+            tabActiveClass: "text-amber-500",
+            tabIndicatorClass: "bg-amber-500",
+            previewA: "bg-amber-300",
+            previewB: "bg-amber-600",
+        },
+        {
+            id: "ocean-cyan",
+            name: "موج سياني",
+            appBgClass: "bg-gradient-to-b from-slate-950 via-cyan-950/40 to-slate-950",
+            headerGradientClass: "from-cyan-200 to-sky-500",
+            headerIconClass: "text-cyan-400",
+            tabActiveClass: "text-cyan-400",
+            tabIndicatorClass: "bg-cyan-400",
+            previewA: "bg-cyan-300",
+            previewB: "bg-sky-600",
+        },
+        {
+            id: "emerald-night",
+            name: "ليلة زمردية",
+            appBgClass: "bg-gradient-to-b from-slate-950 via-emerald-950/35 to-slate-950",
+            headerGradientClass: "from-emerald-200 to-emerald-500",
+            headerIconClass: "text-emerald-400",
+            tabActiveClass: "text-emerald-400",
+            tabIndicatorClass: "bg-emerald-400",
+            previewA: "bg-emerald-300",
+            previewB: "bg-emerald-700",
+        },
+        {
+            id: "sunset-fire",
+            name: "غروب ناري",
+            appBgClass: "bg-gradient-to-b from-slate-950 via-orange-950/35 to-slate-950",
+            headerGradientClass: "from-orange-200 to-red-500",
+            headerIconClass: "text-orange-400",
+            tabActiveClass: "text-orange-400",
+            tabIndicatorClass: "bg-orange-400",
+            previewA: "bg-orange-300",
+            previewB: "bg-red-600",
+        },
+        {
+            id: "rose-neon",
+            name: "وردي نيون",
+            appBgClass: "bg-gradient-to-b from-slate-950 via-rose-950/35 to-slate-950",
+            headerGradientClass: "from-rose-200 to-pink-500",
+            headerIconClass: "text-rose-400",
+            tabActiveClass: "text-rose-400",
+            tabIndicatorClass: "bg-rose-400",
+            previewA: "bg-rose-300",
+            previewB: "bg-pink-600",
+        },
+        {
+            id: "arctic-ice",
+            name: "جليد قطبي",
+            appBgClass: "bg-gradient-to-b from-slate-950 via-blue-950/30 to-slate-950",
+            headerGradientClass: "from-blue-100 to-slate-200",
+            headerIconClass: "text-blue-300",
+            tabActiveClass: "text-blue-300",
+            tabIndicatorClass: "bg-blue-300",
+            previewA: "bg-blue-200",
+            previewB: "bg-slate-300",
+        },
+        {
+            id: "forest-olive",
+            name: "غابة زيتونية",
+            appBgClass: "bg-gradient-to-b from-slate-950 via-lime-950/25 to-slate-950",
+            headerGradientClass: "from-lime-200 to-lime-500",
+            headerIconClass: "text-lime-400",
+            tabActiveClass: "text-lime-400",
+            tabIndicatorClass: "bg-lime-400",
+            previewA: "bg-lime-300",
+            previewB: "bg-green-700",
+        },
+        {
+            id: "midnight-indigo",
+            name: "منتصف الليل",
+            appBgClass: "bg-gradient-to-b from-slate-950 via-indigo-950/35 to-slate-950",
+            headerGradientClass: "from-indigo-200 to-indigo-500",
+            headerIconClass: "text-indigo-400",
+            tabActiveClass: "text-indigo-400",
+            tabIndicatorClass: "bg-indigo-400",
+            previewA: "bg-indigo-300",
+            previewB: "bg-indigo-700",
+        },
+    ];
+
 export default function Dashboard() {
     const WEEK_DAYS: Exclude<WeekSession["day"], null>[] = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
-    const { user, logout } = useAuth();
+    const { user, logout, refreshUserProfile } = useAuth();
     const [currentWeek, setCurrentWeek] = useState<WeekSession | null>(null);
     const [pastWeek, setPastWeek] = useState<WeekSession | null>(null);
     const [hasRatedCurrentWeek, setHasRatedCurrentWeek] = useState(false);
@@ -55,6 +166,13 @@ export default function Dashboard() {
     const [changePasswordError, setChangePasswordError] = useState("");
     const [changePasswordSuccess, setChangePasswordSuccess] = useState("");
 
+    // Profile Customization State
+    const [nickNameInput, setNickNameInput] = useState("");
+    const [profileImageData, setProfileImageData] = useState<string | null>(null);
+    const [profileSaving, setProfileSaving] = useState(false);
+    const [profileError, setProfileError] = useState("");
+    const [profileSuccess, setProfileSuccess] = useState("");
+
     // Constitution State
     const [isConstitutionOpen, setIsConstitutionOpen] = useState(false);
 
@@ -68,6 +186,7 @@ export default function Dashboard() {
     // Tab State
     type TabType = "week" | "leaderboard" | "bathroom" | "more";
     const [activeTab, setActiveTab] = useState<TabType>("week");
+    const [selectedTheme, setSelectedTheme] = useState<ThemeKey>("royal-amber");
 
     const fetchPastWeekOnly = async () => {
         const previous = await services.getPreviousWeek();
@@ -152,6 +271,20 @@ export default function Dashboard() {
         return () => unsubscribe();
     }, [user]);
 
+    useEffect(() => {
+        if (!user) return;
+        setNickNameInput(user.nickName || user.name);
+        setProfileImageData(user.profileImage || null);
+    }, [user?.name, user?.nickName, user?.profileImage]);
+
+    useEffect(() => {
+        const storedTheme = localStorage.getItem("king_theme") as ThemeKey | null;
+        if (!storedTheme) return;
+        if (THEME_OPTIONS.some((theme) => theme.id === storedTheme)) {
+            setSelectedTheme(storedTheme);
+        }
+    }, []);
+
     // Detect and log if user is using the standalone PWA 
     useEffect(() => {
         if (!user) return;
@@ -185,6 +318,77 @@ export default function Dashboard() {
             await services.updatePushSubscription(user.name, sub);
         }
         setSubscribing(false);
+    };
+
+    const resizeImageToDataUrl = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const img = new Image();
+                img.onload = () => {
+                    const maxSize = 320;
+                    const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
+                    const targetW = Math.round(img.width * ratio);
+                    const targetH = Math.round(img.height * ratio);
+
+                    const canvas = document.createElement("canvas");
+                    canvas.width = targetW;
+                    canvas.height = targetH;
+                    const ctx = canvas.getContext("2d");
+                    if (!ctx) {
+                        reject(new Error("تعذر معالجة الصورة"));
+                        return;
+                    }
+                    ctx.drawImage(img, 0, 0, targetW, targetH);
+
+                    const jpeg = canvas.toDataURL("image/jpeg", 0.85);
+                    resolve(jpeg);
+                };
+                img.onerror = () => reject(new Error("تعذر قراءة الصورة"));
+                img.src = reader.result as string;
+            };
+            reader.onerror = () => reject(new Error("تعذر فتح الملف"));
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handleProfileImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith("image/")) {
+            setProfileError("الملف يجب أن يكون صورة");
+            return;
+        }
+        try {
+            const dataUrl = await resizeImageToDataUrl(file);
+            setProfileImageData(dataUrl);
+            setProfileError("");
+            setProfileSuccess("");
+        } catch (e: any) {
+            setProfileError(e.message || "تعذر تجهيز الصورة");
+        }
+    };
+
+    const handleSaveProfileCustomization = async () => {
+        if (!user?.name) return;
+        setProfileError("");
+        setProfileSuccess("");
+        const trimmedNick = nickNameInput.trim();
+        if (trimmedNick.length < 2 || trimmedNick.length > 24) {
+            setProfileError("الاسم المستعار لازم يكون بين 2 و 24 حرف");
+            return;
+        }
+
+        setProfileSaving(true);
+        try {
+            await services.updateProfileCustomization(user.name, trimmedNick, profileImageData);
+            await refreshUserProfile();
+            setProfileSuccess("تم حفظ الملف الشخصي بنجاح");
+        } catch (e: any) {
+            setProfileError(e.message || "حدث خطأ أثناء حفظ الملف الشخصي");
+        } finally {
+            setProfileSaving(false);
+        }
     };
 
     const handleSetChoices = async () => {
@@ -325,11 +529,19 @@ export default function Dashboard() {
         setLoading(false);
     };
 
+    const displayName = user?.nickName?.trim() || user?.name;
+    const activeTheme = THEME_OPTIONS.find((theme) => theme.id === selectedTheme) || THEME_OPTIONS[0];
+
+    const handleThemeChange = (themeId: ThemeKey) => {
+        setSelectedTheme(themeId);
+        localStorage.setItem("king_theme", themeId);
+    };
+
     return (
-        <div className="min-h-screen bg-slate-950 p-4 md:p-8 font-sans relative">
+        <div className={`min-h-screen ${activeTheme.appBgClass} p-4 md:p-8 font-sans relative`}>
             {/* Version Badge & Secret Import */}
             <div className="fixed top-2 left-2 z-50 flex items-center gap-2">
-                <span className="text-[10px] text-slate-600 font-mono select-none">v12</span>
+                <span className="text-[10px] text-slate-600 font-mono select-none">v13</span>
                 {user?.role === "dean" && (
                     <button onClick={handleSecretImport} className="text-slate-800 hover:text-amber-500 transition-colors" title="استيراد البيانات السابقة">
                         <UploadCloud className="w-3 h-3" />
@@ -338,11 +550,11 @@ export default function Dashboard() {
             </div>
             <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800">
                 <div>
-                    <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent flex items-center gap-3">
-                        <Crown className="w-8 h-8 text-amber-500" />
+                    <h1 className={`text-3xl font-bold bg-gradient-to-r ${activeTheme.headerGradientClass} bg-clip-text text-transparent flex items-center gap-3`}>
+                        <Crown className={`w-8 h-8 ${activeTheme.headerIconClass}`} />
                         عرش الخميس
                     </h1>
-                    <p className="text-slate-400 mt-2">أهلاً بك، {user?.name}</p>
+                    <p className="text-slate-400 mt-2">أهلاً بك، {displayName}</p>
                 </div>
                 <div className="flex gap-2 text-xs md:text-sm">
                     {isSupported && !isSubscribed && (
@@ -361,18 +573,6 @@ export default function Dashboard() {
                         title="تحديث البيانات"
                     >
                         <RotateCcw className={`w-5 h-5 ${loading ? 'animate-spin text-amber-500' : ''}`} />
-                    </button>
-                    <button
-                        onClick={() => setIsChangePasswordOpen(true)}
-                        className="bg-slate-900 border border-slate-800 hover:bg-slate-800 py-2 md:py-3 px-3 md:px-5 rounded-xl transition-all shadow-md text-amber-500 font-medium"
-                    >
-                        تغيير كلمة المرور
-                    </button>
-                    <button
-                        onClick={logout}
-                        className="bg-slate-900 border border-slate-800 hover:bg-slate-800 py-2 md:py-3 px-3 md:px-5 rounded-xl transition-all shadow-md text-slate-300 font-medium"
-                    >
-                        تسجيل الخروج
                     </button>
                 </div>
             </header>
@@ -967,6 +1167,129 @@ export default function Dashboard() {
                     {activeTab === "more" && (
                         <div className="space-y-6 max-w-2xl mx-auto">
 
+                            {/* Theme Selector */}
+                            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="bg-violet-500/20 p-2 rounded-xl text-violet-400">
+                                        <Palette className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-lg text-white">الثيمات</h3>
+                                        <p className="text-xs text-slate-500">اختر اللون اللي يناسبك - يتذكره التطبيق تلقائيًا</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {THEME_OPTIONS.map((theme) => {
+                                        const isActive = theme.id === selectedTheme;
+                                        return (
+                                            <button
+                                                key={theme.id}
+                                                onClick={() => handleThemeChange(theme.id)}
+                                                className={`text-right rounded-2xl border p-3 transition-all ${isActive
+                                                    ? "border-white/30 bg-slate-800"
+                                                    : "border-slate-700 bg-slate-900 hover:border-slate-500"}`}
+                                            >
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className={`text-xs font-semibold ${isActive ? "text-white" : "text-slate-300"}`}>{theme.name}</span>
+                                                    {isActive && <span className="text-[10px] text-emerald-400">مختار</span>}
+                                                </div>
+                                                <div className="flex gap-1">
+                                                    <span className={`w-5 h-5 rounded-full ${theme.previewA}`} />
+                                                    <span className={`w-5 h-5 rounded-full ${theme.previewB}`} />
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Profile Customization */}
+                            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="bg-cyan-500/20 p-2 rounded-xl text-cyan-400">
+                                        <Users className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-lg text-white">ملفي الشخصي</h3>
+                                        <p className="text-xs text-slate-500">تقدر تغيّر صورتك والاسم المستعار فقط</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className="w-16 h-16 rounded-full overflow-hidden border border-slate-700 bg-slate-800 flex items-center justify-center text-xl font-bold text-slate-300">
+                                        {profileImageData ? (
+                                            <img src={profileImageData} alt="profile" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span>{(nickNameInput.trim() || user?.name || "?").charAt(0)}</span>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 space-y-2">
+                                        <input
+                                            value={nickNameInput}
+                                            onChange={(e) => setNickNameInput(e.target.value)}
+                                            maxLength={24}
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 outline-none focus:border-cyan-500"
+                                            placeholder="الاسم المستعار"
+                                        />
+                                        <p className="text-[11px] text-slate-500">الاسم الأساسي ثابت: {user?.name}</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                    <label className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-medium py-2 px-3 rounded-xl cursor-pointer text-center transition-colors">
+                                        اختيار صورة
+                                        <input type="file" accept="image/*" className="hidden" onChange={handleProfileImageChange} />
+                                    </label>
+                                    <button
+                                        onClick={() => setProfileImageData(null)}
+                                        className="bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 font-medium py-2 px-3 rounded-xl transition-colors"
+                                    >
+                                        إزالة الصورة
+                                    </button>
+                                </div>
+
+                                {profileError && <p className="text-sm text-red-400 mb-2">{profileError}</p>}
+                                {profileSuccess && <p className="text-sm text-emerald-400 mb-2">{profileSuccess}</p>}
+
+                                <button
+                                    onClick={handleSaveProfileCustomization}
+                                    disabled={profileSaving}
+                                    className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition-all disabled:opacity-50"
+                                >
+                                    {profileSaving ? "جاري حفظ الملف..." : "حفظ الملف الشخصي"}
+                                </button>
+                            </div>
+
+                            {/* Account Actions */}
+                            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="bg-amber-500/20 p-2 rounded-xl text-amber-500">
+                                        <Users className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-lg text-white">الحساب</h3>
+                                        <p className="text-xs text-slate-500">إدارة تسجيل الدخول وكلمة المرور</p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <button
+                                        onClick={() => setIsChangePasswordOpen(true)}
+                                        className="bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-400 font-semibold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <KeyRound className="w-5 h-5" />
+                                        تغيير كلمة المرور
+                                    </button>
+                                    <button
+                                        onClick={logout}
+                                        className="bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 font-semibold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <LogOut className="w-5 h-5" />
+                                        تسجيل الخروج
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* Statistics Button */}
                             <div className="bg-gradient-to-br from-violet-900/40 to-slate-900 border border-violet-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group cursor-pointer" onClick={() => setIsStatsOpen(true)}>
                                 <div className="absolute -right-10 -top-10 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl group-hover:bg-violet-500/20 transition-all duration-500" />
@@ -998,17 +1321,17 @@ export default function Dashboard() {
                                         <div className="bg-cyan-500/20 p-2 rounded-xl text-cyan-400">
                                             <Users className="w-6 h-6" />
                                         </div>
-                                        <h3 className="font-bold text-xl text-white">الملف الشخصي للعضو</h3>
+                                        <h3 className="font-bold text-xl text-white">ملفي الإحصائي</h3>
                                     </div>
                                     <p className="text-sm text-slate-300 mb-5 leading-relaxed">
-                                        اختر أي عضو وشوف إحصائياته الشخصية بسرعة: حضوره، تقييماته، وأداؤه كملك.
+                                        عرض إحصائياتك الشخصية بسرعة: حضورك، تقييماتك، وأداؤك كملك.
                                     </p>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setIsMemberProfileOpen(true); }}
                                         className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20"
                                     >
                                         <Users className="w-5 h-5" />
-                                        فتح الملف الشخصي
+                                        فتح ملفي الإحصائي
                                     </button>
                                 </div>
                             </div>
@@ -1114,14 +1437,14 @@ export default function Dashboard() {
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all duration-200 min-w-[64px] ${
                                     activeTab === tab.id
-                                        ? "text-amber-500 scale-105"
+                                        ? `${activeTheme.tabActiveClass} scale-105`
                                         : "text-slate-500 hover:text-slate-300"
                                 }`}
                             >
                                 <tab.icon className={`w-5 h-5 transition-all ${activeTab === tab.id ? "drop-shadow-[0_0_6px_rgba(245,158,11,0.5)]" : ""}`} />
-                                <span className={`text-[10px] font-medium transition-all ${activeTab === tab.id ? "text-amber-400" : ""}`}>{tab.label}</span>
+                                <span className={`text-[10px] font-medium transition-all ${activeTab === tab.id ? activeTheme.tabActiveClass : ""}`}>{tab.label}</span>
                                 {activeTab === tab.id && (
-                                    <div className="absolute bottom-1 w-6 h-0.5 bg-amber-500 rounded-full" />
+                                    <div className={`absolute bottom-1 w-6 h-0.5 ${activeTheme.tabIndicatorClass} rounded-full`} />
                                 )}
                             </button>
                         ))}
@@ -1152,6 +1475,7 @@ export default function Dashboard() {
             <MemberProfilePanel
                 isOpen={isMemberProfileOpen}
                 onClose={() => setIsMemberProfileOpen(false)}
+                currentUserName={user?.name || ""}
             />
         </div >
     );

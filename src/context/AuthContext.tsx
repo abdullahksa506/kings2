@@ -21,6 +21,8 @@ export interface UserProfile {
     registered: boolean;
     phoneNumber?: string;
     resetCode?: string;
+    nickName?: string;
+    profileImage?: string | null;
 }
 
 interface AuthContextType {
@@ -29,6 +31,7 @@ interface AuthContextType {
     login: (name: string, password: string, skipDeviceCheck?: boolean) => Promise<void>;
     register: (name: string, password: string) => Promise<void>;
     logout: () => void;
+    refreshUserProfile: () => Promise<void>;
     registeredNamesCount: number;
 }
 
@@ -40,6 +43,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [registeredNamesCount, setRegisteredNamesCount] = useState(0);
+
+    const refreshUserProfile = async () => {
+        const storedName = localStorage.getItem("king_user_name");
+        if (!storedName) return;
+        const userDoc = await getDoc(doc(db, "users", storedName));
+        if (!userDoc.exists()) return;
+        const data = userDoc.data() as Record<string, unknown>;
+        setUser({
+            name: typeof data.name === "string" ? data.name : storedName,
+            role: (data.role as UserRole) || "user",
+            registered: Boolean(data.registered),
+            phoneNumber: typeof data.phoneNumber === "string" ? data.phoneNumber : undefined,
+            nickName: typeof data.nickName === "string" ? data.nickName : undefined,
+            profileImage: typeof data.profileImage === "string" ? data.profileImage : null,
+        });
+    };
 
     // Check Local Storage and Fetch Count
     useEffect(() => {
@@ -66,7 +85,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                 name: data.name,
                                 role: data.role,
                                 registered: data.registered,
-                                phoneNumber: data.phoneNumber
+                                phoneNumber: data.phoneNumber,
+                                nickName: data.nickName,
+                                profileImage: data.profileImage || null,
                             };
                             setUser(profile);
                         } else {
@@ -137,7 +158,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             name: userData.name,
             role: userData.role,
             registered: userData.registered,
-            phoneNumber: userData.phoneNumber
+            phoneNumber: userData.phoneNumber,
+            nickName: typeof raw.nickName === "string" ? raw.nickName : undefined,
+            profileImage: typeof raw.profileImage === "string" ? raw.profileImage : null,
         };
 
         const tokenToStore = isHashed(userData.password)
@@ -160,6 +183,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             name: result.name,
             role: result.role,
             registered: result.registered,
+            nickName: result.nickName,
+            profileImage: result.profileImage || null,
         };
 
         setUser(profile);
@@ -175,7 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout, registeredNamesCount }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUserProfile, registeredNamesCount }}>
             {children}
         </AuthContext.Provider>
     );

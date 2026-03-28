@@ -52,6 +52,16 @@ export default function ChatBoard({ userName }: { userName: string }) {
         return `${days} ي`;
     };
 
+    const getMessageDisplayName = (msg: ChatMessage) => {
+        if (typeof msg.nickName === "string" && msg.nickName.trim()) return msg.nickName.trim();
+        return msg.userName;
+    };
+
+    const getInitial = (msg: ChatMessage) => {
+        const display = getMessageDisplayName(msg);
+        return display.charAt(0) || "؟";
+    };
+
     return (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-xl overflow-hidden">
             {/* Header */}
@@ -72,26 +82,39 @@ export default function ChatBoard({ userName }: { userName: string }) {
                         <p className="text-slate-600 text-sm">لا توجد رسائل بعد... كن أول من يكتب!</p>
                     </div>
                 ) : (
-                    messages.map(msg => (
-                        <div
-                            key={msg.id}
-                            className={`flex flex-col ${msg.userName === userName ? "items-end" : "items-start"}`}
-                        >
+                    messages.map(msg => {
+                        const isMine = msg.userName === userName;
+                        const displayName = getMessageDisplayName(msg);
+                        return (
                             <div
-                                className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
-                                    msg.userName === userName
-                                        ? "bg-amber-600/20 border border-amber-500/30 rounded-br-md"
-                                        : "bg-slate-800 border border-slate-700 rounded-bl-md"
-                                }`}
+                                key={msg.id}
+                                className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}
                             >
-                                {msg.userName !== userName && (
-                                    <p className="text-xs font-semibold text-amber-400 mb-1">{msg.userName}</p>
-                                )}
-                                <p className="text-sm text-slate-200 leading-relaxed break-words">{msg.text}</p>
+                                <div className={`flex items-end gap-2 ${isMine ? "flex-row-reverse" : "flex-row"}`}>
+                                    <div className="w-8 h-8 rounded-full border border-slate-700 bg-slate-800 overflow-hidden shrink-0 flex items-center justify-center text-xs font-bold text-slate-300">
+                                        {msg.profileImage ? (
+                                            <img src={msg.profileImage} alt={displayName} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span>{getInitial(msg)}</span>
+                                        )}
+                                    </div>
+                                    <div
+                                        className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
+                                            isMine
+                                                ? "bg-amber-600/20 border border-amber-500/30 rounded-br-md"
+                                                : "bg-slate-800 border border-slate-700 rounded-bl-md"
+                                        }`}
+                                    >
+                                        <p className={`text-xs font-semibold mb-1 ${isMine ? "text-amber-300" : "text-amber-400"}`}>
+                                            {displayName}
+                                        </p>
+                                        <p className="text-sm text-slate-200 leading-relaxed break-words">{msg.text}</p>
+                                    </div>
+                                </div>
+                                <span className="text-[10px] text-slate-600 mt-1 px-1">{formatTime(msg.createdAt)}</span>
                             </div>
-                            <span className="text-[10px] text-slate-600 mt-1 px-1">{formatTime(msg.createdAt)}</span>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
                 <div ref={messagesEndRef} />
             </div>

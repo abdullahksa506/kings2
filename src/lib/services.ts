@@ -77,6 +77,8 @@ export interface Suggestion {
 export interface ChatMessage {
     id: string;
     userName: string;
+    nickName?: string;
+    profileImage?: string | null;
     text: string;
     createdAt: Timestamp;
 }
@@ -431,6 +433,10 @@ export const services = {
 
     async changePassword(userName: string, currentPassword: string, newPassword: string): Promise<void> {
         await invokeRpc("changePassword", { userName, currentPassword, newPassword });
+    },
+
+    async updateProfileCustomization(userName: string, nickName: string, profileImage: string | null): Promise<{ nickName: string; profileImage: string | null }> {
+        return invokeRpc("updateProfileCustomization", { userName, nickName, profileImage });
     },
 
     async getUsersWithResetCodes(): Promise<{ id: string, name: string, resetCode: string }[]> {

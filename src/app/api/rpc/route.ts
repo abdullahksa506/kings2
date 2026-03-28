@@ -44,6 +44,12 @@ export async function POST(request: Request) {
 
         const isAdmin = authName === "شوكا";
 
+        const normalizeNickName = (value: unknown, fallback: string): string => {
+            if (typeof value !== "string") return fallback;
+            const cleaned = value.trim().replace(/\s+/g, " ");
+            return cleaned || fallback;
+        };
+
         switch (action) {
             // --- WEEKS ---
             case "startNewWeek":
@@ -136,6 +142,35 @@ export async function POST(request: Request) {
                 if (action === "updatePushSubscription") await uRef.update({ pushSubscription: JSON.stringify(payload.subscription) });
                 return NextResponse.json({ result: true });
 
+            case "updateProfileCustomization":
+                if (authName !== payload.userName) throw new Error("Identity mismatch");
+                const profileRef = adminDb.collection("users").doc(payload.userName);
+                const profileSnap = await profileRef.get();
+                if (!profileSnap.exists) throw new Error("المستخدم غير موجود");
+
+                const nextNick = normalizeNickName(payload.nickName, payload.userName);
+                if (nextNick.length < 2 || nextNick.length > 24) {
+                    throw new Error("الاسم المستعار يجب أن يكون بين 2 و 24 حرف");
+                }
+
+                let nextImage: string | null = null;
+                if (payload.profileImage === null || payload.profileImage === "") {
+                    nextImage = null;
+                } else if (typeof payload.profileImage === "string") {
+                    if (!payload.profileImage.startsWith("data:image/")) {
+                        throw new Error("صيغة الصورة غير مدعومة");
+                    }
+                    if (payload.profileImage.length > 450000) {
+                        throw new Error("حجم الصورة كبير، استخدم صورة أصغر");
+                    }
+                    nextImage = payload.profileImage;
+                } else {
+                    throw new Error("بيانات الصورة غير صالحة");
+                }
+
+                await profileRef.update({ nickName: nextNick, profileImage: nextImage });
+                return NextResponse.json({ result: { nickName: nextNick, profileImage: nextImage } });
+
             case "requestPasswordReset":
                 if (!VALID_NAMES_RPC.includes(payload.userName)) throw new Error("اسم غير مصرح به");
                 const prRef = adminDb.collection("users").doc(payload.userName);
@@ -176,8 +211,8 @@ export async function POST(request: Request) {
                 if (regSnap.exists) throw new Error("المستخدم مسجل مسبقاً");
                 const role = payload.name === "شوكا" ? "dean" : "user";
                 const hp = await hashPassword(payload.password);
-                await regRef.set({ name: payload.name, password: hp, role, registered: true });
-                return NextResponse.json({ result: { name: payload.name, role, registered: true, token: hp } });
+                await regRef.set({ name: payload.name, password: hp, role, registered: true, nickName: payload.name, profileImage: null });
+                return NextResponse.json({ result: { name: payload.name, role, registered: true, token: hp, nickName: payload.name, profileImage: null } });
 
             case "login_upgrade": // Upgrades plain text to hashed on login
                 const updRef = adminDb.collection("users").doc(payload.userName);
@@ -203,7 +238,13 @@ export async function POST(request: Request) {
 
             case "sendChatMessage":
                 if (authName !== payload.userName) throw new Error("Identity mismatch");
-                await adminDb.collection("chatMessages").add({ userName: payload.userName, text: payload.text, createdAt: Timestamp.now() });
+                await adminDb.collection("chatMessages").add({
+                    userName: payload.userName,
+                    nickName: typeof userDocData?.nickName === "string" ? userDocData.nickName : payload.userName,
+                    profileImage: typeof userDocData?.profileImage === "string" ? userDocData.profileImage : null,
+                    text: payload.text,
+                    createdAt: Timestamp.now()
+                });
                 return NextResponse.json({ result: true });
 
             case "recordVisit":
