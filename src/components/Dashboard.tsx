@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { services, WeekSession, VALID_NAMES, invokeRpc } from "@/lib/services";
+import { services, WeekSession, VALID_NAMES, invokeRpc, PublicUserProfile } from "@/lib/services";
 import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users, KeyRound, LogOut, Palette } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -280,6 +280,7 @@ export default function Dashboard() {
     type TabType = "week" | "leaderboard" | "bathroom" | "more";
     const [activeTab, setActiveTab] = useState<TabType>("week");
     const [selectedTheme, setSelectedTheme] = useState<ThemeKey>("royal-amber");
+    const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
 
     const fetchPastWeekOnly = async () => {
         const previous = await services.getPreviousWeek();
@@ -377,6 +378,18 @@ export default function Dashboard() {
         if (THEME_OPTIONS.some((theme) => theme.id === storedTheme)) {
             setSelectedTheme(storedTheme);
         }
+    }, []);
+
+    useEffect(() => {
+        const unsub = services.listenToPublicUserProfiles((profiles) => {
+            const nextMap: Record<string, PublicUserProfile> = {};
+            profiles.forEach((p) => {
+                nextMap[p.userName] = p;
+            });
+            setPublicProfilesMap(nextMap);
+        });
+
+        return () => unsub();
     }, []);
 
     // Detect and log if user is using the standalone PWA 
@@ -630,6 +643,35 @@ export default function Dashboard() {
     const handleThemeChange = (themeId: ThemeKey) => {
         setSelectedTheme(themeId);
         localStorage.setItem("king_theme", themeId);
+    };
+
+    const renderMemberChip = (name: string, statusIcon: string, mode: "present" | "waiting" | "absent") => {
+        const profile = publicProfilesMap[name];
+        const shouldShowAvatar = profile ? profile.showProfileImage : true;
+        const avatar = profile?.profileImage || null;
+        const initial = (profile?.nickName || name).charAt(0) || "؟";
+
+        const tone = mode === "present"
+            ? "bg-emerald-400/20 border-emerald-300/30 text-emerald-200"
+            : mode === "absent"
+                ? "bg-red-400/20 border-red-300/30 text-red-200"
+                : "bg-slate-700/70 border-slate-500 text-slate-200";
+
+        return (
+            <span key={`${mode}-${name}`} className={`px-3 py-1.5 border text-sm rounded-lg flex items-center gap-2 ${tone}`}>
+                {shouldShowAvatar && (
+                    <span className="w-5 h-5 rounded-full overflow-hidden border border-white/20 bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-200 shrink-0">
+                        {avatar ? (
+                            <img src={avatar} alt={name} className="w-full h-full object-cover" />
+                        ) : (
+                            <span>{initial}</span>
+                        )}
+                    </span>
+                )}
+                <span>{name}</span>
+                <span>{statusIcon}</span>
+            </span>
+        );
     };
 
     return (
@@ -1161,9 +1203,7 @@ export default function Dashboard() {
                                                     </p>
                                                     <div className="flex flex-wrap gap-2">
                                                         {VALID_NAMES.filter(n => (currentWeek.responded || []).includes(n) && !(currentWeek.absentees || []).includes(n) || n === currentWeek.king).map(name => (
-                                                            <span key={name} className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm rounded-lg flex items-center gap-1">
-                                                                {name} {name === currentWeek.king ? "👑" : "✅"}
-                                                            </span>
+                                                            renderMemberChip(name, name === currentWeek.king ? "👑" : "✅", "present")
                                                         ))}
                                                     </div>
                                                 </div>
@@ -1176,9 +1216,7 @@ export default function Dashboard() {
                                                         </p>
                                                         <div className="flex flex-wrap gap-2">
                                                             {VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).map(name => (
-                                                                <span key={name} className="px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-400 text-sm rounded-lg flex items-center gap-1 opacity-70">
-                                                                    {name} ⏳
-                                                                </span>
+                                                                renderMemberChip(name, "⏳", "waiting")
                                                             ))}
                                                         </div>
                                                     </div>
@@ -1192,9 +1230,7 @@ export default function Dashboard() {
                                                         </p>
                                                         <div className="flex flex-wrap gap-2">
                                                             {(currentWeek.absentees || []).map(name => (
-                                                                <span key={name} className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg flex items-center gap-1">
-                                                                    {name} ❌
-                                                                </span>
+                                                                renderMemberChip(name, "❌", "absent")
                                                             ))}
                                                         </div>
                                                     </div>
@@ -1283,8 +1319,8 @@ export default function Dashboard() {
                                                 key={theme.id}
                                                 onClick={() => handleThemeChange(theme.id)}
                                                 className={`text-right rounded-2xl border p-3 transition-all ${isActive
-                                                    ? `${activeThemeStyle.accentBorderClass} bg-slate-800 ring-1 ring-white/20`
-                                                    : "border-slate-700 bg-slate-900 hover:border-slate-500"}`}
+                                                    ? `${activeThemeStyle.accentBorderClass} bg-slate-700/90 ring-1 ring-white/25`
+                                                    : "border-slate-600 bg-slate-800/90 hover:bg-slate-700/90 hover:border-slate-400"}`}
                                             >
                                                 <div className="flex items-center justify-between mb-2">
                                                     <span className={`text-xs font-semibold ${isActive ? "text-white" : "text-slate-300"}`}>{theme.name}</span>

@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import { services, VALID_NAMES } from "@/lib/services";
 import {
     BarChart3, Eye, Castle, Users, UtensilsCrossed,
-    MessageSquare, Flame, Calendar, TrendingUp, X,
-    Crown, Award, Zap, Clock, Hash
+    Flame, TrendingUp, X,
+    Award, Clock
 } from "lucide-react";
 
 interface StatisticsPanelProps {
@@ -215,31 +215,95 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                             )}
                         </div>
 
-                        {/* Chat & Activity */}
-                        <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-pink-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
-                            <div className="absolute -left-8 -bottom-8 w-28 h-28 bg-pink-500/10 rounded-full blur-2xl" />
+                        {/* Time Windows */}
+                        <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-cyan-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+                            <div className="absolute -left-8 -bottom-8 w-28 h-28 bg-cyan-500/10 rounded-full blur-2xl" />
                             <div className="flex items-center gap-2 mb-4 relative z-10">
-                                <MessageSquare className="w-5 h-5 text-pink-400" />
-                                <h3 className="font-bold text-pink-300 text-lg">النشاط والتفاعل</h3>
+                                <TrendingUp className="w-5 h-5 text-cyan-400" />
+                                <h3 className="font-bold text-cyan-300 text-lg">مقارنة زمنية</h3>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 relative z-10">
+                                <StatBox label="آخر 4 أسابيع (حضور)" value={stats.timeWindows.last4.avgAttendance} color="cyan" icon="4️⃣" />
+                                <StatBox label="آخر 8 أسابيع (حضور)" value={stats.timeWindows.last8.avgAttendance} color="sky" icon="8️⃣" />
+                                <StatBox label="الموسم كامل (حضور)" value={stats.timeWindows.season.avgAttendance} color="emerald" icon="🏁" />
+                                <StatBox label="آخر 4 أسابيع (تقييم)" value={`${stats.timeWindows.last4.avgRating} ⭐`} color="violet" icon="⭐" />
+                                <StatBox label="آخر 8 أسابيع (تقييم)" value={`${stats.timeWindows.last8.avgRating} ⭐`} color="purple" icon="📈" />
+                                <StatBox label="الموسم كامل (تقييم)" value={`${stats.timeWindows.season.avgRating} ⭐`} color="amber" icon="📊" />
+                            </div>
+                        </div>
+
+                        {/* Member Trends */}
+                        <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-emerald-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+                            <div className="absolute -right-8 -top-8 w-28 h-28 bg-emerald-500/10 rounded-full blur-2xl" />
+                            <div className="flex items-center gap-2 mb-4 relative z-10">
+                                <Users className="w-5 h-5 text-emerald-400" />
+                                <h3 className="font-bold text-emerald-300 text-lg">تطور أداء الأعضاء (آخر 4 مقابل اللي قبلها)</h3>
+                            </div>
+                            <div className="space-y-2 relative z-10">
+                                {VALID_NAMES.map((name) => {
+                                    const t = stats.memberTrends[name];
+                                    if (!t) return null;
+                                    const up = t.attendanceDelta >= 0;
+                                    return (
+                                        <div key={name} className="bg-slate-950/60 border border-slate-800/50 rounded-xl p-3 flex items-center justify-between gap-3">
+                                            <div>
+                                                <p className="text-sm text-white font-semibold">{name}</p>
+                                                <p className="text-[11px] text-slate-500">الحضور: {t.recentAttendanceRate}% (قبلها {t.previousAttendanceRate}%)</p>
+                                                <p className="text-[11px] text-slate-500">متوسط تقييماته: {t.recentGivenRating}⭐ (قبلها {t.previousGivenRating}⭐)</p>
+                                            </div>
+                                            <div className={`text-sm font-bold ${up ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                {up ? '+' : ''}{t.attendanceDelta}%
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* King Decision Analytics */}
+                        <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-amber-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+                            <div className="absolute -left-8 -top-8 w-28 h-28 bg-amber-500/10 rounded-full blur-2xl" />
+                            <div className="flex items-center gap-2 mb-4 relative z-10">
+                                <Award className="w-5 h-5 text-amber-400" />
+                                <h3 className="font-bold text-amber-300 text-lg">تحليل قرارات الملوك</h3>
+                            </div>
+                            <div className="space-y-2 relative z-10">
+                                {stats.kingDecisionAnalytics.map((k: any) => (
+                                    <div key={k.king} className="bg-slate-950/60 border border-slate-800/50 rounded-xl p-3">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-white font-semibold text-sm">{k.king}</span>
+                                            <span className="text-amber-400 text-sm font-bold">{k.avgScore}⭐</span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-500">متوسط الحضور بأسابيعه: {k.avgAttendance}</p>
+                                        <p className="text-[11px] text-slate-500">الخميس: {k.thursdayAvgScore}⭐ | الجمعة: {k.fridayAvgScore}⭐</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Cycle Health + Comparisons */}
+                        <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-orange-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+                            <div className="absolute -right-8 -bottom-8 w-28 h-28 bg-orange-500/10 rounded-full blur-2xl" />
+                            <div className="flex items-center gap-2 mb-4 relative z-10">
+                                <Clock className="w-5 h-5 text-orange-400" />
+                                <h3 className="font-bold text-orange-300 text-lg">صحة الدورة والمقارنات</h3>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 relative z-10">
-                                <StatBox label="رسائل الشات" value={stats.chatCount} color="pink" icon="💬" />
-                                <StatBox label="اقتراحات" value={stats.suggestionsCount} color="rose" icon="💡" />
+                                <StatBox label="اكتمال الردود" value={`${stats.cycleHealth.averageResponseCompletion}%`} color="orange" icon="✅" />
+                                <StatBox label="أسابيع بردود كاملة" value={`${stats.cycleHealth.fullyRespondedWeeks}/${stats.cycleHealth.totalCompletedWeeks}`} color="amber" icon="📬" />
                             </div>
-                            {Object.keys(stats.chatPerUser).length > 0 && (
-                                <div className="space-y-1.5 relative z-10 mt-3">
-                                    <p className="text-xs text-slate-500 font-medium mb-2">أكثر المتفاعلين في الشات:</p>
-                                    {Object.entries(stats.chatPerUser)
-                                        .sort(([, a]: any, [, b]: any) => b - a)
-                                        .map(([name, count]: [string, any], i: number) => (
-                                            <div key={name} className="flex items-center gap-2 bg-slate-950/40 rounded-lg p-2 border border-slate-800/30">
-                                                <span className={`text-xs font-bold ${i === 0 ? 'text-pink-400' : 'text-slate-500'}`}>
-                                                    {i === 0 ? '🗣️' : `${i + 1}`}
-                                                </span>
-                                                <span className="text-white text-sm flex-1">{name}</span>
-                                                <span className="text-pink-400 font-bold text-sm">{count} رسالة</span>
-                                            </div>
-                                        ))}
+                            {stats.comparisons.lastWeekVsPrevious && (
+                                <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-3 mb-2 relative z-10">
+                                    <p className="text-xs text-slate-500">آخر أسبوع مقابل اللي قبله</p>
+                                    <p className="text-sm text-white">فرق الحضور: {stats.comparisons.lastWeekVsPrevious.attendanceDelta >= 0 ? '+' : ''}{stats.comparisons.lastWeekVsPrevious.attendanceDelta}</p>
+                                    <p className="text-sm text-white">فرق التقييم: {stats.comparisons.lastWeekVsPrevious.ratingDelta >= 0 ? '+' : ''}{stats.comparisons.lastWeekVsPrevious.ratingDelta}⭐</p>
+                                </div>
+                            )}
+                            {stats.comparisons.currentVsPreviousCycle && (
+                                <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-3 relative z-10">
+                                    <p className="text-xs text-slate-500">الدورة الحالية مقابل السابقة</p>
+                                    <p className="text-sm text-white">فرق الحضور: {stats.comparisons.currentVsPreviousCycle.attendanceDelta >= 0 ? '+' : ''}{stats.comparisons.currentVsPreviousCycle.attendanceDelta}</p>
+                                    <p className="text-sm text-white">فرق التقييم: {stats.comparisons.currentVsPreviousCycle.ratingDelta >= 0 ? '+' : ''}{stats.comparisons.currentVsPreviousCycle.ratingDelta}⭐</p>
                                 </div>
                             )}
                         </div>
@@ -279,9 +343,6 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                                 {stats.funFacts.longestStreak && stats.funFacts.longestStreak.streak > 0 && (
                                     <FunFactRow icon="🔥" label="أطول سلسلة حضور متتالي" value={`${stats.funFacts.longestStreak.name} (${stats.funFacts.longestStreak.streak} طلعات)`} />
                                 )}
-                                {stats.funFacts.mostChatActive && (
-                                    <FunFactRow icon="🗣️" label="أكثر واحد يسولف بالشات" value={`${stats.funFacts.mostChatActive.name} (${stats.funFacts.mostChatActive.count} رسالة)`} />
-                                )}
                                 <FunFactRow icon="📊" label="متوسط الحضور لكل طلعة" value={`${stats.avgAttendancePerWeek} شخص`} />
                                 <FunFactRow
                                     icon="📅"
@@ -292,6 +353,42 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                                             ? `الجمعة (${stats.fridayCount} مرة)`
                                             : `تعادل! (${stats.thursdayCount} لكل يوم)`}
                                 />
+                            </div>
+                        </div>
+
+                        {/* Restaurant Intelligence + Insights */}
+                        <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-fuchsia-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+                            <div className="absolute -left-8 -top-8 w-28 h-28 bg-fuchsia-500/10 rounded-full blur-2xl" />
+                            <div className="flex items-center gap-2 mb-4 relative z-10">
+                                <UtensilsCrossed className="w-5 h-5 text-fuchsia-400" />
+                                <h3 className="font-bold text-fuchsia-300 text-lg">ذكاء المطاعم + التوقعات</h3>
+                            </div>
+
+                            <div className="space-y-2 mb-3 relative z-10">
+                                {stats.restaurantIntelligence.retryCandidates.map((r: any) => (
+                                    <FunFactRow key={`retry-${r.restaurant}`} icon="🥇" label="إعادة التجربة المقترحة" value={`${r.restaurant} (${r.avgScore}⭐)`} />
+                                ))}
+                                {stats.restaurantIntelligence.avoidCandidates.map((r: any) => (
+                                    <FunFactRow key={`avoid-${r.restaurant}`} icon="⚠️" label="مطعم يحتاج مراجعة" value={`${r.restaurant} (${r.avgScore}⭐)`} />
+                                ))}
+                            </div>
+
+                            {stats.prediction && (
+                                <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-3 mb-3 relative z-10">
+                                    <p className="text-xs text-slate-500">توقع الأسبوع الحالي</p>
+                                    <p className="text-sm text-white">الحضور المتوقع: {stats.prediction.expectedAttendance} أشخاص</p>
+                                    <p className="text-sm text-white">التقييم المتوقع: {stats.prediction.expectedRating}⭐</p>
+                                    <p className="text-[11px] text-slate-400">الثقة: {stats.prediction.confidence}</p>
+                                </div>
+                            )}
+
+                            <div className="space-y-2 relative z-10">
+                                <p className="text-xs text-slate-500 font-medium">Insights تلقائية:</p>
+                                {stats.insights.map((line: string, idx: number) => (
+                                    <div key={`insight-${idx}`} className="bg-slate-950/40 border border-slate-800/40 rounded-lg p-2.5 text-sm text-slate-200">
+                                        • {line}
+                                    </div>
+                                ))}
                             </div>
                         </div>
 

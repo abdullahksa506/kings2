@@ -557,16 +557,30 @@ export const services = {
         const ratingsSnap = await getDocs(collection(db, "ratings"));
         const allRatings = ratingsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Rating));
 
-        // 3. Get chat messages count
-        const chatSnap = await getDocs(collection(db, "chatMessages"));
-        const chatCount = chatSnap.size;
-        
-        // 4. Get suggestions count
+        // 3. Get suggestions count
         const suggestionsSnap = await getDocs(collection(db, "suggestions"));
         const suggestionsCount = suggestionsSnap.size;
 
-        // 5. Visit stats
+        // 4. Visit stats
         const visitStats = await this.getVisitStats();
+
+        const sortedWeeks = [...completedWeeks].sort((a, b) => a.createdAt.toMillis() - b.createdAt.toMillis());
+
+        const attendedCountForWeek = (week: WeekSession): number => {
+            return VALID_NAMES.filter((name) => {
+                if (week.king === name) return true;
+                return (week.responded || []).includes(name) && !(week.absentees || []).includes(name);
+            }).length;
+        };
+
+        // Calculate Week Averages
+        const weekAverages: Record<string, number> = {};
+        for (const week of completedWeeks) {
+            const weekRt = allRatings.filter(r => r.weekId === week.id);
+            if (weekRt.length > 0) {
+                weekAverages[week.id] = weekRt.reduce((acc, r) => acc + r.score, 0) / weekRt.length;
+            }
+        }
 
         // --- Compute member stats ---
         const memberStats: Record<string, {
@@ -637,15 +651,6 @@ export const services = {
             ? VALID_NAMES.reduce((sum, name) => sum + memberStats[name].attended, 0) / completedWeeks.length
             : 0;
 
-        // Calculate Week Averages
-        const weekAverages: Record<string, number> = {};
-        for (const week of completedWeeks) {
-            const weekRt = allRatings.filter(r => r.weekId === week.id);
-            if (weekRt.length > 0) {
-                weekAverages[week.id] = weekRt.reduce((acc, r) => acc + r.score, 0) / weekRt.length;
-            }
-        }
-
         // Calculate King Averages
         const kingAverageScores: Record<string, { sum: number; count: number }> = {};
         for (const week of completedWeeks) {
@@ -703,7 +708,6 @@ export const services = {
         for (const name of VALID_NAMES) {
             streaks[name] = { current: 0, max: 0 };
         }
-        const sortedWeeks = [...completedWeeks].sort((a, b) => a.createdAt.toMillis() - b.createdAt.toMillis());
         for (const week of sortedWeeks) {
             for (const name of VALID_NAMES) {
                 const wasPresent = name === week.king || 
@@ -719,14 +723,6 @@ export const services = {
 
         const longestStreak = Object.entries(streaks).sort((a, b) => b[1].max - a[1].max)[0];
 
-        // --- Chat activity per user ---
-        const chatPerUser: Record<string, number> = {};
-        chatSnap.forEach(d => {
-            const name = d.data().userName;
-            if (name) chatPerUser[name] = (chatPerUser[name] || 0) + 1;
-        });
-        const mostChatActive = Object.entries(chatPerUser).sort((a, b) => b[1] - a[1])[0];
-
         // --- First and last outing dates ---
         const firstOuting = sortedWeeks.length > 0 ? sortedWeeks[0] : null;
         const lastOuting = sortedWeeks.length > 0 ? sortedWeeks[sortedWeeks.length - 1] : null;
@@ -735,6 +731,317 @@ export const services = {
         const daysSinceFirst = firstOuting 
             ? Math.floor((Date.now() - firstOuting.createdAt.toMillis()) / (1000 * 60 * 60 * 24))
             : 0;
+
+        // --- Time windows ---
+        const last4Weeks = sortedWeeks.slice(-4);
+        const previous4Weeks = sortedWeeks.slice(-8, -4);
+        const last8Weeks = sortedWeeks.slice(-8);
+
+        const buildWindowStats = (weeks: WeekSession[]) => {
+            if (weeks.length === 0) {
+                return {
+                    outings: 0,
+                    avgAttendance: 0,
+                    avgRating: 0,
+                    attendanceRate: 0,
+                };
+            }
+
+            const attendanceCounts = weeks.map((w) => attendedCountForWeek(w));
+            const avgAttendance = attendanceCounts.reduce((s, n) => s + n, 0) / weeks.length;
+            const avgRating = weeks.length > 0
+                ? weeks.reduce((sum, w) => sum + (weekAverages[w.id] || 0), 0) / weeks.length
+                : 0;
+            const attendanceRate = (avgAttendance / VALID_NAMES.length) * 100;
+
+            return {
+                outings: weeks.length,
+                avgAttendance: Math.round(avgAttendance * 10) / 10,
+                avgRating: Math.round(avgRating * 10) / 10,
+                attendanceRate: Math.round(attendanceRate),
+            };
+        };
+
+        const timeWindows = {
+            last4: buildWindowStats(last4Weeks),
+            last8: buildWindowStats(last8Weeks),
+            season: buildWindowStats(sortedWeeks),
+        };
+
+        // --- Member trends (recent vs previous 4) ---
+        const memberTrends: Record<string, {
+            recentAttendanceRate: number;
+            previousAttendanceRate: number;
+            attendanceDelta: number;
+            recentGivenRating: number;
+            previousGivenRating: number;
+            ratingDelta: number;
+        }> = {};
+
+        const calcMemberAttendanceRate = (weeks: WeekSession[], name: string) => {
+            if (weeks.length === 0) return 0;
+            let considered = 0;
+            let attended = 0;
+            for (const week of weeks) {
+                const involved = week.king === name || (week.responded || []).includes(name);
+                if (!involved) continue;
+                considered++;
+                const present = week.king === name || ((week.responded || []).includes(name) && !(week.absentees || []).includes(name));
+                if (present) attended++;
+            }
+            if (considered === 0) return 0;
+            return Math.round((attended / considered) * 100);
+        };
+
+        const calcMemberGivenRating = (weeks: WeekSession[], name: string) => {
+            if (weeks.length === 0) return 0;
+            const weekIds = new Set(weeks.map((w) => w.id));
+            const given = allRatings.filter((r) => r.userName === name && weekIds.has(r.weekId));
+            if (given.length === 0) return 0;
+            const avg = given.reduce((sum, r) => sum + r.score, 0) / given.length;
+            return Math.round(avg * 10) / 10;
+        };
+
+        for (const name of VALID_NAMES) {
+            const recentAttendanceRate = calcMemberAttendanceRate(last4Weeks, name);
+            const previousAttendanceRate = calcMemberAttendanceRate(previous4Weeks, name);
+            const recentGivenRating = calcMemberGivenRating(last4Weeks, name);
+            const previousGivenRating = calcMemberGivenRating(previous4Weeks, name);
+            memberTrends[name] = {
+                recentAttendanceRate,
+                previousAttendanceRate,
+                attendanceDelta: recentAttendanceRate - previousAttendanceRate,
+                recentGivenRating,
+                previousGivenRating,
+                ratingDelta: Math.round((recentGivenRating - previousGivenRating) * 10) / 10,
+            };
+        }
+
+        // --- Restaurant intelligence ---
+        const restaurantStatsMap: Record<string, { count: number; total: number; scores: number[] }> = {};
+        for (const week of sortedWeeks) {
+            const name = week.restaurant || "غير محدد";
+            const score = weekAverages[week.id] || 0;
+            if (!restaurantStatsMap[name]) restaurantStatsMap[name] = { count: 0, total: 0, scores: [] };
+            restaurantStatsMap[name].count++;
+            restaurantStatsMap[name].total += score;
+            restaurantStatsMap[name].scores.push(score);
+        }
+
+        const calcStdDev = (arr: number[]) => {
+            if (arr.length < 2) return 0;
+            const mean = arr.reduce((s, n) => s + n, 0) / arr.length;
+            const variance = arr.reduce((s, n) => s + (n - mean) ** 2, 0) / arr.length;
+            return Math.sqrt(variance);
+        };
+
+        const restaurantIntelligence = Object.entries(restaurantStatsMap)
+            .map(([restaurant, info]) => {
+                const avgScore = info.count > 0 ? info.total / info.count : 0;
+                const stability = calcStdDev(info.scores);
+                return {
+                    restaurant,
+                    count: info.count,
+                    avgScore: Math.round(avgScore * 10) / 10,
+                    stability: Math.round(stability * 100) / 100,
+                };
+            })
+            .sort((a, b) => b.avgScore - a.avgScore || b.count - a.count);
+
+        const retryCandidates = restaurantIntelligence
+            .filter((r) => r.count >= 2 && r.avgScore >= 3.8)
+            .slice(0, 3);
+
+        const worstCandidates = [...restaurantIntelligence]
+            .filter((r) => r.count >= 2)
+            .sort((a, b) => a.avgScore - b.avgScore)
+            .slice(0, 3);
+
+        // --- King decision analytics ---
+        const kingDecisionMap: Record<string, {
+            outings: number;
+            scoreSum: number;
+            attendanceSum: number;
+            thursdayOutings: number;
+            fridayOutings: number;
+            thursdayScoreSum: number;
+            fridayScoreSum: number;
+            thursdayAttendanceSum: number;
+            fridayAttendanceSum: number;
+        }> = {};
+
+        for (const name of VALID_NAMES) {
+            kingDecisionMap[name] = {
+                outings: 0,
+                scoreSum: 0,
+                attendanceSum: 0,
+                thursdayOutings: 0,
+                fridayOutings: 0,
+                thursdayScoreSum: 0,
+                fridayScoreSum: 0,
+                thursdayAttendanceSum: 0,
+                fridayAttendanceSum: 0,
+            };
+        }
+
+        for (const week of sortedWeeks) {
+            if (!week.king || !kingDecisionMap[week.king]) continue;
+            const k = kingDecisionMap[week.king];
+            const attendance = attendedCountForWeek(week);
+            const score = weekAverages[week.id] || 0;
+            k.outings++;
+            k.scoreSum += score;
+            k.attendanceSum += attendance;
+            if (week.day === "الخميس") {
+                k.thursdayOutings++;
+                k.thursdayScoreSum += score;
+                k.thursdayAttendanceSum += attendance;
+            }
+            if (week.day === "الجمعة") {
+                k.fridayOutings++;
+                k.fridayScoreSum += score;
+                k.fridayAttendanceSum += attendance;
+            }
+        }
+
+        const kingDecisionAnalytics = Object.entries(kingDecisionMap)
+            .map(([king, data]) => ({
+                king,
+                outings: data.outings,
+                avgScore: data.outings > 0 ? Math.round((data.scoreSum / data.outings) * 10) / 10 : 0,
+                avgAttendance: data.outings > 0 ? Math.round((data.attendanceSum / data.outings) * 10) / 10 : 0,
+                thursdayOutings: data.thursdayOutings,
+                fridayOutings: data.fridayOutings,
+                thursdayAvgScore: data.thursdayOutings > 0 ? Math.round((data.thursdayScoreSum / data.thursdayOutings) * 10) / 10 : 0,
+                fridayAvgScore: data.fridayOutings > 0 ? Math.round((data.fridayScoreSum / data.fridayOutings) * 10) / 10 : 0,
+                thursdayAvgAttendance: data.thursdayOutings > 0 ? Math.round((data.thursdayAttendanceSum / data.thursdayOutings) * 10) / 10 : 0,
+                fridayAvgAttendance: data.fridayOutings > 0 ? Math.round((data.fridayAttendanceSum / data.fridayOutings) * 10) / 10 : 0,
+            }))
+            .sort((a, b) => b.avgScore - a.avgScore);
+
+        // --- Cycle health ---
+        const responseRates = sortedWeeks.map((w) => {
+            const required = VALID_NAMES.length - (w.king ? 1 : 0);
+            const responded = (w.responded || []).length;
+            if (required <= 0) return 1;
+            return Math.min(1, responded / required);
+        });
+        const avgResponseRate = responseRates.length > 0
+            ? (responseRates.reduce((s, n) => s + n, 0) / responseRates.length) * 100
+            : 0;
+        const fullyRespondedWeeks = sortedWeeks.filter((w) => {
+            const required = VALID_NAMES.length - (w.king ? 1 : 0);
+            return (w.responded || []).length >= required;
+        }).length;
+
+        const cycleHealth = {
+            averageResponseCompletion: Math.round(avgResponseRate),
+            fullyRespondedWeeks,
+            totalCompletedWeeks: sortedWeeks.length,
+            fullyRespondedRate: sortedWeeks.length > 0 ? Math.round((fullyRespondedWeeks / sortedWeeks.length) * 100) : 0,
+        };
+
+        // --- Comparisons ---
+        const latestWeek = sortedWeeks.length > 0 ? sortedWeeks[sortedWeeks.length - 1] : null;
+        const prevWeek = sortedWeeks.length > 1 ? sortedWeeks[sortedWeeks.length - 2] : null;
+
+        const byCycle: Record<number, WeekSession[]> = {};
+        for (const week of sortedWeeks) {
+            const cycle = week.cycleNumber || 1;
+            if (!byCycle[cycle]) byCycle[cycle] = [];
+            byCycle[cycle].push(week);
+        }
+        const cycles = Object.keys(byCycle).map(Number).sort((a, b) => a - b);
+        const currentCycle = cycles.length > 0 ? cycles[cycles.length - 1] : null;
+        const previousCycle = cycles.length > 1 ? cycles[cycles.length - 2] : null;
+
+        const cycleAggregate = (cycleNumber: number | null) => {
+            if (cycleNumber === null || !byCycle[cycleNumber]) return { outings: 0, avgRating: 0, avgAttendance: 0 };
+            const weeks = byCycle[cycleNumber];
+            if (weeks.length === 0) return { outings: 0, avgRating: 0, avgAttendance: 0 };
+            const avgRating = weeks.reduce((s, w) => s + (weekAverages[w.id] || 0), 0) / weeks.length;
+            const avgAttendance = weeks.reduce((s, w) => s + attendedCountForWeek(w), 0) / weeks.length;
+            return {
+                outings: weeks.length,
+                avgRating: Math.round(avgRating * 10) / 10,
+                avgAttendance: Math.round(avgAttendance * 10) / 10,
+            };
+        };
+
+        const currentCycleAgg = cycleAggregate(currentCycle);
+        const previousCycleAgg = cycleAggregate(previousCycle);
+
+        const comparisons = {
+            lastWeekVsPrevious: latestWeek && prevWeek ? {
+                attendanceDelta: attendedCountForWeek(latestWeek) - attendedCountForWeek(prevWeek),
+                ratingDelta: Math.round(((weekAverages[latestWeek.id] || 0) - (weekAverages[prevWeek.id] || 0)) * 10) / 10,
+            } : null,
+            currentVsPreviousCycle: currentCycle && previousCycle ? {
+                currentCycle,
+                previousCycle,
+                attendanceDelta: Math.round((currentCycleAgg.avgAttendance - previousCycleAgg.avgAttendance) * 10) / 10,
+                ratingDelta: Math.round((currentCycleAgg.avgRating - previousCycleAgg.avgRating) * 10) / 10,
+            } : null,
+        };
+
+        // --- Prediction (simple heuristic) ---
+        const currentWeek = pendingWeeks.length > 0 ? pendingWeeks[0] : null;
+        const dayHistorical = {
+            thursdayAttendanceAvg: thursdayCount > 0
+                ? Math.round((sortedWeeks.filter(w => w.day === "الخميس").reduce((s, w) => s + attendedCountForWeek(w), 0) / thursdayCount) * 10) / 10
+                : 0,
+            fridayAttendanceAvg: fridayCount > 0
+                ? Math.round((sortedWeeks.filter(w => w.day === "الجمعة").reduce((s, w) => s + attendedCountForWeek(w), 0) / fridayCount) * 10) / 10
+                : 0,
+        };
+
+        let prediction: { expectedAttendance: number; expectedRating: number; confidence: "low" | "medium" | "high" } | null = null;
+        if (currentWeek) {
+            let expectedAttendance = Math.round(avgAttendancePerWeek * 10) / 10;
+            let expectedRating = Math.round(globalAverageRating * 10) / 10;
+            let confidence: "low" | "medium" | "high" = "low";
+
+            if (currentWeek.day === "الخميس" && dayHistorical.thursdayAttendanceAvg > 0) expectedAttendance = dayHistorical.thursdayAttendanceAvg;
+            if (currentWeek.day === "الجمعة" && dayHistorical.fridayAttendanceAvg > 0) expectedAttendance = dayHistorical.fridayAttendanceAvg;
+
+            if (currentWeek.king) {
+                const kingData = kingDecisionAnalytics.find((k) => k.king === currentWeek.king);
+                if (kingData && kingData.outings >= 2) {
+                    expectedRating = kingData.avgScore;
+                    expectedAttendance = Math.round(((expectedAttendance + kingData.avgAttendance) / 2) * 10) / 10;
+                    confidence = kingData.outings >= 4 ? "high" : "medium";
+                } else {
+                    confidence = "medium";
+                }
+            }
+
+            prediction = { expectedAttendance, expectedRating, confidence };
+        }
+
+        // --- Smart insights ---
+        const insights: string[] = [];
+        if (timeWindows.last4.outings > 0 && timeWindows.last8.outings > 0) {
+            const attendanceShift = timeWindows.last4.avgAttendance - timeWindows.last8.avgAttendance;
+            if (attendanceShift >= 0.6) insights.push(`الحضور آخر 4 طلعات أعلى من المتوسط العام بـ ${attendanceShift.toFixed(1)} شخص`);
+            if (attendanceShift <= -0.6) insights.push(`الحضور آخر 4 طلعات أقل من المتوسط العام بـ ${Math.abs(attendanceShift).toFixed(1)} شخص`);
+        }
+        if (comparisons.lastWeekVsPrevious) {
+            const d = comparisons.lastWeekVsPrevious;
+            if (d.ratingDelta >= 0.4) insights.push(`تقييم آخر طلعة تحسّن عن اللي قبلها بـ ${d.ratingDelta.toFixed(1)} نجمة`);
+            if (d.ratingDelta <= -0.4) insights.push(`تقييم آخر طلعة انخفض عن اللي قبلها بـ ${Math.abs(d.ratingDelta).toFixed(1)} نجمة`);
+        }
+        if (retryCandidates.length > 0) {
+            insights.push(`أفضل إعادة تجربة مقترحة: ${retryCandidates[0].restaurant} بمتوسط ${retryCandidates[0].avgScore}⭐`);
+        }
+        if (worstCandidates.length > 0) {
+            insights.push(`مطعم يحتاج مراجعة قبل التكرار: ${worstCandidates[0].restaurant} بمتوسط ${worstCandidates[0].avgScore}⭐`);
+        }
+        if (cycleHealth.fullyRespondedRate < 70) {
+            insights.push(`نسبة اكتمال ردود الحضور ${cycleHealth.fullyRespondedRate}% فقط، يفضّل زيادة التذكيرات المبكرة`);
+        }
+        if (prediction) {
+            insights.push(`توقع الطلعة الحالية: حضور ${prediction.expectedAttendance} أشخاص وتقييم ${prediction.expectedRating}⭐ (ثقة ${prediction.confidence})`);
+        }
 
         return {
             visitStats,
@@ -746,7 +1053,6 @@ export const services = {
             uniqueRestaurants,
             thursdayCount,
             fridayCount,
-            chatCount,
             suggestionsCount,
             avgAttendancePerWeek: Math.round(avgAttendancePerWeek * 10) / 10,
             funFacts: {
@@ -754,7 +1060,6 @@ export const services = {
                 mostAbsent: mostAbsent ? { name: mostAbsent[0], count: mostAbsent[1].absent } : null,
                 mostKing: mostKing ? { name: mostKing[0], count: mostKing[1].timesAsKing } : null,
                 longestStreak: longestStreak ? { name: longestStreak[0], streak: longestStreak[1].max } : null,
-                mostChatActive: mostChatActive ? { name: mostChatActive[0], count: mostChatActive[1] } : null,
                 highestRatedKing: highestRatedKing ? { name: highestRatedKing.name, score: Math.round(highestRatedKing.score * 10) / 10 } : null,
                 lowestRatedKing: lowestRatedKing && lowestRatedKing.name !== highestRatedKing?.name ? { name: lowestRatedKing.name, score: Math.round(lowestRatedKing.score * 10) / 10 } : null,
                 mostCriticalRater: mostCriticalRater ? { name: mostCriticalRater.name, score: Math.round(mostCriticalRater.score * 10) / 10 } : null,
@@ -762,10 +1067,21 @@ export const services = {
                 globalAverageRating: Math.round(globalAverageRating * 10) / 10
             },
             streaks,
-            chatPerUser,
             daysSinceFirst,
             firstOutingDate: firstOuting?.createdAt || null,
             lastOutingDate: lastOuting?.createdAt || null,
+            timeWindows,
+            memberTrends,
+            restaurantIntelligence: {
+                ranked: restaurantIntelligence,
+                retryCandidates,
+                avoidCandidates: worstCandidates,
+            },
+            kingDecisionAnalytics,
+            cycleHealth,
+            comparisons,
+            prediction,
+            insights,
         };
     }
 };
