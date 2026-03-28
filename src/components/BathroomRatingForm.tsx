@@ -1,19 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { services } from "@/lib/services";
 import { Send, Lock, Bath } from "lucide-react";
 
 export default function BathroomRatingForm({ weekId, userName, restaurantName, onRated, disabled = false }: { weekId: string, userName: string, restaurantName?: string, onRated: () => void, disabled?: boolean }) {
     const [hoveredScore, setHoveredScore] = useState(0);
     const [score, setScore] = useState(0);
+    const [bathroomName, setBathroomName] = useState("");
     const [submitting, setSubmitting] = useState(false);
 
+    useEffect(() => {
+        if (!restaurantName) return;
+        setBathroomName((prev) => prev || `حمام ${restaurantName}`);
+    }, [restaurantName]);
+
     const handleSubmit = async () => {
-        if (score === 0 || disabled) return;
+        const trimmedBathroom = bathroomName.trim();
+        if (score === 0 || disabled || trimmedBathroom.length < 2) return;
         setSubmitting(true);
         try {
-            await services.submitBathroomRating(weekId, userName, score);
+            await services.submitBathroomRating(weekId, userName, score, trimmedBathroom, restaurantName || null);
+            setScore(0);
+            setHoveredScore(0);
             onRated();
         } catch (e) {
             console.error(e);
@@ -32,8 +41,21 @@ export default function BathroomRatingForm({ weekId, userName, restaurantName, o
                 حمامات هشام
             </h3>
             <p className="text-slate-400 text-sm mb-6">
-                تقييمك اختياري لدورات مياه {restaurantName ? `مطعم (${restaurantName})` : "المطعم"}.
+                تقدر تضيف أي حمام بأي وقت وتقيمه مباشرة.
             </p>
+
+            <div className="mb-5 text-right">
+                <label className="block text-sm text-slate-300 mb-2">اسم الحمام</label>
+                <input
+                    value={bathroomName}
+                    onChange={(e) => setBathroomName(e.target.value)}
+                    maxLength={60}
+                    placeholder={restaurantName ? `مثال: حمام ${restaurantName}` : "مثال: حمام الدور الثاني"}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-slate-200 outline-none focus:border-sky-500"
+                    disabled={disabled || submitting}
+                />
+                <p className="text-[11px] text-slate-500 mt-1">الحد الأقصى 60 حرف</p>
+            </div>
 
             {disabled && (
                 <div className="flex items-center justify-center gap-2 mb-4 text-slate-500 text-sm">
@@ -63,7 +85,7 @@ export default function BathroomRatingForm({ weekId, userName, restaurantName, o
 
             <button
                 onClick={handleSubmit}
-                disabled={score === 0 || submitting || disabled}
+                disabled={score === 0 || bathroomName.trim().length < 2 || submitting || disabled}
                 className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-3 px-8 rounded-xl transition-all shadow-lg hover:shadow-sky-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 mx-auto"
             >
                 {disabled ? "التقييم مقفل" : submitting ? "جاري الإرسال..." : "تأكيد واستمرار"}

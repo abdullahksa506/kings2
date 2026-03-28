@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { services, WeekSession, VALID_NAMES, Rating } from "@/lib/services";
+import { PublicUserProfile, services, WeekSession, VALID_NAMES, Rating } from "@/lib/services";
 import { History, Star, Crown, Download, ListFilter, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as xlsx from "xlsx";
@@ -19,6 +19,7 @@ export default function GlobalLeaderboard() {
     const [expandedWeek, setExpandedWeek] = useState<string | null>(null);
     const [weekRatings, setWeekRatings] = useState<Record<string, Rating[]>>({});
     const [loadingRatings, setLoadingRatings] = useState<Record<string, boolean>>({});
+    const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
 
     useEffect(() => {
         const fetchData = async () => {
@@ -32,6 +33,18 @@ export default function GlobalLeaderboard() {
             setLoading(false);
         };
         fetchData();
+    }, []);
+
+    useEffect(() => {
+        const unsub = services.listenToPublicUserProfiles((profiles) => {
+            const nextMap: Record<string, PublicUserProfile> = {};
+            profiles.forEach((p) => {
+                nextMap[p.userName] = p;
+            });
+            setPublicProfilesMap(nextMap);
+        });
+
+        return () => unsub();
     }, []);
 
     const exportToExcel = () => {
@@ -139,6 +152,11 @@ export default function GlobalLeaderboard() {
                 <AnimatePresence mode="popLayout">
                     {sortedData.map((entry) => {
                         const isExpanded = expandedWeek === entry.week.id;
+                        const kingName = entry.week.king || "عشوائي";
+                        const kingProfile = entry.week.king ? publicProfilesMap[entry.week.king] : null;
+                        const kingDisplayName = kingProfile?.nickName?.trim() || kingName;
+                        const kingAvatar = kingProfile?.profileImage || null;
+                        const kingInitial = kingDisplayName.charAt(0) || "؟";
                         return (
                             <motion.div
                                 layout
@@ -176,9 +194,14 @@ export default function GlobalLeaderboard() {
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <div className="flex items-center gap-1.5">
                                                     <Crown className="w-3 h-3 text-amber-500/60" />
-                                                    <span className="text-xs text-slate-400">
-                                                        {entry.week.king || "عشوائي"}
+                                                    <span className="w-5 h-5 rounded-full overflow-hidden border border-white/20 bg-slate-800 flex items-center justify-center text-[9px] font-bold text-slate-200 shrink-0">
+                                                        {kingAvatar ? (
+                                                            <img src={kingAvatar} alt={kingDisplayName} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <span>{kingInitial}</span>
+                                                        )}
                                                     </span>
+                                                    <span className="text-xs text-slate-400">{kingDisplayName}</span>
                                                 </div>
                                                 {entry.week.activity && entry.week.activity.length > 0 && (
                                                     <>

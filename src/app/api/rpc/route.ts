@@ -121,17 +121,46 @@ export async function POST(request: Request) {
 
             // --- RATINGS ---
             case "submitRating":
-            case "submitBathroomRating":
                 if (authName !== payload.userName) throw new Error("Identity mismatch");
                 if (payload.score < 1 || payload.score > 5) throw new Error("Invalid score");
-                const collName = action === "submitRating" ? "ratings" : "bathroomRatings";
-                const ratingRef = await adminDb.collection(collName).add({
+                const ratingRef = await adminDb.collection("ratings").add({
                     weekId: payload.weekId,
                     userName: payload.userName,
                     score: payload.score,
                     createdAt: Timestamp.now()
                 });
                 return NextResponse.json({ result: ratingRef.id });
+
+            case "submitBathroomRating":
+                if (authName !== payload.userName) throw new Error("Identity mismatch");
+                if (payload.score < 1 || payload.score > 5) throw new Error("Invalid score");
+
+                const bathroomWeekId = typeof payload.weekId === "string" && payload.weekId.trim()
+                    ? payload.weekId.trim()
+                    : "general";
+
+                const normalizedBathroomName = normalizeNickName(
+                    payload.bathroomName,
+                    typeof payload.restaurantName === "string" && payload.restaurantName.trim()
+                        ? `حمام ${payload.restaurantName.trim()}`
+                        : "حمام غير مسمى"
+                );
+
+                if (normalizedBathroomName.length > 60) {
+                    throw new Error("اسم الحمام طويل جدًا");
+                }
+
+                const bathroomRef = await adminDb.collection("bathroomRatings").add({
+                    weekId: bathroomWeekId,
+                    userName: payload.userName,
+                    score: payload.score,
+                    bathroomName: normalizedBathroomName,
+                    restaurantName: typeof payload.restaurantName === "string" && payload.restaurantName.trim()
+                        ? payload.restaurantName.trim()
+                        : null,
+                    createdAt: Timestamp.now()
+                });
+                return NextResponse.json({ result: bathroomRef.id });
 
             // --- USERS & AUTH ---
             case "updateUserStandaloneStatus":

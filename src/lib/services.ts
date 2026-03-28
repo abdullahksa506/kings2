@@ -65,6 +65,8 @@ export interface BathroomRating {
     weekId: string;
     userName: string;
     score: number; // 1 to 5
+    bathroomName?: string;
+    restaurantName?: string | null;
     createdAt: Timestamp;
 }
 
@@ -216,8 +218,14 @@ export const services = {
         return !snap.empty;
     },
 
-    async submitBathroomRating(weekId: string, userName: string, score: number) {
-        return invokeRpc("submitBathroomRating", { weekId, userName, score });
+    async submitBathroomRating(
+        weekId: string,
+        userName: string,
+        score: number,
+        bathroomName?: string,
+        restaurantName?: string | null
+    ) {
+        return invokeRpc("submitBathroomRating", { weekId, userName, score, bathroomName, restaurantName });
     },
 
     async getBathroomRatingsForWeek(weekId: string): Promise<BathroomRating[]> {

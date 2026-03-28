@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ListFilter, Search, Star } from "lucide-react";
-import { RatingExplorerWeek, services, VALID_NAMES } from "@/lib/services";
+import { PublicUserProfile, RatingExplorerWeek, services, VALID_NAMES } from "@/lib/services";
 
 type SortType = "newest" | "oldest" | "highest" | "lowest";
 
@@ -14,6 +14,7 @@ export default function RatingsExplorer() {
     const [selectedRater, setSelectedRater] = useState("all");
     const [minScore, setMinScore] = useState("all");
     const [searchText, setSearchText] = useState("");
+    const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
 
     useEffect(() => {
         const run = async () => {
@@ -23,6 +24,17 @@ export default function RatingsExplorer() {
             setLoading(false);
         };
         run();
+    }, []);
+
+    useEffect(() => {
+        const unsub = services.listenToPublicUserProfiles((profiles) => {
+            const nextMap: Record<string, PublicUserProfile> = {};
+            profiles.forEach((p) => {
+                nextMap[p.userName] = p;
+            });
+            setPublicProfilesMap(nextMap);
+        });
+        return () => unsub();
     }, []);
 
     const filtered = useMemo(() => {
@@ -92,6 +104,14 @@ export default function RatingsExplorer() {
                 <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
                     {filtered.map((row) => (
                         <div key={row.week.id} className="bg-slate-950/60 border border-slate-800 rounded-xl p-3">
+                            {(() => {
+                                const kingName = row.week.king || "عشوائي";
+                                const kingProfile = row.week.king ? publicProfilesMap[row.week.king] : null;
+                                const kingDisplayName = kingProfile?.nickName?.trim() || kingName;
+                                const kingAvatar = kingProfile?.profileImage || null;
+                                const kingInitial = kingDisplayName.charAt(0) || "؟";
+
+                                return (
                             <div className="flex items-start justify-between gap-2">
                                 <div>
                                     <p className="text-white font-semibold text-sm">{row.week.restaurant || "غير محدد"}</p>
@@ -99,8 +119,16 @@ export default function RatingsExplorer() {
                                         <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300">
                                             {row.week.day || "يوم غير محدد"}
                                         </span>
-                                        <span className="text-[11px] text-slate-500">
-                                            - الملك: {row.week.king || "عشوائي"}
+                                        <span className="text-[11px] text-slate-500 flex items-center gap-1.5">
+                                            <span>- الملك:</span>
+                                            <span className="w-5 h-5 rounded-full overflow-hidden border border-white/20 bg-slate-800 flex items-center justify-center text-[9px] font-bold text-slate-200 shrink-0">
+                                                {kingAvatar ? (
+                                                    <img src={kingAvatar} alt={kingDisplayName} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span>{kingInitial}</span>
+                                                )}
+                                            </span>
+                                            <span>{kingDisplayName}</span>
                                         </span>
                                     </div>
                                 </div>
@@ -109,6 +137,8 @@ export default function RatingsExplorer() {
                                     {row.averageScore > 0 ? row.averageScore.toFixed(1) : "—"}
                                 </div>
                             </div>
+                                );
+                            })()}
                             <p className="text-[11px] text-slate-500 mt-2">
                                 تاريخ الطلعة: {new Date(row.week.createdAt.toMillis()).toLocaleDateString("ar-SA")}
                             </p>

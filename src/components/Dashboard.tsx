@@ -230,6 +230,17 @@ const THEME_STYLE: Record<ThemeKey, {
     },
 };
 
+const THEME_META_COLOR: Record<ThemeKey, string> = {
+    "royal-amber": "#f59e0b",
+    "ocean-cyan": "#06b6d4",
+    "emerald-night": "#10b981",
+    "sunset-fire": "#f97316",
+    "rose-neon": "#f43f5e",
+    "arctic-ice": "#60a5fa",
+    "forest-olive": "#84cc16",
+    "midnight-indigo": "#6366f1",
+};
+
 export default function Dashboard() {
     const WEEK_DAYS: Exclude<WeekSession["day"], null>[] = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
     const { user, logout, refreshUserProfile } = useAuth();
@@ -590,6 +601,8 @@ export default function Dashboard() {
 
     const isKing = currentWeek?.king === user?.name;
     const isDean = user?.role === "dean";
+    const isHesham = user?.name === "هشام";
+    const bathroomWeekForRating = currentWeek || pastWeek;
 
     const handleAttendanceChoice = async (isAbsent: boolean) => {
         if (!currentWeek || !user?.name) return;
@@ -640,35 +653,50 @@ export default function Dashboard() {
     const activeTheme = THEME_OPTIONS.find((theme) => theme.id === selectedTheme) || THEME_OPTIONS[0];
     const activeThemeStyle = THEME_STYLE[selectedTheme];
 
+    const applyThemeMetaColor = (themeId: ThemeKey) => {
+        if (typeof document === "undefined") return;
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (!meta) return;
+        meta.setAttribute("content", THEME_META_COLOR[themeId]);
+    };
+
     const handleThemeChange = (themeId: ThemeKey) => {
         setSelectedTheme(themeId);
         localStorage.setItem("king_theme", themeId);
+        applyThemeMetaColor(themeId);
     };
+
+    useEffect(() => {
+        applyThemeMetaColor(selectedTheme);
+    }, [selectedTheme]);
 
     const renderMemberChip = (name: string, statusIcon: string, mode: "present" | "waiting" | "absent") => {
         const profile = publicProfilesMap[name];
-        const shouldShowAvatar = profile ? profile.showProfileImage : true;
         const avatar = profile?.profileImage || null;
-        const initial = (profile?.nickName || name).charAt(0) || "؟";
+        const nick = typeof profile?.nickName === "string" ? profile.nickName.trim() : "";
+        const display = nick || name;
+        const hasAlias = display !== name;
+        const initial = display.charAt(0) || "؟";
 
         const tone = mode === "present"
-            ? "bg-emerald-400/20 border-emerald-300/30 text-emerald-200"
+            ? "bg-emerald-400/20 border-emerald-300/30 text-emerald-100"
             : mode === "absent"
-                ? "bg-red-400/20 border-red-300/30 text-red-200"
-                : "bg-slate-700/70 border-slate-500 text-slate-200";
+                ? "bg-red-400/20 border-red-300/30 text-red-100"
+                : "bg-slate-700/80 border-slate-500 text-slate-100";
 
         return (
-            <span key={`${mode}-${name}`} className={`px-3 py-1.5 border text-sm rounded-lg flex items-center gap-2 ${tone}`}>
-                {shouldShowAvatar && (
-                    <span className="w-5 h-5 rounded-full overflow-hidden border border-white/20 bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-200 shrink-0">
-                        {avatar ? (
-                            <img src={avatar} alt={name} className="w-full h-full object-cover" />
-                        ) : (
-                            <span>{initial}</span>
-                        )}
-                    </span>
-                )}
-                <span>{name}</span>
+            <span key={`${mode}-${name}`} className={`px-4 py-2.5 border text-sm rounded-xl flex items-center gap-3 min-h-14 ${tone}`}>
+                <span className="w-10 h-10 rounded-full overflow-hidden border border-white/20 bg-slate-800 flex items-center justify-center text-sm font-bold text-slate-200 shrink-0">
+                    {avatar ? (
+                        <img src={avatar} alt={display} className="w-full h-full object-cover" />
+                    ) : (
+                        <span>{initial}</span>
+                    )}
+                </span>
+                <span className="leading-tight">
+                    <span className="block font-semibold text-sm">{display}</span>
+                    {hasAlias && <span className="block text-[11px] font-semibold text-slate-600">{name}</span>}
+                </span>
                 <span>{statusIcon}</span>
             </span>
         );
@@ -955,7 +983,7 @@ export default function Dashboard() {
                                                     }
                                                 }}
                                                 disabled={saving}
-                                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${(!currentWeek.responded?.includes(name)) ? 'bg-slate-800 border-slate-700 text-slate-400 opacity-70' : isAbsent ? 'bg-red-500/20 border-red-500/30 text-red-400' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'}`}
+                                                className={`px-4 py-3 rounded-xl text-base font-semibold transition-colors border ${(!currentWeek.responded?.includes(name)) ? 'bg-slate-800 border-slate-700 text-slate-400 opacity-70' : isAbsent ? 'bg-red-500/20 border-red-500/30 text-red-400' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'}`}
                                             >
                                                 {name}: {(!currentWeek.responded?.includes(name)) ? 'بانتظار الرد ⏳' : isAbsent ? 'معتذر ❌' : 'حاضر ✅'}
                                             </button>
@@ -1175,7 +1203,7 @@ export default function Dashboard() {
                                                             <button
                                                                 onClick={() => handleAttendanceChoice(false)}
                                                                 disabled={saving || (!(currentWeek.absentees || []).includes(user.name) && (currentWeek.responded || []).includes(user.name))}
-                                                                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border shadow-sm ${(!(currentWeek.absentees || []).includes(user.name) && (currentWeek.responded || []).includes(user.name))
+                                                                className={`px-6 py-3 rounded-xl text-base font-semibold transition-colors border shadow-sm ${(!(currentWeek.absentees || []).includes(user.name) && (currentWeek.responded || []).includes(user.name))
                                                                     ? 'bg-emerald-500/25 border-emerald-500/40 text-emerald-300 cursor-default'
                                                                     : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'}`}
                                                             >
@@ -1184,7 +1212,7 @@ export default function Dashboard() {
                                                             <button
                                                                 onClick={() => handleAttendanceChoice(true)}
                                                                 disabled={saving || (currentWeek.absentees || []).includes(user.name)}
-                                                                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border shadow-sm ${((currentWeek.absentees || []).includes(user.name))
+                                                                className={`px-6 py-3 rounded-xl text-base font-semibold transition-colors border shadow-sm ${((currentWeek.absentees || []).includes(user.name))
                                                                     ? 'bg-red-500/25 border-red-500/40 text-red-300 cursor-default'
                                                                     : 'bg-red-500/15 border-red-500/30 text-red-400 hover:bg-red-500/25'}`}
                                                             >
@@ -1282,13 +1310,16 @@ export default function Dashboard() {
                                 <Bath className="w-6 h-6" />
                                 قسم تقييم حمامات المطاعم
                             </h2>
-                            {(currentWeek && !hasRatedBathroomCurrentWeek && user?.name === "هشام") && (
+                            {isHesham && (
                                 <BathroomRatingForm
-                                    weekId={currentWeek.id}
+                                    weekId={bathroomWeekForRating?.id || "general"}
                                     userName={user?.name || ""}
-                                    restaurantName={currentWeek.restaurant || undefined}
-                                    onRated={() => setHasRatedBathroomCurrentWeek(true)}
-                                    disabled={!currentWeek.ratingEnabled || (currentWeek.absentees || []).includes(user?.name || "")}
+                                    restaurantName={bathroomWeekForRating?.restaurant || undefined}
+                                    onRated={() => {
+                                        setHasRatedBathroomCurrentWeek(true);
+                                        setHasRatedBathroomPastWeek(true);
+                                    }}
+                                    disabled={false}
                                 />
                             )}
                             <BathroomRatingsDisplay />

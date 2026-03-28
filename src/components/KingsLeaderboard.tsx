@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { services, WeekSession, VALID_NAMES } from "@/lib/services";
+import { PublicUserProfile, services, WeekSession, VALID_NAMES } from "@/lib/services";
 import { Trophy, Star, Crown, Download, ListFilter, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as xlsx from "xlsx";
@@ -20,6 +20,7 @@ interface KingStat {
 export default function KingsLeaderboard() {
     const [data, setData] = useState<KingStat[]>([]);
     const [loading, setLoading] = useState(true);
+    const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
 
     useEffect(() => {
         const fetchData = async () => {
@@ -49,6 +50,17 @@ export default function KingsLeaderboard() {
             setLoading(false);
         };
         fetchData();
+    }, []);
+
+    useEffect(() => {
+        const unsub = services.listenToPublicUserProfiles((profiles) => {
+            const nextMap: Record<string, PublicUserProfile> = {};
+            profiles.forEach((p) => {
+                nextMap[p.userName] = p;
+            });
+            setPublicProfilesMap(nextMap);
+        });
+        return () => unsub();
     }, []);
 
     const exportToExcel = () => {
@@ -118,6 +130,10 @@ export default function KingsLeaderboard() {
             <div className="space-y-3">
                 <AnimatePresence mode="popLayout">
                     {data.map((entry, index) => {
+                        const profile = publicProfilesMap[entry.king];
+                        const displayName = profile?.nickName?.trim() || entry.king;
+                        const avatar = profile?.profileImage || null;
+                        const initial = displayName.charAt(0) || "؟";
                         // Different styling top 3
                         let ringColor = "border-slate-800/60";
                         let rankColor = "text-slate-500";
@@ -153,7 +169,14 @@ export default function KingsLeaderboard() {
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-white text-base leading-tight mb-1 flex items-center gap-2">
-                                            {entry.king}
+                                            <span className="w-7 h-7 rounded-full overflow-hidden border border-white/20 bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-200 shrink-0">
+                                                {avatar ? (
+                                                    <img src={avatar} alt={displayName} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span>{initial}</span>
+                                                )}
+                                            </span>
+                                            {displayName}
                                             {index === 0 && <Crown className="w-4 h-4 text-amber-500" />}
                                         </h4>
                                         <div className="flex items-center gap-2 text-xs text-slate-400">

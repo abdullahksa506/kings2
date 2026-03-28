@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { services, WeekSession } from "@/lib/services";
+import { PublicUserProfile, services, WeekSession } from "@/lib/services";
 import { Trophy, Medal, Star, RotateCcw } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -13,6 +13,7 @@ interface LeaderboardEntry {
 export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { cycleNumber: number, isDean?: boolean, onReset?: () => Promise<void> }) {
     const [data, setData] = useState<LeaderboardEntry[]>([]);
     const [loading, setLoading] = useState(true);
+    const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
 
     useEffect(() => {
         const fetchData = async () => {
@@ -24,6 +25,17 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
         };
         fetchData();
     }, [cycleNumber]);
+
+    useEffect(() => {
+        const unsub = services.listenToPublicUserProfiles((profiles) => {
+            const nextMap: Record<string, PublicUserProfile> = {};
+            profiles.forEach((p) => {
+                nextMap[p.userName] = p;
+            });
+            setPublicProfilesMap(nextMap);
+        });
+        return () => unsub();
+    }, []);
 
     if (loading) {
         return (
@@ -73,6 +85,11 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
                     const isFirst = index === 0;
                     const isSecond = index === 1;
                     const isThird = index === 2;
+                    const kingName = entry.week.king || "عشوائي";
+                    const kingProfile = entry.week.king ? publicProfilesMap[entry.week.king] : null;
+                    const kingDisplayName = kingProfile?.nickName?.trim() || kingName;
+                    const kingAvatar = kingProfile?.profileImage || null;
+                    const kingInitial = kingDisplayName.charAt(0) || "؟";
 
                     let medalColor = "text-slate-600";
                     if (isFirst) medalColor = "text-amber-400"; // Gold
@@ -99,9 +116,17 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
                                     <h4 className="font-bold text-white text-base leading-tight">
                                         {entry.week.restaurant || "مطعم مجهول"}
                                     </h4>
-                                    <p className="text-xs text-slate-400 mt-1">
-                                        اختيار: <span className="font-medium text-amber-500/80">{entry.week.king || "عشوائي"}</span>
-                                    </p>
+                                    <div className="text-xs text-slate-400 mt-1 flex items-center gap-2">
+                                        <span>اختيار:</span>
+                                        <span className="w-6 h-6 rounded-full overflow-hidden border border-white/20 bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-200 shrink-0">
+                                            {kingAvatar ? (
+                                                <img src={kingAvatar} alt={kingDisplayName} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <span>{kingInitial}</span>
+                                            )}
+                                        </span>
+                                        <span className="font-medium text-amber-500/80">{kingDisplayName}</span>
+                                    </div>
                                 </div>
                             </div>
 
