@@ -47,10 +47,6 @@ export default function Dashboard() {
     const [restaurant, setRestaurant] = useState("");
     const [saving, setSaving] = useState(false);
 
-    // Restaurant selection cooldown state
-    const [lastRestaurantChoiceTime, setLastRestaurantChoiceTime] = useState<number | null>(null);
-    const [restaurantChoiceCooldown, setRestaurantChoiceCooldown] = useState(0);
-
     // Change Password State
     const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
     const [currentPassword, setCurrentPassword] = useState("");
@@ -156,25 +152,6 @@ export default function Dashboard() {
         return () => unsubscribe();
     }, [user]);
 
-    // Cooldown timer effect
-    useEffect(() => {
-        if (!lastRestaurantChoiceTime) return;
-
-        const interval = setInterval(() => {
-            const elapsed = Date.now() - lastRestaurantChoiceTime;
-            const remaining = Math.max(0, 120000 - elapsed); // 120 seconds in milliseconds
-            
-            setRestaurantChoiceCooldown(Math.ceil(remaining / 1000));
-            
-            if (remaining === 0) {
-                setLastRestaurantChoiceTime(null);
-                clearInterval(interval);
-            }
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [lastRestaurantChoiceTime]);
-
     // Detect and log if user is using the standalone PWA 
     useEffect(() => {
         if (!user) return;
@@ -212,40 +189,9 @@ export default function Dashboard() {
 
     const handleSetChoices = async () => {
         if (!currentWeek || !user) return;
-        
-        // Check if user is king and if they're on cooldown for restaurant selection
-        if (currentWeek.king === user?.name && lastRestaurantChoiceTime) {
-            const elapsed = Date.now() - lastRestaurantChoiceTime;
-            if (elapsed < 120000) { // 120 seconds cooldown
-                const remainingSeconds = Math.ceil((120000 - elapsed) / 1000);
-                alert(`يجب الانتظار ${remainingSeconds} ثانية قبل تغيير المطعم مرة أخرى`);
-                return;
-            }
-        }
-        
         setSaving(true);
         try {
             await services.setWeekChoices(currentWeek.id, selectedDay, restaurant, null);
-
-            // Set cooldown for restaurant selection if user is king and restaurant was changed
-            if (currentWeek.king === user?.name && restaurant !== currentWeek.restaurant) {
-                setLastRestaurantChoiceTime(Date.now());
-                
-                // Send special notification for restaurant change
-                try {
-                    await fetch("/api/reminders/restaurant-change", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ 
-                            weekId: currentWeek.id,
-                            kingName: user.name,
-                            newRestaurant: restaurant
-                        })
-                    });
-                } catch (e) {
-                    console.error("Failed to send restaurant change notification:", e);
-                }
-            }
 
             // Notify members (Web Push)
             try {
@@ -333,6 +279,33 @@ export default function Dashboard() {
 
     const isKing = currentWeek?.king === user?.name;
     const isDean = user?.role === "dean";
+
+    const handleAttendanceChoice = async (isAbsent: boolean) => {
+        if (!currentWeek || !user?.name) return;
+        setSaving(true);
+        try {
+            const justCompleted = await services.toggleAttendance(currentWeek.id, user.name, isAbsent);
+
+            if (justCompleted) {
+                try {
+                    await fetch("/api/reminders/attendance-complete", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ weekId: currentWeek.id })
+                    });
+                } catch (e) {
+                    console.error("Failed to notify members:", e);
+                }
+            }
+
+            await fetchWeek();
+        } catch (e: any) {
+            console.error("Toggle attendance error:", e);
+            alert(e.message || "حدث خطأ أثناء تحديث الحضور");
+        } finally {
+            setSaving(false);
+        }
+    };
 
     const handleSecretImport = async () => {
         if (!confirm("تأكيد استيراد البيانات التاريخية وتحديث السجل؟ سيتم حذف أي استيراد سابق لمنع التكرار.")) return;
@@ -860,38 +833,26 @@ export default function Dashboard() {
                                                 </div>
                                                 <div className="flex gap-2">
                                                     {!isKing && user?.name && (
-                                                        <button
-                                                            onClick={async () => {
-                                                                setSaving(true);
-                                                                const isAbsent = currentWeek.absentees?.includes(user!.name) || false;
-                                                                try {
-                                                                    const justCompleted = await services.toggleAttendance(currentWeek.id, user!.name, !isAbsent);
-
-                                                                    if (justCompleted) {
-                                                                        try {
-                                                                            await fetch("/api/reminders/attendance-complete", {
-                                                                                method: "POST",
-                                                                                headers: { "Content-Type": "application/json" },
-                                                                                body: JSON.stringify({ weekId: currentWeek.id })
-                                                                            });
-                                                                        } catch (e) {
-                                                                            console.error("Failed to notify members:", e);
-                                                                        }
-                                                                    }
-
-                                                                    await fetchWeek();
-                                                                } catch (e: any) {
-                                                                    console.error("Toggle attendance error:", e);
-                                                                    alert(e.message || "حدث خطأ أثناء تغيير الحضور");
-                                                                } finally {
-                                                                    setSaving(false);
-                                                                }
-                                                            }}
-                                                            disabled={saving}
-                                                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border shadow-sm ${currentWeek.absentees?.includes(user?.name) ? 'bg-red-500/20 border-red-500/30 text-red-400 hover:bg-red-500/30' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30'}`}
-                                                        >
-                                                            {currentWeek.absentees?.includes(user?.name) ? "أنا معتذر ❌" : "سأحضر ✅"}
-                                                        </button>
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleAttendanceChoice(false)}
+                                                                disabled={saving || (!(currentWeek.absentees || []).includes(user.name) && (currentWeek.responded || []).includes(user.name)}
+                                                                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border shadow-sm ${(!(currentWeek.absentees || []).includes(user.name) && (currentWeek.responded || []).includes(user.name))
+                                                                    ? 'bg-emerald-500/25 border-emerald-500/40 text-emerald-300 cursor-default'
+                                                                    : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'}`}
+                                                            >
+                                                                حضور ✅
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleAttendanceChoice(true)}
+                                                                disabled={saving || (currentWeek.absentees || []).includes(user.name)}
+                                                                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border shadow-sm ${((currentWeek.absentees || []).includes(user.name))
+                                                                    ? 'bg-red-500/25 border-red-500/40 text-red-300 cursor-default'
+                                                                    : 'bg-red-500/15 border-red-500/30 text-red-400 hover:bg-red-500/25'}`}
+                                                            >
+                                                                اعتذار ❌
+                                                            </button>
+                                                        </>
                                                     )}
                                                 </div>
                                             </div>
@@ -947,21 +908,10 @@ export default function Dashboard() {
 
                                         {isKing && (
                                             <div className="pt-4 border-t border-slate-800">
-                                                {/* Cooldown Display */}
-                                                {restaurantChoiceCooldown > 0 && (
-                                                    <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-                                                        <div className="flex items-center gap-2 text-amber-400">
-                                                            <AlertTriangle className="w-4 h-4" />
-                                                            <span className="text-sm font-medium">
-                                                        يجب الانتظار {restaurantChoiceCooldown} ثانية قبل تغيير المطعم مرة أخرى
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                )}
                                                 <button
                                                     onClick={handleSetChoices}
-                                                    disabled={saving || (restaurantChoiceCooldown > 0)}
-                                                    className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-semibold py-3 px-8 rounded-xl flex items-center gap-2 transition-all w-full md:w-auto justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    disabled={saving}
+                                                    className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-semibold py-3 px-8 rounded-xl flex items-center gap-2 transition-all w-full md:w-auto justify-center"
                                                 >
                                                     {saving ? "جاري الحفظ..." : "حفظ القرارات"}
                                                     <CheckCircle className="w-5 h-5" />
