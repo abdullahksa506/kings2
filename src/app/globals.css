@@ -19,10 +19,18 @@
   }
 }
 
+html {
+  height: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
   /* iOS PWA behavior improvements */
   -webkit-touch-callout: none; /* Disable callout to copy image, etc when tap to hold */
   -webkit-user-select: none;   /* Disable selection/copy in UI */
@@ -32,6 +40,18 @@ body {
 
 /* Safe area padding classes */
 @layer utilities {
+  .min-h-screen {
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+  }
+
+  .h-screen {
+    height: 100vh;
+    height: 100svh;
+    height: 100dvh;
+  }
+
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
@@ -50,6 +70,16 @@ body {
 input, textarea, [contenteditable] {
   -webkit-user-select: text;
   user-select: text;
+}
+
+/* Improve tap response on iOS Safari and remove 300ms delay behavior */
+button,
+[role="button"],
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
 }
 
 /* iOS: prevent auto-zoom on input focus (requires font-size >= 16px) */

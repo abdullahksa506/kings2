@@ -55,7 +55,7 @@ export default function ClientSecurity() {
             const widthThreshold = window.outerWidth - window.innerWidth > 160;
             const heightThreshold = window.outerHeight - window.innerHeight > 160;
             if (widthThreshold || heightThreshold) {
-                document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#ef4444;font-size:24px;font-weight:bold;text-align:center;direction:rtl;padding:20px;">⛔ تم رصد محاولة فحص غير مصرح بها<br/><span style="font-size:14px;color:#64748b;margin-top:12px;display:block;">أغلق أدوات المطور وأعد تحميل الصفحة</span></div>';
+                document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100dvh;background:#0a0a0a;color:#ef4444;font-size:24px;font-weight:bold;text-align:center;direction:rtl;padding:20px;">⛔ تم رصد محاولة فحص غير مصرح بها<br/><span style="font-size:14px;color:#64748b;margin-top:12px;display:block;">أغلق أدوات المطور وأعد تحميل الصفحة</span></div>';
             }
         };
 
@@ -73,7 +73,7 @@ export default function ClientSecurity() {
             // Clear console to trigger the getter
             console.log('%c', element as any);
             if (devtoolsOpen) {
-                document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#ef4444;font-size:24px;font-weight:bold;text-align:center;direction:rtl;padding:20px;">⛔ تم رصد محاولة فحص غير مصرح بها<br/><span style="font-size:14px;color:#64748b;margin-top:12px;display:block;">أغلق أدوات المطور وأعد تحميل الصفحة</span></div>';
+                document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100dvh;background:#0a0a0a;color:#ef4444;font-size:24px;font-weight:bold;text-align:center;direction:rtl;padding:20px;">⛔ تم رصد محاولة فحص غير مصرح بها<br/><span style="font-size:14px;color:#64748b;margin-top:12px;display:block;">أغلق أدوات المطور وأعد تحميل الصفحة</span></div>';
             }
         };
 
