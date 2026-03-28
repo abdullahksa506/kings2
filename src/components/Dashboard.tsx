@@ -1036,7 +1036,7 @@ export default function Dashboard() {
                                                         <>
                                                             <button
                                                                 onClick={() => handleAttendanceChoice(false)}
-                                                                disabled={saving || (!(currentWeek.absentees || []).includes(user.name) && (currentWeek.responded || []).includes(user.name)}
+                                                                disabled={saving || (!(currentWeek.absentees || []).includes(user.name) && (currentWeek.responded || []).includes(user.name))}
                                                                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border shadow-sm ${(!(currentWeek.absentees || []).includes(user.name) && (currentWeek.responded || []).includes(user.name))
                                                                     ? 'bg-emerald-500/25 border-emerald-500/40 text-emerald-300 cursor-default'
                                                                     : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'}`}
