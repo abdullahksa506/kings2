@@ -168,8 +168,12 @@ export async function POST(request: Request) {
                     throw new Error("بيانات الصورة غير صالحة");
                 }
 
-                await profileRef.update({ nickName: nextNick, profileImage: nextImage });
-                return NextResponse.json({ result: { nickName: nextNick, profileImage: nextImage } });
+                const nextShowProfileImage = typeof payload.showProfileImage === "boolean"
+                    ? payload.showProfileImage
+                    : true;
+
+                await profileRef.update({ nickName: nextNick, profileImage: nextImage, showProfileImage: nextShowProfileImage });
+                return NextResponse.json({ result: { nickName: nextNick, profileImage: nextImage, showProfileImage: nextShowProfileImage } });
 
             case "requestPasswordReset":
                 if (!VALID_NAMES_RPC.includes(payload.userName)) throw new Error("اسم غير مصرح به");
@@ -211,8 +215,8 @@ export async function POST(request: Request) {
                 if (regSnap.exists) throw new Error("المستخدم مسجل مسبقاً");
                 const role = payload.name === "شوكا" ? "dean" : "user";
                 const hp = await hashPassword(payload.password);
-                await regRef.set({ name: payload.name, password: hp, role, registered: true, nickName: payload.name, profileImage: null });
-                return NextResponse.json({ result: { name: payload.name, role, registered: true, token: hp, nickName: payload.name, profileImage: null } });
+                await regRef.set({ name: payload.name, password: hp, role, registered: true, nickName: payload.name, profileImage: null, showProfileImage: true });
+                return NextResponse.json({ result: { name: payload.name, role, registered: true, token: hp, nickName: payload.name, profileImage: null, showProfileImage: true } });
 
             case "login_upgrade": // Upgrades plain text to hashed on login
                 const updRef = adminDb.collection("users").doc(payload.userName);
@@ -242,6 +246,7 @@ export async function POST(request: Request) {
                     userName: payload.userName,
                     nickName: typeof userDocData?.nickName === "string" ? userDocData.nickName : payload.userName,
                     profileImage: typeof userDocData?.profileImage === "string" ? userDocData.profileImage : null,
+                    showProfileImage: typeof userDocData?.showProfileImage === "boolean" ? userDocData.showProfileImage : true,
                     text: payload.text,
                     createdAt: Timestamp.now()
                 });

@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { services, ChatMessage } from "@/lib/services";
+import { services, ChatMessage, PublicUserProfile } from "@/lib/services";
 import { Send, MessageCircle } from "lucide-react";
 
 export default function ChatBoard({ userName }: { userName: string }) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [profilesMap, setProfilesMap] = useState<Record<string, PublicUserProfile>>({});
     const [text, setText] = useState("");
     const [sending, setSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -15,6 +16,17 @@ export default function ChatBoard({ userName }: { userName: string }) {
             setMessages(msgs);
         });
         return () => unsub();
+    }, []);
+
+    useEffect(() => {
+        const unsubProfiles = services.listenToPublicUserProfiles((profiles) => {
+            const nextMap: Record<string, PublicUserProfile> = {};
+            profiles.forEach((profile) => {
+                nextMap[profile.userName] = profile;
+            });
+            setProfilesMap(nextMap);
+        });
+        return () => unsubProfiles();
     }, []);
 
     const handleSend = async () => {
@@ -84,7 +96,10 @@ export default function ChatBoard({ userName }: { userName: string }) {
                 ) : (
                     messages.map(msg => {
                         const isMine = msg.userName === userName;
-                        const displayName = getMessageDisplayName(msg);
+                        const latestProfile = profilesMap[msg.userName];
+                        const displayName = latestProfile?.nickName || getMessageDisplayName(msg);
+                        const canShowAvatar = latestProfile ? latestProfile.showProfileImage : (msg.showProfileImage ?? true);
+                        const profileImage = latestProfile?.profileImage ?? msg.profileImage;
                         return (
                             <div
                                 key={msg.id}
@@ -92,8 +107,8 @@ export default function ChatBoard({ userName }: { userName: string }) {
                             >
                                 <div className={`flex items-end gap-2 ${isMine ? "flex-row-reverse" : "flex-row"}`}>
                                     <div className="w-8 h-8 rounded-full border border-slate-700 bg-slate-800 overflow-hidden shrink-0 flex items-center justify-center text-xs font-bold text-slate-300">
-                                        {msg.profileImage ? (
-                                            <img src={msg.profileImage} alt={displayName} className="w-full h-full object-cover" />
+                                        {canShowAvatar && profileImage ? (
+                                            <img src={profileImage} alt={displayName} className="w-full h-full object-cover" />
                                         ) : (
                                             <span>{getInitial(msg)}</span>
                                         )}

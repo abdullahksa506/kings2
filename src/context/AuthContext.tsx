@@ -23,6 +23,7 @@ export interface UserProfile {
     resetCode?: string;
     nickName?: string;
     profileImage?: string | null;
+    showProfileImage?: boolean;
 }
 
 interface AuthContextType {
@@ -57,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             phoneNumber: typeof data.phoneNumber === "string" ? data.phoneNumber : undefined,
             nickName: typeof data.nickName === "string" ? data.nickName : undefined,
             profileImage: typeof data.profileImage === "string" ? data.profileImage : null,
+            showProfileImage: typeof data.showProfileImage === "boolean" ? data.showProfileImage : true,
         });
     };
 
@@ -88,6 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                 phoneNumber: data.phoneNumber,
                                 nickName: data.nickName,
                                 profileImage: data.profileImage || null,
+                                showProfileImage: typeof data.showProfileImage === "boolean" ? data.showProfileImage : true,
                             };
                             setUser(profile);
                         } else {
@@ -161,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             phoneNumber: userData.phoneNumber,
             nickName: typeof raw.nickName === "string" ? raw.nickName : undefined,
             profileImage: typeof raw.profileImage === "string" ? raw.profileImage : null,
+            showProfileImage: typeof raw.showProfileImage === "boolean" ? raw.showProfileImage : true,
         };
 
         const tokenToStore = isHashed(userData.password)
@@ -185,6 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             registered: result.registered,
             nickName: result.nickName,
             profileImage: result.profileImage || null,
+            showProfileImage: typeof result.showProfileImage === "boolean" ? result.showProfileImage : true,
         };
 
         setUser(profile);

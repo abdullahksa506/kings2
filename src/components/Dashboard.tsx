@@ -138,6 +138,98 @@ const THEME_OPTIONS: {
         },
     ];
 
+const THEME_STYLE: Record<ThemeKey, {
+    atmosphereClass: string;
+    accentTextClass: string;
+    accentSoftClass: string;
+    accentSoftHoverClass: string;
+    accentBorderClass: string;
+    accentSolidClass: string;
+    accentSolidHoverClass: string;
+    accentSpinnerClass: string;
+}> = {
+    "royal-amber": {
+        atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(245,158,11,0.22),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(251,191,36,0.18),transparent_44%)]",
+        accentTextClass: "text-amber-400",
+        accentSoftClass: "bg-amber-500/20",
+        accentSoftHoverClass: "hover:bg-amber-500/30",
+        accentBorderClass: "border-amber-500/35",
+        accentSolidClass: "bg-amber-500",
+        accentSolidHoverClass: "hover:bg-amber-400",
+        accentSpinnerClass: "text-amber-500",
+    },
+    "ocean-cyan": {
+        atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(34,211,238,0.22),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(56,189,248,0.18),transparent_44%)]",
+        accentTextClass: "text-cyan-300",
+        accentSoftClass: "bg-cyan-500/20",
+        accentSoftHoverClass: "hover:bg-cyan-500/30",
+        accentBorderClass: "border-cyan-500/35",
+        accentSolidClass: "bg-cyan-500",
+        accentSolidHoverClass: "hover:bg-cyan-400",
+        accentSpinnerClass: "text-cyan-400",
+    },
+    "emerald-night": {
+        atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(16,185,129,0.24),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(5,150,105,0.2),transparent_44%)]",
+        accentTextClass: "text-emerald-300",
+        accentSoftClass: "bg-emerald-500/20",
+        accentSoftHoverClass: "hover:bg-emerald-500/30",
+        accentBorderClass: "border-emerald-500/35",
+        accentSolidClass: "bg-emerald-500",
+        accentSolidHoverClass: "hover:bg-emerald-400",
+        accentSpinnerClass: "text-emerald-400",
+    },
+    "sunset-fire": {
+        atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(249,115,22,0.23),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(239,68,68,0.2),transparent_44%)]",
+        accentTextClass: "text-orange-300",
+        accentSoftClass: "bg-orange-500/20",
+        accentSoftHoverClass: "hover:bg-orange-500/30",
+        accentBorderClass: "border-orange-500/35",
+        accentSolidClass: "bg-orange-500",
+        accentSolidHoverClass: "hover:bg-orange-400",
+        accentSpinnerClass: "text-orange-400",
+    },
+    "rose-neon": {
+        atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(244,63,94,0.24),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(236,72,153,0.2),transparent_44%)]",
+        accentTextClass: "text-rose-300",
+        accentSoftClass: "bg-rose-500/20",
+        accentSoftHoverClass: "hover:bg-rose-500/30",
+        accentBorderClass: "border-rose-500/35",
+        accentSolidClass: "bg-rose-500",
+        accentSolidHoverClass: "hover:bg-rose-400",
+        accentSpinnerClass: "text-rose-400",
+    },
+    "arctic-ice": {
+        atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(125,211,252,0.22),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(148,163,184,0.2),transparent_44%)]",
+        accentTextClass: "text-blue-200",
+        accentSoftClass: "bg-blue-400/20",
+        accentSoftHoverClass: "hover:bg-blue-400/30",
+        accentBorderClass: "border-blue-300/35",
+        accentSolidClass: "bg-blue-400",
+        accentSolidHoverClass: "hover:bg-blue-300",
+        accentSpinnerClass: "text-blue-300",
+    },
+    "forest-olive": {
+        atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(132,204,22,0.22),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(34,197,94,0.2),transparent_44%)]",
+        accentTextClass: "text-lime-300",
+        accentSoftClass: "bg-lime-500/20",
+        accentSoftHoverClass: "hover:bg-lime-500/30",
+        accentBorderClass: "border-lime-500/35",
+        accentSolidClass: "bg-lime-500",
+        accentSolidHoverClass: "hover:bg-lime-400",
+        accentSpinnerClass: "text-lime-400",
+    },
+    "midnight-indigo": {
+        atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(99,102,241,0.22),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(79,70,229,0.2),transparent_44%)]",
+        accentTextClass: "text-indigo-300",
+        accentSoftClass: "bg-indigo-500/20",
+        accentSoftHoverClass: "hover:bg-indigo-500/30",
+        accentBorderClass: "border-indigo-500/35",
+        accentSolidClass: "bg-indigo-500",
+        accentSolidHoverClass: "hover:bg-indigo-400",
+        accentSpinnerClass: "text-indigo-400",
+    },
+};
+
 export default function Dashboard() {
     const WEEK_DAYS: Exclude<WeekSession["day"], null>[] = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
     const { user, logout, refreshUserProfile } = useAuth();
@@ -169,6 +261,7 @@ export default function Dashboard() {
     // Profile Customization State
     const [nickNameInput, setNickNameInput] = useState("");
     const [profileImageData, setProfileImageData] = useState<string | null>(null);
+    const [showProfileImageInput, setShowProfileImageInput] = useState(true);
     const [profileSaving, setProfileSaving] = useState(false);
     const [profileError, setProfileError] = useState("");
     const [profileSuccess, setProfileSuccess] = useState("");
@@ -275,7 +368,8 @@ export default function Dashboard() {
         if (!user) return;
         setNickNameInput(user.nickName || user.name);
         setProfileImageData(user.profileImage || null);
-    }, [user?.name, user?.nickName, user?.profileImage]);
+        setShowProfileImageInput(typeof user.showProfileImage === "boolean" ? user.showProfileImage : true);
+    }, [user?.name, user?.nickName, user?.profileImage, user?.showProfileImage]);
 
     useEffect(() => {
         const storedTheme = localStorage.getItem("king_theme") as ThemeKey | null;
@@ -381,7 +475,7 @@ export default function Dashboard() {
 
         setProfileSaving(true);
         try {
-            await services.updateProfileCustomization(user.name, trimmedNick, profileImageData);
+            await services.updateProfileCustomization(user.name, trimmedNick, profileImageData, showProfileImageInput);
             await refreshUserProfile();
             setProfileSuccess("تم حفظ الملف الشخصي بنجاح");
         } catch (e: any) {
@@ -531,6 +625,7 @@ export default function Dashboard() {
 
     const displayName = user?.nickName?.trim() || user?.name;
     const activeTheme = THEME_OPTIONS.find((theme) => theme.id === selectedTheme) || THEME_OPTIONS[0];
+    const activeThemeStyle = THEME_STYLE[selectedTheme];
 
     const handleThemeChange = (themeId: ThemeKey) => {
         setSelectedTheme(themeId);
@@ -539,11 +634,12 @@ export default function Dashboard() {
 
     return (
         <div className={`min-h-screen ${activeTheme.appBgClass} p-4 md:p-8 font-sans relative`}>
+            <div className={`pointer-events-none absolute inset-0 ${activeThemeStyle.atmosphereClass}`} />
             {/* Version Badge & Secret Import */}
             <div className="fixed top-2 left-2 z-50 flex items-center gap-2">
                 <span className="text-[10px] text-slate-600 font-mono select-none">v13</span>
                 {user?.role === "dean" && (
-                    <button onClick={handleSecretImport} className="text-slate-800 hover:text-amber-500 transition-colors" title="استيراد البيانات السابقة">
+                    <button onClick={handleSecretImport} className={`text-slate-700 ${activeThemeStyle.accentTextClass} transition-colors`} title="استيراد البيانات السابقة">
                         <UploadCloud className="w-3 h-3" />
                     </button>
                 )}
@@ -572,7 +668,7 @@ export default function Dashboard() {
                         className="bg-slate-900 border border-slate-800 hover:bg-slate-800 py-2 md:py-3 px-3 rounded-xl transition-all shadow-md text-slate-300"
                         title="تحديث البيانات"
                     >
-                        <RotateCcw className={`w-5 h-5 ${loading ? 'animate-spin text-amber-500' : ''}`} />
+                        <RotateCcw className={`w-5 h-5 ${loading ? `animate-spin ${activeThemeStyle.accentSpinnerClass}` : ''}`} />
                     </button>
                 </div>
             </header>
@@ -581,7 +677,7 @@ export default function Dashboard() {
             {isChangePasswordOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
                     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
-                        <h2 className="text-xl font-bold text-amber-500 mb-4">تغيير كلمة المرور</h2>
+                        <h2 className={`text-xl font-bold ${activeThemeStyle.accentTextClass} mb-4`}>تغيير كلمة المرور</h2>
 
                         {changePasswordError && (
                             <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
@@ -602,7 +698,7 @@ export default function Dashboard() {
                                     required
                                     value={currentPassword}
                                     onChange={e => setCurrentPassword(e.target.value)}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-amber-500 font-mono"
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-slate-400 font-mono"
                                 />
                             </div>
                             <div className="space-y-1">
@@ -612,14 +708,14 @@ export default function Dashboard() {
                                     required
                                     value={newPassword}
                                     onChange={e => setNewPassword(e.target.value)}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-amber-500 font-mono"
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-slate-400 font-mono"
                                 />
                             </div>
                             <div className="flex gap-3 pt-2">
                                 <button
                                     type="submit"
                                     disabled={changePasswordLoading}
-                                    className="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+                                    className={`flex-1 ${activeThemeStyle.accentSolidClass} ${activeThemeStyle.accentSolidHoverClass} text-white py-2 rounded-lg font-medium transition-colors disabled:opacity-50`}
                                 >
                                     {changePasswordLoading ? "جاري..." : "حفظ"}
                                 </button>
@@ -644,9 +740,9 @@ export default function Dashboard() {
 
             {/* Dean's Admin Panel */}
             {user?.role === "dean" && (
-                <div className="bg-amber-900/20 border border-amber-500/30 rounded-2xl p-6 mb-8 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-2 h-full bg-amber-500 opacity-80" />
-                    <h2 className="text-amber-500 font-bold mb-4 flex items-center gap-2 text-xl">
+                <div className={`bg-slate-900/70 border ${activeThemeStyle.accentBorderClass} rounded-2xl p-6 mb-8 relative overflow-hidden`}>
+                    <div className={`absolute top-0 left-0 w-2 h-full ${activeThemeStyle.accentSolidClass} opacity-80`} />
+                    <h2 className={`${activeThemeStyle.accentTextClass} font-bold mb-4 flex items-center gap-2 text-xl`}>
                         <Shield className="w-6 h-6" />
                         لوحة العميد (سرية)
                     </h2>
@@ -654,7 +750,7 @@ export default function Dashboard() {
                         <button
                             onClick={handleStartNewWeek}
                             disabled={saving}
-                            className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold py-3 px-6 rounded-xl flex items-center gap-2 transition-all"
+                            className={`${activeThemeStyle.accentSolidClass} ${activeThemeStyle.accentSolidHoverClass} text-slate-950 font-semibold py-3 px-6 rounded-xl flex items-center gap-2 transition-all`}
                         >
                             <PlusCircle className="w-5 h-5" />
                             {currentWeek ? "إنهاء الأسبوع الحالي وبدء أسبوع جديد" : "بدء أسبوع جديد"}
@@ -920,7 +1016,7 @@ export default function Dashboard() {
 
             {loading ? (
                 <div className="flex justify-center p-20">
-                    <div className="w-10 h-10 border-4 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+                    <div className={`w-10 h-10 border-4 border-white/20 border-t-current rounded-full animate-spin ${activeThemeStyle.accentTextClass}`} />
                 </div>
             ) : (
                 <div className="pb-24">
@@ -965,15 +1061,15 @@ export default function Dashboard() {
                                 </div>
                             ) : (
                                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
-                                    <div className="absolute -top-20 -right-20 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl" />
+                                    <div className={`absolute -top-20 -right-20 w-64 h-64 ${activeThemeStyle.accentSoftClass} rounded-full blur-3xl`} />
 
                                     <div className="flex items-start justify-between mb-8 relative z-10">
                                         <div>
                                             <h3 className="text-slate-400 font-medium mb-1">دورة هذا الأسبوع</h3>
                                             <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-                                                ملك الأسبوع: <span className="text-amber-400">{currentWeek.king || "عشوائي"}</span>
+                                                ملك الأسبوع: <span className={activeThemeStyle.accentTextClass}>{currentWeek.king || "عشوائي"}</span>
                                                 {currentWeek.king === user?.name && (
-                                                    <span className="text-xs bg-amber-500/20 text-amber-500 px-3 py-1 rounded-full border border-amber-500/30">
+                                                    <span className={`text-xs ${activeThemeStyle.accentSoftClass} ${activeThemeStyle.accentTextClass} px-3 py-1 rounded-full border ${activeThemeStyle.accentBorderClass}`}>
                                                         أنت الملك!
                                                     </span>
                                                 )}
@@ -990,7 +1086,7 @@ export default function Dashboard() {
                                                     <select
                                                         value={selectedDay}
                                                         onChange={e => setSelectedDay(e.target.value as Exclude<WeekSession["day"], null>)}
-                                                        className="bg-slate-900 text-white border border-slate-700 rounded-lg p-2 outline-none w-48 focus:border-amber-500"
+                                                        className="bg-slate-900 text-white border border-slate-700 rounded-lg p-2 outline-none w-48 focus:border-slate-400"
                                                     >
                                                         {(["الخميس", "الجمعة"] as Exclude<WeekSession["day"], null>[]).map(day => (
                                                             <option key={day} value={day}>{day}</option>
@@ -1014,7 +1110,7 @@ export default function Dashboard() {
                                                         placeholder="اسم المطعم..."
                                                         value={restaurant}
                                                         onChange={e => setRestaurant(e.target.value)}
-                                                        className="bg-slate-900 text-white border border-slate-700 rounded-lg p-3 outline-none w-full max-w-sm focus:border-amber-500"
+                                                        className="bg-slate-900 text-white border border-slate-700 rounded-lg p-3 outline-none w-full max-w-sm focus:border-slate-400"
                                                     />
                                                 ) : (
                                                     <p className="text-xl font-semibold text-white">
@@ -1111,7 +1207,7 @@ export default function Dashboard() {
                                                 <button
                                                     onClick={handleSetChoices}
                                                     disabled={saving}
-                                                    className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-semibold py-3 px-8 rounded-xl flex items-center gap-2 transition-all w-full md:w-auto justify-center"
+                                                    className={`${activeThemeStyle.accentSolidClass} ${activeThemeStyle.accentSolidHoverClass} text-white font-semibold py-3 px-8 rounded-xl flex items-center gap-2 transition-all w-full md:w-auto justify-center`}
                                                 >
                                                     {saving ? "جاري الحفظ..." : "حفظ القرارات"}
                                                     <CheckCircle className="w-5 h-5" />
@@ -1168,9 +1264,9 @@ export default function Dashboard() {
                         <div className="space-y-6 max-w-2xl mx-auto">
 
                             {/* Theme Selector */}
-                            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+                            <div className={`bg-slate-900/90 border ${activeThemeStyle.accentBorderClass} rounded-3xl p-6 shadow-xl`}>
                                 <div className="flex items-center gap-3 mb-4">
-                                    <div className="bg-violet-500/20 p-2 rounded-xl text-violet-400">
+                                    <div className={`${activeThemeStyle.accentSoftClass} p-2 rounded-xl ${activeThemeStyle.accentTextClass}`}>
                                         <Palette className="w-6 h-6" />
                                     </div>
                                     <div>
@@ -1187,12 +1283,12 @@ export default function Dashboard() {
                                                 key={theme.id}
                                                 onClick={() => handleThemeChange(theme.id)}
                                                 className={`text-right rounded-2xl border p-3 transition-all ${isActive
-                                                    ? "border-white/30 bg-slate-800"
+                                                    ? `${activeThemeStyle.accentBorderClass} bg-slate-800 ring-1 ring-white/20`
                                                     : "border-slate-700 bg-slate-900 hover:border-slate-500"}`}
                                             >
                                                 <div className="flex items-center justify-between mb-2">
                                                     <span className={`text-xs font-semibold ${isActive ? "text-white" : "text-slate-300"}`}>{theme.name}</span>
-                                                    {isActive && <span className="text-[10px] text-emerald-400">مختار</span>}
+                                                    {isActive && <span className={`text-[10px] ${activeThemeStyle.accentTextClass}`}>مختار</span>}
                                                 </div>
                                                 <div className="flex gap-1">
                                                     <span className={`w-5 h-5 rounded-full ${theme.previewA}`} />
@@ -1205,9 +1301,9 @@ export default function Dashboard() {
                             </div>
 
                             {/* Profile Customization */}
-                            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+                            <div className={`bg-slate-900/90 border ${activeThemeStyle.accentBorderClass} rounded-3xl p-6 shadow-xl`}>
                                 <div className="flex items-center gap-3 mb-4">
-                                    <div className="bg-cyan-500/20 p-2 rounded-xl text-cyan-400">
+                                    <div className={`${activeThemeStyle.accentSoftClass} p-2 rounded-xl ${activeThemeStyle.accentTextClass}`}>
                                         <Users className="w-6 h-6" />
                                     </div>
                                     <div>
@@ -1229,11 +1325,26 @@ export default function Dashboard() {
                                             value={nickNameInput}
                                             onChange={(e) => setNickNameInput(e.target.value)}
                                             maxLength={24}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 outline-none focus:border-cyan-500"
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 outline-none focus:border-slate-400"
                                             placeholder="الاسم المستعار"
                                         />
                                         <p className="text-[11px] text-slate-500">الاسم الأساسي ثابت: {user?.name}</p>
                                     </div>
+                                </div>
+
+                                <div className="mb-3 p-3 rounded-xl border border-slate-700 bg-slate-950/70 flex items-center justify-between gap-3">
+                                    <div>
+                                        <p className="text-sm text-slate-200 font-medium">إظهار الصورة الشخصية بجانب الاسم</p>
+                                        <p className="text-[11px] text-slate-500">هذا الخيار يطبق في بورد الدردشة لكل رسائلك</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowProfileImageInput(prev => !prev)}
+                                        className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors ${showProfileImageInput
+                                            ? `${activeThemeStyle.accentSoftClass} ${activeThemeStyle.accentBorderClass} ${activeThemeStyle.accentTextClass}`
+                                            : "bg-slate-800 border-slate-700 text-slate-400"}`}
+                                    >
+                                        {showProfileImageInput ? "مفعل" : "مخفي"}
+                                    </button>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
@@ -1255,7 +1366,7 @@ export default function Dashboard() {
                                 <button
                                     onClick={handleSaveProfileCustomization}
                                     disabled={profileSaving}
-                                    className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition-all disabled:opacity-50"
+                                    className={`w-full ${activeThemeStyle.accentSolidClass} ${activeThemeStyle.accentSolidHoverClass} text-slate-950 font-bold py-3 px-4 rounded-xl transition-all disabled:opacity-50`}
                                 >
                                     {profileSaving ? "جاري حفظ الملف..." : "حفظ الملف الشخصي"}
                                 </button>

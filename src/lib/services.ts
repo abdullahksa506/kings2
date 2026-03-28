@@ -79,8 +79,16 @@ export interface ChatMessage {
     userName: string;
     nickName?: string;
     profileImage?: string | null;
+    showProfileImage?: boolean;
     text: string;
     createdAt: Timestamp;
+}
+
+export interface PublicUserProfile {
+    userName: string;
+    nickName?: string;
+    profileImage?: string | null;
+    showProfileImage: boolean;
 }
 
 export interface RatingExplorerWeek {
@@ -435,8 +443,13 @@ export const services = {
         await invokeRpc("changePassword", { userName, currentPassword, newPassword });
     },
 
-    async updateProfileCustomization(userName: string, nickName: string, profileImage: string | null): Promise<{ nickName: string; profileImage: string | null }> {
-        return invokeRpc("updateProfileCustomization", { userName, nickName, profileImage });
+    async updateProfileCustomization(
+        userName: string,
+        nickName: string,
+        profileImage: string | null,
+        showProfileImage: boolean
+    ): Promise<{ nickName: string; profileImage: string | null; showProfileImage: boolean }> {
+        return invokeRpc("updateProfileCustomization", { userName, nickName, profileImage, showProfileImage });
     },
 
     async getUsersWithResetCodes(): Promise<{ id: string, name: string, resetCode: string }[]> {
@@ -486,6 +499,21 @@ export const services = {
         return onSnapshot(q, (snap) => {
             const messages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
             callback(messages);
+        });
+    },
+
+    listenToPublicUserProfiles(callback: (profiles: PublicUserProfile[]) => void) {
+        return onSnapshot(collection(db, "users"), (snap) => {
+            const profiles = snap.docs.map((d) => {
+                const data = d.data() as any;
+                return {
+                    userName: d.id,
+                    nickName: typeof data.nickName === "string" ? data.nickName : d.id,
+                    profileImage: typeof data.profileImage === "string" ? data.profileImage : null,
+                    showProfileImage: typeof data.showProfileImage === "boolean" ? data.showProfileImage : true,
+                } as PublicUserProfile;
+            });
+            callback(profiles);
         });
     },
 
