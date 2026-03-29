@@ -1,105 +1,138 @@
 <div align="center">
-  <img src="public/favicon.ico" alt="Logo" width="100" height="auto" />
-  <h1>👑 عرش الخميس (King of Thursday)</h1>
-  <p>تطبيق ويب متكامل لإدارة وتنظيم الطلعات الأسبوعية للأصدقاء، مبني على "دستور" خاص لضمان العدل، المتعة، والمشاركة الفعالة.</p>
-
-  [![Next.js](https://img.shields.io/badge/Next.js-15.0-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-  [![React](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
-  [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-  [![Firebase](https://img.shields.io/badge/Firebase-11.3-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+   <img src="public/favicon.ico" alt="King App Logo" width="96" />
+   <h1>عرش الخميس - KingApp</h1>
+   <p>منصة اجتماعية لإدارة طلعات الأصدقاء: اختيار الملك الأسبوعي، إدارة الحضور، التقييمات، الإشعارات، ولوحات الصدارة.</p>
 </div>
 
----
+## نظرة سريعة
 
-## 📖 عن المشروع
+هذا المشروع مبني بـ Next.js App Router مع Firebase، ويقدم تجربة كاملة لإدارة الدورة الأسبوعية للطلعة:
 
-**عرش الخميس** هو نظام صُمم خصيصاً لمجموعة من الأصدقاء لحل مشكلة "وين نطلع هالأسبوع؟". يعتمد النظام على دورة أسبوعية يتولى فيها شخص واحد (الملك) مسؤولية اختيار يوم الطلعة (الخميس أو الجمعة) والمطعم (بميزانية محددة). 
+- تحديد الملك الأسبوعي وقراراته (اليوم والمطعم).
+- تأكيد الحضور والاعتذار.
+- تقييم المطاعم بسرية، مع لوحات صدارة متعددة.
+- تقييم الحمامات بشكل منفصل.
+- نظام إشعارات Web Push للتذكير والتنبيه.
+- صلاحيات خاصة للعميد (Dean) ولوحة إدارة/متابعة.
+- دعم PWA وتجربة مناسبة للجوال.
 
-يوفر التطبيق لوحة تحكم ذكية تتيح للأعضاء تأكيد الحضور، تقييم المطاعم بسرية تامة، ومتابعة لوحة المتصدرين (Leaderboard) لأفضل تفضيلات المطاعم على مدار السنة.
+## التقنيات
 
----
+- Next.js 16
+- React 19
+- TypeScript 5
+- Tailwind CSS 4
+- Firebase Client SDK + Firebase Admin SDK
+- web-push
+- Framer Motion
 
-## ✨ المميزات الرئيسية
+## المتطلبات
 
-- 👑 **نظام الملك الأسبوعي:** تناوب سلس بين الأعضاء لاختيار المطعم ويوم الطلعة.
-- 📜 **دستور مُدمج:** صفحة خاصة بقوانين الطلعات للرجوع إليها في أي وقت.
-- 📊 **لوحة تحكم تفاعلية (Dashboard):** عرض حالة الأسبوع الحالي، الملك، المطعم، والحاضرين.
-- ✅ **إدارة الحضور:** إمكانية تأكيد الحضور أو الاعتذار بنقرة زر.
-- ⭐ **نظام التقييم السري:** تقييم المطعم من 1 إلى 5 بشكل سري تماماً؛ لا يطلع على التقييم التفصيلي سوى "عميد الدستور".
-- 🚽 **نظام تقييم حمامات المطاعم:** لوحة تقييم مخصصة لتقييم نظافة وجودة حمامات المطاعم بشكل منفصل.
-- 🏆 **لوحات المتصدرين:** 
-  - **قائمة المتصدرين للدورة الحالية** (كل 6 أسابيع).
-  - **السجل الشامل (Global Leaderboard):** سجل تاريخي بالترتيب الزمني الثابت مع إمكانية الفرز وعرض المصوتين بشكل مفصل.
-  - **قائمة شرف الملوك (Kings Average Leaderboard):** ترتيب الملوك بناءً على متوسط جميع تقييمات المطاعم التي اختاروها عبر كل الدورات.
-- 🎮 **صراع الملوك الجياع (Mini-Game):** لعبة أونلاين جماعية مدمجة يتنافس فيها الأعضاء على جمع نقاط البرجر.
-- 🤖 **التفاعل الصوتي (AI Text-to-Speech):** ذكاء اصطناعي باللهجة السعودية مدمج للتحدث والرد داخل التطبيق.
-- 📱 **دعم PWA:** تصميم متجاوب (Responsive) بالكامل مع أجهزة iPhone والأندرويد، ويمكن تثبيته كتطبيق على الشاشة الرئيسية.
-- 🔔 **إشعارات وتنبيهات (Web Push):** تذكيرات للتقييم، تأكيد الحضور، وإعلان اختيارات الملك.
-- 🛡️ **نظام أمان وصلاحيات:** أدوار مخصصة مثل "العميد" (Dean) لإدارة وإغلاق الأسابيع ورؤية النتائج والتنبيهات، بالإضافة لنظام تسجيل دخول بكلمات مرور مشفرة متقدمة.
+- Node.js 20 أو أحدث (موصى به)
+- npm 10 أو أحدث
+- مشروع Firebase مفعّل (Firestore + Web App)
 
----
+## التشغيل المحلي
 
-## 🛠️ التقنيات المستخدمة
+1. تثبيت الحزم:
 
-- **Frontend:** Next.js (App Router), React, Tailwind CSS, Lucide Icons.
-- **Backend/Database:** Firebase (Firestore).
-- **Authentication:** Custom Auth with Passwords/Codes.
-- **Deployment & PWA:** Next.js PWA features, Vercel (Recommended).
+```bash
+npm install
+```
 
----
+2. إنشاء ملف env:
 
-## 🚀 طريقة التشغيل وتثبيت المشروع
+أنشئ ملف `.env.local` في جذر المشروع، ثم أضف القيم التالية:
 
-1. **نسخ المستودع (Clone Repository):**
-   ```bash
-   git clone https://github.com/your-username/king-of-thursday.git
-   cd king-of-thursday
-   ```
+```env
+# Firebase Web (client)
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
 
-2. **تثبيت الحزم (Install Dependencies):**
-   ```bash
-   npm install
-   ```
+# Web Push
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
 
-3. **إعداد المتغيرات البيئية (Environment Variables):**
-   قم بإنشاء ملف `.env.local` في الجذر الرئيسي للمشروع وأضف مفاتيح Firebase الخاصة بك:
-   ```env
-   NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
-   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
-   NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-   ```
+# Server/Admin
+FIREBASE_SERVICE_ACCOUNT_KEY=
+IMPORT_SECRET=
+```
 
-4. **تشغيل بيئة التطوير (Run Server):**
-   ```bash
-   npm run dev
-   ```
-   افتح `http://localhost:3000` في متصفحك.
+ملاحظات مهمة:
 
----
+- `FIREBASE_SERVICE_ACCOUNT_KEY` يجب أن يكون JSON كامل لحساب الخدمة من Firebase Admin (عادةً كسطر واحد escaped).
+- `IMPORT_SECRET` يستخدم لحماية endpoint استيراد التاريخ.
+- مفاتيح VAPID مطلوبة لعمل الإشعارات.
 
-## 📜 نبذة عن دستور الطلعات (القوانين الأساسية)
+3. تشغيل المشروع:
 
-1. **يوم الطلعة والمطعم:** يحدده ملك الخميس قبل يوم الأربعاء (8م لليوم، و10م للمطعم).
-2. **الميزانية:** لا تتجاوز 175 ريال سعودي للفرد.
-3. **التكرار:** يُمنع اختيار نفس المطعم لدورتين متتاليتين.
-4. **الغياب والتخطي:** المعتذر يجب أن يجد بديلاً لتبديل الأدوار. التقييم السيء (أقل من 2) لدورتين يسقط دور الملك في الدورة القادمة.
-5. **التقييم والتصويت:** يجب على كل حاضر تقييم المطعم بسرية، ويجمع "عميد الدستور" الأصوات.
-6. **نهاية العام:** في نهاية السنة والموسم، يتم تكريم الفائز وتسديد فاتورته من قبل المجموعة.
+```bash
+npm run dev
+```
 
-*(لقراءة الدستور بالكامل، يرجى مراجعة نافذة الدستور داخل لوحة التحكم في التطبيق).*
+ثم افتح:
 
----
+```text
+http://localhost:3000
+```
 
-## 🤝 المشاركة والمساهمة (Contributing)
+## أوامر المشروع
 
-هذا المشروع مصمم لخدمة مجموعة محددة، ولكن إذا أعجبتك الفكرة وأردت استخدامها لأصدقائك، يمكنك عمل Fork للمشروع وتعديل ملف `src/lib/services.ts` لتغيير قائمة الأسماء (`VALID_NAMES`) وتخصيص الدستور ليناسب مجموعتك.
+```bash
+npm run dev    # تشغيل بيئة التطوير
+npm run build  # بناء نسخة الإنتاج
+npm run start  # تشغيل نسخة الإنتاج
+npm run lint   # فحص ESLint
+```
 
----
+## سكربتات مساعدة موجودة بالمستودع
 
-<div align="center">
-  <p>تم التطوير بـ ❤️ لتسهيل طلعات الأصدقاء وتوثيق أجمل اللحظات.</p>
-</div>
+يوجد سكربتات إدارية/تشخيصية في الجذر، منها:
+
+- `import-history.mjs`
+- `import-history-direct.mjs`
+- `upgrade-passwords.mjs`
+- `test-firebase.js`
+- `test-queries.js`
+- `test-query.js`
+
+تشغّل عند الحاجة مباشرة عبر Node، مثال:
+
+```bash
+node import-history-direct.mjs
+```
+
+## هيكلة مختصرة للمجلدات
+
+```text
+src/
+   app/                 # صفحات Next.js + API Routes
+   components/          # مكونات الواجهة
+   context/             # سياق المصادقة
+   hooks/               # Hooks مخصصة (مثل الإشعارات)
+   lib/                 # خدمات Firebase والمنطق الأساسي
+   data/                # بيانات ثابتة/تاريخية
+public/
+```
+
+## الدستور واللعبة والنظام الاجتماعي
+
+التطبيق يطبق "دستور" داخلي للطلعات (ميزانية، تناوب، ضوابط التقييم، وغير ذلك) مع عناصر ترفيهية مثل منافسة "الملوك الجياع" للحفاظ على التفاعل بين الأعضاء.
+
+## المساهمة والتخصيص
+
+المشروع مخصص أساسًا لمجموعة محددة، لكن يمكن تخصيصه لأي مجموعة أصدقاء عبر:
+
+- تعديل الأسماء والإعدادات داخل `src/lib/services.ts`.
+- تحديث نصوص الدستور وسياسة التقييم حسب احتياج المجموعة.
+- تغيير إعدادات Firebase ومفاتيح الإشعارات.
+
+## ملاحظات أمان
+
+- لا تشارك ملف `.env.local` أو مفاتيح الخدمة الخاصة.
+- راجع صلاحيات Firestore في `firestore.rules` قبل النشر.
+- يفضّل تشغيل `npm run lint` قبل أي نشر.
