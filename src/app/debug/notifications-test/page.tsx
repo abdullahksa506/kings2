@@ -86,12 +86,8 @@ export default function NotificationsDebugPage() {
         checkSubscription();
     }, []);
 
-    // Auth guard
-    useEffect(() => {
-        if (!authLoading && (!user || user.role !== "dean")) {
-            router.push("/");
-        }
-    }, [user, authLoading, router]);
+    // Soft auth check (shows message instead of blocking)
+    const isDean = user?.role === "dean";
 
     const testAuthHeaders = async () => {
         log("info", "جاري اختبار الترويسات المرسلة...");
@@ -207,6 +203,18 @@ export default function NotificationsDebugPage() {
                 <h1 className="text-3xl font-bold text-amber-500 mb-2">🔧 Debug Notifications</h1>
                 <p className="text-slate-400">صفحة اختبار وتشخيص مشاكل الإشعارات</p>
             </header>
+
+            {!isDean && (
+                <div className="mb-8 bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 text-amber-500 mt-1 flex-shrink-0" />
+                        <div>
+                            <p className="text-amber-300 font-semibold">⚠️ تحذير: أنت لست عميداً</p>
+                            <p className="text-amber-200 text-sm mt-1">هذه الصفحة للعميد فقط. لكن يمكنك معاينة الأداة.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 {/* Subscription Status */}
