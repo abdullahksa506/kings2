@@ -12,6 +12,7 @@ export async function POST(request: Request) {
         const usersSnap = await adminDb.collection("users").get();
         const users = usersSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
         let sentCount = 0;
+        const results: any[] = [];
 
         // Web Push setup
         const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -29,6 +30,7 @@ export async function POST(request: Request) {
                 webPushInitialized = true;
             } catch (e) {
                 console.error("Web push library not installed or configured correctly.");
+                return NextResponse.json({ error: "Web-push library not configured" }, { status: 500 });
             }
         }
 
@@ -44,14 +46,20 @@ export async function POST(request: Request) {
                         url: '/',
                         icon: '/icon.png'
                     }));
-                        sentCount++;
+                    sentCount++;
+                    results.push({ user: user.id, status: "sent" });
                 } catch (err: any) {
                     console.error(`Failed to send test Web Push to ${user.name}:`, err.message);
+                    results.push({ user: user.id, status: "failed", error: err.message });
                 }
+            } else if (user.pushSubscription) {
+                results.push({ user: user.id, status: "no_webpush" });
+            } else {
+                results.push({ user: user.id, status: "no_subscription" });
             }
         }
 
-        return NextResponse.json({ success: true, message: `Test notifications sent to ${sentCount} members.` });
+        return NextResponse.json({ success: true, message: `Test notifications sent to ${sentCount} members.`, sentCount, total: users.length, results });
     } catch (error: any) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
