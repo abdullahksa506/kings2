@@ -349,6 +349,8 @@ export default function Dashboard() {
 
     const { isSupported, isSubscribed, subscribeToPush } = usePushNotifications();
     const [subscribing, setSubscribing] = useState(false);
+    const [showNotifDiagnostics, setShowNotifDiagnostics] = useState(false);
+    const [notifStatus, setNotifStatus] = useState<string>("");
 
     useEffect(() => {
         fetchPastWeekOnly();
@@ -434,10 +436,29 @@ export default function Dashboard() {
 
     const handleSubscribe = async () => {
         setSubscribing(true);
-        const sub = await subscribeToPush();
-        if (sub && user) {
-            await services.updatePushSubscription(user.name, sub);
+        setNotifStatus("🔄 جاري محاولة تفعيل الإشعارات...");
+        setShowNotifDiagnostics(true);
+
+        try {
+            // Check permission
+            const currentPermission = Notification.permission;
+            if (currentPermission === "denied") {
+                setNotifStatus("❌ الإذن مرفوض في المتصفح!\n\nالحل:\n1. اضغط على القفل في شريط العنوان\n2. اسمح بـ Notifications\n3. أعد تحميل الصفحة");
+                setSubscribing(false);
+                return;
+            }
+
+            const sub = await subscribeToPush();
+            if (sub && user) {
+                await services.updatePushSubscription(user.name, sub);
+                setNotifStatus("✅ تم تفعيل الإشعارات بنجاح!\n\nالاشتراك محفوظ بشكل دائم في المتصفح");
+            } else {
+                setNotifStatus("❌ فشل تفعيل الإشعارات\n\nالأسباب المحتملة:\n• الإذن مرفوض\n• مشكلة في Service Worker\n• مشكلة في VAPID Key");
+            }
+        } catch (error: any) {
+            setNotifStatus(`❌ خطأ: ${error.message}`);
         }
+
         setSubscribing(false);
     };
 
@@ -797,6 +818,17 @@ export default function Dashboard() {
                             <Bell className="w-4 h-4" />
                             <span className="hidden md:inline">{subscribing ? "جاري التفعيل..." : "تفعيل الإشعارات"}</span>
                         </button>
+                    )}
+                    {showNotifDiagnostics && notifStatus && (
+                        <div className="fixed top-20 right-4 bg-slate-900 border-2 border-amber-500/50 rounded-xl p-4 max-w-xs shadow-lg z-50">
+                            <p className="text-sm whitespace-pre-line text-slate-200">{notifStatus}</p>
+                            <button
+                                onClick={() => setShowNotifDiagnostics(false)}
+                                className="mt-3 w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-1 px-2 rounded text-xs"
+                            >
+                                إغلاق
+                            </button>
+                        </div>
                     )}
                     <button
                         onClick={handleManualRefresh}

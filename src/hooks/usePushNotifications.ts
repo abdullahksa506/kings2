@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 const urlBase64ToUint8Array = (base64String: string) => {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -20,40 +20,63 @@ export function usePushNotifications() {
     const [subscription, setSubscription] = useState<PushSubscription | null>(null)
     const [isSubscribed, setIsSubscribed] = useState(false)
 
+    // Refresh subscription status
+    const refreshSubscription = useCallback(async (registration: ServiceWorkerRegistration) => {
+        try {
+            const existingSub = await registration.pushManager.getSubscription()
+            if (existingSub) {
+                console.log('✅ Found active subscription')
+                setSubscription(existingSub)
+                setIsSubscribed(true)
+                return true
+            } else {
+                console.log('❌ No subscription found')
+                setSubscription(null)
+                setIsSubscribed(false)
+                return false
+            }
+        } catch (error) {
+            console.error('Failed to get subscription:', error)
+            return false
+        }
+    }, [])
+
+    const registerServiceWorker = useCallback(async () => {
+        try {
+            console.log('📝 Registering Service Worker...')
+            await navigator.serviceWorker.register('/sw.js')
+            const registration = await navigator.serviceWorker.ready
+            console.log('✅ Service Worker ready')
+            await refreshSubscription(registration)
+        } catch (error) {
+            console.error('Service worker registration failed:', error)
+        }
+    }, [refreshSubscription])
+
     useEffect(() => {
         if ('serviceWorker' in navigator && 'PushManager' in window) {
             setIsSupported(true)
             registerServiceWorker()
         }
-    }, [])
-
-    const registerServiceWorker = async () => {
-        try {
-            await navigator.serviceWorker.register('/sw.js')
-            const registration = await navigator.serviceWorker.ready
-            const extSubscription = await registration.pushManager.getSubscription()
-            if (extSubscription) {
-                setSubscription(extSubscription)
-                setIsSubscribed(true)
-            }
-        } catch (error) {
-            console.error('Service worker registration failed:', error)
-        }
-    }
+    }, [registerServiceWorker])
 
     const subscribeToPush = async () => {
         if (!isSupported) return null
         try {
+            console.log('🔔 Requesting notification permission...')
             const permission = await Notification.requestPermission()
+            console.log(`Permission: ${permission}`)
+            
             if (permission !== 'granted') {
-                console.error('Notification permission not granted')
+                console.error('❌ Notification permission not granted')
                 return null
             }
 
+            console.log('✅ Permission granted, subscribing to push...')
             const registration = await navigator.serviceWorker.ready
             const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
             if (!vapidKey) {
-                console.error('VAPID Key not found')
+                console.error('❌ VAPID Key not found')
                 return null
             }
 
@@ -62,8 +85,19 @@ export function usePushNotifications() {
                 applicationServerKey: urlBase64ToUint8Array(vapidKey),
             })
 
+            console.log('✅ Subscribed successfully!')
+            // Update state immediately
             setSubscription(sub)
             setIsSubscribed(true)
+            
+            // Also verify subscription persists
+            const verifySubscription = await registration.pushManager.getSubscription()
+            if (verifySubscription) {
+                console.log('✅ Subscription verified and persisted')
+            } else {
+                console.warn('⚠️ Subscription not persisted!')
+            }
+            
             return sub
         } catch (error) {
             console.error('Push subscription error:', error)
@@ -71,5 +105,5 @@ export function usePushNotifications() {
         }
     }
 
-    return { isSupported, isSubscribed, subscription, subscribeToPush }
+    return { isSupported, isSubscribed, subscription, subscribeToPush, refreshSubscription }
 }
