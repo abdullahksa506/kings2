@@ -38,7 +38,15 @@ export default function TestPanel() {
         setLoading(true);
         log(`Testing: ${label}...`);
         try {
-            const res = await fetch(endpoint, { method: "POST" });
+            const name = localStorage.getItem("king_user_name") || "";
+            const token = localStorage.getItem("king_user_token") || "";
+            const res = await fetch(endpoint, {
+                method: "POST",
+                headers: {
+                    "x-user-name": name,
+                    "x-user-token": token,
+                },
+            });
             const data = await res.json();
             log(`Success (${label}): ${data.message || 'Sent'}`);
         } catch (e: any) {

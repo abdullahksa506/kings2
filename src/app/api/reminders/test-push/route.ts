@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
+import { authenticateServerRequest } from "@/lib/serverRequestAuth";
 
-export async function POST() {
+export async function POST(request: Request) {
+    const auth = await authenticateServerRequest(request, { allowedRoles: ["dean"], allowAdminKey: true });
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     try {
         const usersSnap = await adminDb.collection("users").get();
         const users = usersSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));

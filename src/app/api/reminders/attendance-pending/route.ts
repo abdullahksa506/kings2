@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { services, VALID_NAMES } from "@/lib/services";
 import { adminDb } from "@/lib/firebase-admin";
+import { authenticateServerRequest } from "@/lib/serverRequestAuth";
 
 export async function POST(request: Request) {
+    const auth = await authenticateServerRequest(request, { allowedRoles: ["dean"], allowAdminKey: true });
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     try {
         const body = await request.json();
         const { weekId } = body;

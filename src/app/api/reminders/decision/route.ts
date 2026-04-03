@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { services } from "@/lib/services";
 import { adminDb } from "@/lib/firebase-admin";
+import { authenticateServerRequest } from "@/lib/serverRequestAuth";
 
 export async function POST(request: Request) {
-    // 1. Authenticate Request (optional, we'll just check if body has weekId)
+    const auth = await authenticateServerRequest(request, { allowAdminKey: true });
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     try {
         const body = await request.json();
         const { weekId } = body;
@@ -15,6 +20,11 @@ export async function POST(request: Request) {
         const week = await services.getCurrentWeek();
         if (!week || week.id !== weekId) {
             return NextResponse.json({ message: "Week not active or mismatch." }, { status: 400 });
+        }
+
+        const isAllowedCaller = auth.user.viaAdminKey || auth.user.role === "dean" || auth.user.name === week.king;
+        if (!isAllowedCaller) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
         if (!week.restaurant || !week.day) {

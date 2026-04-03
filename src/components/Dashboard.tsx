@@ -522,7 +522,7 @@ export default function Dashboard() {
             try {
                 await fetch("/api/reminders/decision", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: getReminderAuthHeaders(),
                     body: JSON.stringify({ weekId: currentWeek.id })
                 });
             } catch (e) {
@@ -536,6 +536,16 @@ export default function Dashboard() {
         } finally {
             setSaving(false);
         }
+    };
+
+    const getReminderAuthHeaders = (): Record<string, string> => {
+        const name = typeof window !== "undefined" ? localStorage.getItem("king_user_name") || "" : "";
+        const token = typeof window !== "undefined" ? localStorage.getItem("king_user_token") || "" : "";
+        return {
+            "Content-Type": "application/json",
+            "x-user-name": name,
+            "x-user-token": token,
+        };
     };
 
     const handleToggleDayVoting = async (enabled: boolean) => {
@@ -674,7 +684,7 @@ export default function Dashboard() {
                 try {
                     await fetch("/api/reminders/attendance-complete", {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: getReminderAuthHeaders(),
                         body: JSON.stringify({ weekId: currentWeek.id })
                     });
                 } catch (e) {
@@ -963,7 +973,7 @@ export default function Dashboard() {
                                             try {
                                                 await fetch("/api/reminders/rating-unlocked", {
                                                     method: "POST",
-                                                    headers: { "Content-Type": "application/json" },
+                                                    headers: getReminderAuthHeaders(),
                                                     body: JSON.stringify({ weekId: ratingWeek.id })
                                                 });
                                             } catch (e) {
@@ -1021,7 +1031,7 @@ export default function Dashboard() {
                                                             try {
                                                                 await fetch("/api/reminders/attendance-complete", {
                                                                     method: "POST",
-                                                                    headers: { "Content-Type": "application/json" },
+                                                                    headers: getReminderAuthHeaders(),
                                                                     body: JSON.stringify({ weekId: currentWeek.id })
                                                                 });
                                                             } catch (e) {
@@ -1063,7 +1073,7 @@ export default function Dashboard() {
                                     try {
                                         const res = await fetch("/api/reminders/attendance-pending", {
                                             method: "POST",
-                                            headers: { "Content-Type": "application/json" },
+                                            headers: getReminderAuthHeaders(),
                                             body: JSON.stringify({ weekId: currentWeek?.id })
                                         });
                                         const data = await res.json();
@@ -1089,7 +1099,7 @@ export default function Dashboard() {
                                     try {
                                         const res = await fetch("/api/reminders/king-push", {
                                             method: "POST",
-                                            headers: { "Content-Type": "application/json" },
+                                            headers: getReminderAuthHeaders(),
                                             body: JSON.stringify({ weekId: currentWeek.id })
                                         });
                                         const data = await res.json();
@@ -1114,7 +1124,7 @@ export default function Dashboard() {
                                     try {
                                         const res = await fetch("/api/reminders/rating-unlocked", {
                                             method: "POST",
-                                            headers: { "Content-Type": "application/json" },
+                                            headers: getReminderAuthHeaders(),
                                             body: JSON.stringify({ weekId: currentWeek?.id || pastWeek?.id })
                                         });
                                         const data = await res.json();

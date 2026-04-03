@@ -55,9 +55,15 @@ export default function NotificationsTestPanel() {
         }));
 
         try {
+            const name = localStorage.getItem("king_user_name") || "";
+            const token = localStorage.getItem("king_user_token") || "";
             const res = await fetch("/api/reminders/test-push-user", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-user-name": name,
+                    "x-user-token": token,
+                },
                 body: JSON.stringify({ userName }),
             });
             const data = await res.json();

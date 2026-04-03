@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { services } from "@/lib/services";
 import { adminDb } from "@/lib/firebase-admin";
+import { authenticateServerRequest } from "@/lib/serverRequestAuth";
 
 export async function POST(request: Request) {
-    // 1. Authenticate Request
-    const { searchParams } = new URL(request.url);
-    const token = searchParams.get("token");
-    if (token !== "king-cron-secret-2026") {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await authenticateServerRequest(request, { allowedRoles: ["dean"], allowAdminKey: true });
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
     try {
