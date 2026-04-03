@@ -14,6 +14,16 @@ export default function NotificationsTestPanel() {
     const [testStatuses, setTestStatuses] = useState<Record<string, { loading: boolean, success?: boolean, error?: string }>>({});
     const [refreshing, setRefreshing] = useState(false);
 
+    const getReminderAuthHeaders = (): Record<string, string> => {
+        const name = typeof window !== "undefined" ? localStorage.getItem("king_user_name") || "" : "";
+        const token = typeof window !== "undefined" ? localStorage.getItem("king_user_token") || "" : "";
+        return {
+            "Content-Type": "application/json",
+            "x-user-name": name,
+            "x-user-token": token,
+        };
+    };
+
     // Auth guard
     useEffect(() => {
         if (!authLoading && (!user || user.role !== "dean")) {
@@ -59,11 +69,7 @@ export default function NotificationsTestPanel() {
             const token = localStorage.getItem("king_user_token") || "";
             const res = await fetch("/api/reminders/test-push-user", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-user-name": name,
-                    "x-user-token": token,
-                },
+                headers: getReminderAuthHeaders(),
                 body: JSON.stringify({ userName }),
             });
             const data = await res.json();
