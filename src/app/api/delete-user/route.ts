@@ -23,7 +23,7 @@ export async function POST(request: Request) {
         const userRef = adminDb.collection("users").doc(name);
         const userDoc = await userRef.get();
 
-        if (!userDoc.exists()) {
+        if (!userDoc.exists) {
             return NextResponse.json({ success: false, message: `User "${name}" not found in database.` });
         }
 
