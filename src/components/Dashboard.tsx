@@ -260,6 +260,7 @@ export default function Dashboard() {
     const [selectedDay, setSelectedDay] = useState<Exclude<WeekSession["day"], null>>("الخميس");
     const [deanSelectedDay, setDeanSelectedDay] = useState<Exclude<WeekSession["day"], null>>("الخميس");
     const [restaurant, setRestaurant] = useState("");
+    const [tieBreakDay, setTieBreakDay] = useState<"الخميس" | "الجمعة">("الخميس");
     const [saving, setSaving] = useState(false);
 
     // Change Password State
@@ -537,6 +538,45 @@ export default function Dashboard() {
         }
     };
 
+    const handleToggleDayVoting = async (enabled: boolean) => {
+        if (!currentWeek) return;
+        setSaving(true);
+        try {
+            await services.toggleDayVoting(currentWeek.id, enabled, !enabled ? false : true);
+            await fetchWeek();
+        } catch (e: any) {
+            alert(e.message || "تعذر تحديث وضع التصويت على اليوم");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleSubmitDayVote = async (day: "الخميس" | "الجمعة") => {
+        if (!currentWeek || !user?.name) return;
+        setSaving(true);
+        try {
+            await services.submitDayVote(currentWeek.id, user.name, day);
+            await fetchWeek();
+        } catch (e: any) {
+            alert(e.message || "تعذر إرسال التصويت");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleApplyDayVoteResult = async () => {
+        if (!currentWeek) return;
+        setSaving(true);
+        try {
+            await services.applyDayVoteResult(currentWeek.id, tieBreakDay);
+            await fetchWeek();
+        } catch (e: any) {
+            alert(e.message || "تعذر اعتماد نتيجة التصويت");
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const handleChangePassword = async (e: React.FormEvent) => {
         e.preventDefault();
         setChangePasswordError("");
@@ -605,6 +645,24 @@ export default function Dashboard() {
     const isDean = user?.role === "dean";
     const isHesham = user?.name === "هشام";
     const bathroomWeekForRating = currentWeek || pastWeek;
+    const dayVotingEnabled = Boolean(currentWeek?.dayVotingEnabled);
+    const dayVotes = (currentWeek?.dayVotes || {}) as Record<string, "الخميس" | "الجمعة">;
+    const eligibleDayVoters = currentWeek
+        ? VALID_NAMES.filter((name) =>
+            name !== currentWeek.king &&
+            (currentWeek.responded || []).includes(name) &&
+            !(currentWeek.absentees || []).includes(name)
+        )
+        : [];
+    const voteThursdayCount = eligibleDayVoters.filter((name) => dayVotes[name] === "الخميس").length;
+    const voteFridayCount = eligibleDayVoters.filter((name) => dayVotes[name] === "الجمعة").length;
+    const canUserVoteDay = Boolean(
+        currentWeek && user?.name &&
+        user.name !== currentWeek.king &&
+        (currentWeek.responded || []).includes(user.name) &&
+        !(currentWeek.absentees || []).includes(user.name)
+    );
+    const myDayVote = user?.name ? dayVotes[user.name] : undefined;
 
     const handleAttendanceChoice = async (isAbsent: boolean) => {
         if (!currentWeek || !user?.name) return;
@@ -1165,12 +1223,93 @@ export default function Dashboard() {
                                                         ))}
                                                     </select>
                                                 ) : (
-                                                    <p className="text-xl font-semibold text-white">
-                                                        {currentWeek.day || <span className="text-slate-600 font-normal">لم يحدد بعد</span>}
-                                                    </p>
+                                                    <div className="space-y-3">
+                                                        <p className="text-xl font-semibold text-white">
+                                                            {currentWeek.day || <span className="text-slate-600 font-normal">لم يحدد بعد</span>}
+                                                        </p>
+                                                        {!currentWeek.day && dayVotingEnabled && canUserVoteDay && (
+                                                            <div className="flex flex-wrap gap-2">
+                                                                <button
+                                                                    onClick={() => handleSubmitDayVote("الخميس")}
+                                                                    disabled={saving}
+                                                                    className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${myDayVote === "الخميس"
+                                                                        ? "bg-emerald-500/25 border-emerald-400/40 text-emerald-300"
+                                                                        : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800"}`}
+                                                                >
+                                                                    التصويت: الخميس
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleSubmitDayVote("الجمعة")}
+                                                                    disabled={saving}
+                                                                    className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${myDayVote === "الجمعة"
+                                                                        ? "bg-emerald-500/25 border-emerald-400/40 text-emerald-300"
+                                                                        : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800"}`}
+                                                                >
+                                                                    التصويت: الجمعة
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                        {!currentWeek.day && dayVotingEnabled && !canUserVoteDay && (
+                                                            <p className="text-xs text-slate-500">التصويت متاح فقط للحاضرين بعد تأكيد الحضور.</p>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
+
+                                        {currentWeek && (
+                                            <div className="bg-slate-950/50 rounded-2xl p-5 border border-slate-800">
+                                                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                                                    <h4 className="text-sm font-semibold text-slate-300">تصويت يوم الطلعة</h4>
+                                                    {isKing && (
+                                                        <button
+                                                            onClick={() => handleToggleDayVoting(!dayVotingEnabled)}
+                                                            disabled={saving || !!currentWeek.day}
+                                                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${dayVotingEnabled
+                                                                ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-300"
+                                                                : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800"}`}
+                                                        >
+                                                            {dayVotingEnabled ? "إيقاف التصويت" : "تفعيل التصويت"}
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-center">
+                                                        <p className="text-xs text-slate-400 mb-1">الخميس</p>
+                                                        <p className="text-lg font-bold text-white">{voteThursdayCount}</p>
+                                                    </div>
+                                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-center">
+                                                        <p className="text-xs text-slate-400 mb-1">الجمعة</p>
+                                                        <p className="text-lg font-bold text-white">{voteFridayCount}</p>
+                                                    </div>
+                                                </div>
+
+                                                <p className="text-xs text-slate-500">
+                                                    المصوّتون المؤهلون: {eligibleDayVoters.length} | الأصوات المسجلة: {voteThursdayCount + voteFridayCount}
+                                                </p>
+
+                                                {isKing && dayVotingEnabled && !currentWeek.day && (
+                                                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                                                        <select
+                                                            value={tieBreakDay}
+                                                            onChange={(e) => setTieBreakDay(e.target.value as "الخميس" | "الجمعة")}
+                                                            className="bg-slate-900 text-slate-200 border border-slate-700 rounded-lg p-2 text-sm outline-none"
+                                                        >
+                                                            <option value="الخميس">الخميس</option>
+                                                            <option value="الجمعة">الجمعة</option>
+                                                        </select>
+                                                        <button
+                                                            onClick={handleApplyDayVoteResult}
+                                                            disabled={saving || (voteThursdayCount + voteFridayCount === 0)}
+                                                            className="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                                                        >
+                                                            اعتماد نتيجة التصويت
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
                                         <div className="bg-slate-950/50 rounded-2xl p-5 border border-slate-800 flex items-center gap-4">
                                             <MapPin className="w-10 h-10 text-slate-500" />

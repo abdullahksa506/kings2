@@ -17,6 +17,7 @@ const RATE_LIMIT_RULES: Record<string, RateLimitRule> = {
     resetPasswordWithCode: { limit: 8, windowMs: 15 * 60 * 1000 },
     submitRating: { limit: 8, windowMs: 60 * 1000 },
     submitBathroomRating: { limit: 8, windowMs: 60 * 1000 },
+    submitDayVote: { limit: 12, windowMs: 60 * 1000 },
     submitSuggestion: { limit: 12, windowMs: 60 * 1000 },
     sendChatMessage: { limit: 30, windowMs: 60 * 1000 },
 };
@@ -72,6 +73,10 @@ function normalizeAuthProfile(name: string, data: any) {
         profileImage: typeof data?.profileImage === "string" ? data.profileImage : null,
         showProfileImage: typeof data?.showProfileImage === "boolean" ? data.showProfileImage : true,
     };
+}
+
+function isStandardOutingDay(value: unknown): value is (typeof STANDARD_OUTING_DAYS)[number] {
+    return typeof value === "string" && STANDARD_OUTING_DAYS.includes(value as (typeof STANDARD_OUTING_DAYS)[number]);
 }
 
 /** يطابق التوكن مع كلمة المرور المخزنة (SHA-256 hex قد يختلف حرف كبير/صغير بين العميل والخادم) */
@@ -143,6 +148,8 @@ export async function POST(request: Request) {
                     cycleNumber: payload.cycleNumber,
                     weekNumber: payload.weekNumber,
                     day: null,
+                    dayVotingEnabled: false,
+                    dayVotes: {},
                     restaurant: null,
                     activity: null,
                     status: "pending",
@@ -161,13 +168,17 @@ export async function POST(request: Request) {
                 if (!weekSnap.exists) throw new Error("Week not found");
                 
                 let { absentees = [], responded = [] } = weekSnap.data() as any;
+                const dayVotes = { ...((weekSnap.data() as any).dayVotes || {}) } as Record<string, string>;
                 
-                if (payload.isAbsent && !absentees.includes(payload.userName)) absentees.push(payload.userName);
+                if (payload.isAbsent && !absentees.includes(payload.userName)) {
+                    absentees.push(payload.userName);
+                    delete dayVotes[payload.userName];
+                }
                 else if (!payload.isAbsent) absentees = absentees.filter((n: string) => n !== payload.userName);
 
                 if (!responded.includes(payload.userName)) responded.push(payload.userName);
 
-                await weekRef.update({ absentees, responded });
+                await weekRef.update({ absentees, responded, dayVotes });
                 
                 const requiredCount = VALID_NAMES_RPC.length - 1;
                 const justCompleted = responded.length >= requiredCount && ((weekSnap.data() as any).responded || []).length < requiredCount;
@@ -186,8 +197,91 @@ export async function POST(request: Request) {
                 if (!isAdmin && payload.day !== null && !STANDARD_OUTING_DAYS.includes(payload.day)) {
                     throw new Error("Only the Dean can pick a non-standard day");
                 }
-                await weekChoicesRef.update({ day: payload.day, restaurant: payload.restaurant, activity: payload.activity });
+                await weekChoicesRef.update({
+                    day: payload.day,
+                    restaurant: payload.restaurant,
+                    activity: payload.activity,
+                    dayVotingEnabled: payload.day ? false : (weekChoicesSnap.data() as any).dayVotingEnabled ?? false
+                });
                 return NextResponse.json({ result: true });
+
+            case "toggleDayVoting": {
+                const weekVotingRef = adminDb.collection("weeks").doc(payload.weekId);
+                const weekVotingSnap = await weekVotingRef.get();
+                if (!weekVotingSnap.exists) throw new Error("Week not found");
+
+                const weekData = weekVotingSnap.data() as any;
+                if (weekData.king !== authName && !isAdmin) throw new Error("Only the King can control day voting");
+
+                const enabled = Boolean(payload.enabled);
+                const resetVotes = Boolean(payload.resetVotes);
+                const updatePayload: Record<string, unknown> = { dayVotingEnabled: enabled };
+                if (resetVotes || !enabled) {
+                    updatePayload.dayVotes = {};
+                }
+                await weekVotingRef.update(updatePayload);
+                return NextResponse.json({ result: true });
+            }
+
+            case "submitDayVote": {
+                if (authName !== payload.userName) throw new Error("Identity mismatch");
+                if (!isStandardOutingDay(payload.day)) throw new Error("Invalid day vote");
+
+                const weekVoteRef = adminDb.collection("weeks").doc(payload.weekId);
+                await adminDb.runTransaction(async (tx) => {
+                    const weekVoteSnap = await tx.get(weekVoteRef);
+                    if (!weekVoteSnap.exists) throw new Error("Week not found");
+                    const weekData = weekVoteSnap.data() as any;
+
+                    if (!weekData?.dayVotingEnabled) throw new Error("التصويت على اليوم غير مفعل");
+                    if (weekData?.day) throw new Error("تم اعتماد يوم الطلعة بالفعل");
+                    if (weekData?.king === authName) throw new Error("الملك يعتمد القرار ولا يصوّت");
+                    if ((weekData?.absentees || []).includes(authName)) throw new Error("التصويت متاح للحاضرين فقط");
+                    if (!(weekData?.responded || []).includes(authName)) throw new Error("أكد حضورك أولاً ثم صوّت");
+
+                    const currentVotes = { ...(weekData?.dayVotes || {}) } as Record<string, string>;
+                    currentVotes[authName] = payload.day;
+                    tx.update(weekVoteRef, { dayVotes: currentVotes });
+                });
+                return NextResponse.json({ result: true });
+            }
+
+            case "applyDayVoteResult": {
+                const weekApplyRef = adminDb.collection("weeks").doc(payload.weekId);
+                const weekApplySnap = await weekApplyRef.get();
+                if (!weekApplySnap.exists) throw new Error("Week not found");
+
+                const weekData = weekApplySnap.data() as any;
+                if (weekData.king !== authName && !isAdmin) throw new Error("Only the King can apply the voting result");
+
+                const responded = Array.isArray(weekData.responded) ? weekData.responded : [];
+                const absentees = Array.isArray(weekData.absentees) ? weekData.absentees : [];
+                const votes = { ...(weekData.dayVotes || {}) } as Record<string, string>;
+
+                let thursday = 0;
+                let friday = 0;
+                for (const [name, day] of Object.entries(votes)) {
+                    const eligible = responded.includes(name) && !absentees.includes(name) && name !== weekData.king;
+                    if (!eligible) continue;
+                    if (day === "الخميس") thursday += 1;
+                    if (day === "الجمعة") friday += 1;
+                }
+
+                if (thursday === 0 && friday === 0) throw new Error("لا توجد أصوات صالحة لاعتماد اليوم");
+
+                let chosen: "الخميس" | "الجمعة";
+                if (thursday === friday) {
+                    if (!isStandardOutingDay(payload.preferredDay)) {
+                        throw new Error("تعادل الأصوات، اختر اليوم يدويًا من قائمة الملك ثم احفظ");
+                    }
+                    chosen = payload.preferredDay;
+                } else {
+                    chosen = thursday > friday ? "الخميس" : "الجمعة";
+                }
+
+                await weekApplyRef.update({ day: chosen, dayVotingEnabled: false });
+                return NextResponse.json({ result: chosen });
+            }
 
             case "secretlyChangeKing":
             case "toggleRatingEnabled":

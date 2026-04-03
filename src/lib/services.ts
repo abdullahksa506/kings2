@@ -33,6 +33,8 @@ export interface WeekSession {
     activity: string | null;
     status: "pending" | "completed" | "skipped";
     ratingEnabled: boolean;
+    dayVotingEnabled?: boolean;
+    dayVotes?: Record<string, "الخميس" | "الجمعة">;
     absentees: string[];
     responded: string[];
     createdAt: Timestamp;
@@ -163,6 +165,18 @@ export const services = {
 
     async setWeekChoices(weekId: string, day: WeekSession["day"], restaurant: string | null, activity: string | null) {
         return invokeRpc("setWeekChoices", { weekId, day, restaurant, activity });
+    },
+
+    async toggleDayVoting(weekId: string, enabled: boolean, resetVotes = false) {
+        return invokeRpc("toggleDayVoting", { weekId, enabled, resetVotes });
+    },
+
+    async submitDayVote(weekId: string, userName: string, day: "الخميس" | "الجمعة") {
+        return invokeRpc("submitDayVote", { weekId, userName, day });
+    },
+
+    async applyDayVoteResult(weekId: string, preferredDay?: "الخميس" | "الجمعة") {
+        return invokeRpc("applyDayVoteResult", { weekId, preferredDay: preferredDay || null });
     },
 
     // Secret Dean Power
