@@ -564,7 +564,7 @@ export default function Dashboard() {
         const token = typeof window !== "undefined" ? localStorage.getItem("king_user_token") || "" : "";
         return {
             "Content-Type": "application/json",
-            "x-user-name": name,
+            "x-user-name": encodeURIComponent(name),
             "x-user-token": token,
         };
     };

@@ -43,7 +43,7 @@ export default function TestPanel() {
             const res = await fetch(endpoint, {
                 method: "POST",
                 headers: {
-                    "x-user-name": name,
+                    "x-user-name": encodeURIComponent(name),
                     "x-user-token": token,
                 },
             });

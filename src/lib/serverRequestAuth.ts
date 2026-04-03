@@ -20,6 +20,14 @@ function authPasswordMatches(dbPassword: unknown, clientToken: unknown): boolean
     return false;
 }
 
+function decodeHeaderValue(value: string): string {
+    try {
+        return decodeURIComponent(value);
+    } catch {
+        return value;
+    }
+}
+
 export async function authenticateServerRequest(
     request: Request,
     options: { allowedRoles?: string[]; allowAdminKey?: boolean } = {}
@@ -33,8 +41,10 @@ export async function authenticateServerRequest(
         return { ok: true, user: { name: "__admin_key__", role: "dean", viaAdminKey: true } };
     }
 
-    const name = request.headers.get("x-user-name")?.trim() || "";
-    const token = request.headers.get("x-user-token")?.trim() || "";
+    const rawName = request.headers.get("x-user-name")?.trim() || "";
+    const rawToken = request.headers.get("x-user-token")?.trim() || "";
+    const name = decodeHeaderValue(rawName);
+    const token = decodeHeaderValue(rawToken);
 
     if (!name || !token) {
         return { ok: false, status: 401, error: "Unauthorized" };
