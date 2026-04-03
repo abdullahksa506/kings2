@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import * as admin from 'firebase-admin';
+import { authenticateServerRequest } from '@/lib/serverRequestAuth';
 
 // Expected input structure from the JSON
 interface HistoricalWeekInput {
@@ -19,13 +20,13 @@ interface HistoricalWeekInput {
 
 export async function POST(req: Request) {
     try {
-        const body = await req.json();
-        const { weeks, secret } = body;
-
-        // Simple protection so not just anyone can run this
-        if (secret !== process.env.IMPORT_SECRET) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        const auth = await authenticateServerRequest(req, { allowAdminKey: true });
+        if (!auth.ok) {
+            return NextResponse.json({ error: auth.error }, { status: auth.status });
         }
+
+        const body = await req.json();
+        const { weeks } = body;
 
         if (!Array.isArray(weeks)) {
             return NextResponse.json({ error: "Weeks must be an array" }, { status: 400 });

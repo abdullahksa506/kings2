@@ -33,6 +33,7 @@ export async function POST(request: Request) {
 
         const usersSnap = await adminDb.collection("users").get();
         const users = usersSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+        let sentCount = 0;
         const kingUser = users.find(u => u.name === week.king);
 
         if (!kingUser || !kingUser.pushSubscription) {
@@ -69,6 +70,7 @@ export async function POST(request: Request) {
                     url: '/',
                     icon: '/icon.png'
                 }));
+                sentCount++;
                 success = true;
             } catch (err: any) {
                 console.error(`Failed to send Web Push to King ${kingUser.name}:`, err.message);

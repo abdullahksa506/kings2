@@ -60,6 +60,7 @@ export async function POST(request: Request) {
                             url: '/',
                             icon: '/icon.png'
                         }));
+                        sentCount++;
                     } catch (err: any) {
                         console.error(`Failed to send Web Push to ${user.name}:`, err.message);
                     }

@@ -44,6 +44,12 @@ export function usePushNotifications() {
     const subscribeToPush = async () => {
         if (!isSupported) return null
         try {
+            const permission = await Notification.requestPermission()
+            if (permission !== 'granted') {
+                console.error('Notification permission not granted')
+                return null
+            }
+
             const registration = await navigator.serviceWorker.ready
             const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
             if (!vapidKey) {
