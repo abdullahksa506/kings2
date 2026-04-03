@@ -8,6 +8,56 @@ const WEEK_DAYS = ["السبت", "الأحد", "الإثنين", "الثلاثا
 const STANDARD_OUTING_DAYS = ["الخميس", "الجمعة"] as const;
 const Timestamp = admin.firestore.Timestamp;
 
+type RateLimitRule = { limit: number; windowMs: number };
+type RateLimitBucket = { count: number; windowStart: number };
+
+const RATE_LIMIT_RULES: Record<string, RateLimitRule> = {
+    login: { limit: 12, windowMs: 60 * 1000 },
+    requestPasswordReset: { limit: 5, windowMs: 15 * 60 * 1000 },
+    resetPasswordWithCode: { limit: 8, windowMs: 15 * 60 * 1000 },
+    submitRating: { limit: 8, windowMs: 60 * 1000 },
+    submitBathroomRating: { limit: 8, windowMs: 60 * 1000 },
+    submitSuggestion: { limit: 12, windowMs: 60 * 1000 },
+    sendChatMessage: { limit: 30, windowMs: 60 * 1000 },
+};
+
+const rateLimitStore = new Map<string, RateLimitBucket>();
+
+function getClientIp(request: Request): string {
+    const fwd = request.headers.get("x-forwarded-for");
+    if (fwd) return fwd.split(",")[0].trim();
+    const realIp = request.headers.get("x-real-ip");
+    if (realIp) return realIp.trim();
+    return "unknown";
+}
+
+function enforceRateLimit(action: string, actorKey: string) {
+    const rule = RATE_LIMIT_RULES[action];
+    if (!rule) return;
+
+    const now = Date.now();
+    const key = `${action}:${actorKey}`;
+    const bucket = rateLimitStore.get(key);
+
+    if (!bucket || now - bucket.windowStart >= rule.windowMs) {
+        rateLimitStore.set(key, { count: 1, windowStart: now });
+    } else if (bucket.count >= rule.limit) {
+        throw new Error("Too many requests, please wait and try again.");
+    } else {
+        bucket.count += 1;
+        rateLimitStore.set(key, bucket);
+    }
+
+    // Keep memory bounded on long-lived processes.
+    if (rateLimitStore.size > 5000) {
+        for (const [k, v] of rateLimitStore) {
+            if (now - v.windowStart >= 60 * 60 * 1000) {
+                rateLimitStore.delete(k);
+            }
+        }
+    }
+}
+
 function asTrimmedString(value: unknown): string {
     return typeof value === "string" ? value.trim() : "";
 }
@@ -39,6 +89,7 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
         const { action, payload, auth } = body;
+        const clientIp = getClientIp(request);
 
         // Skip auth check for public actions
         const publicActions = [
@@ -55,6 +106,11 @@ export async function POST(request: Request) {
         
         let userDocData: any = null;
         let authName = auth?.name;
+
+        const actorKey = authName && typeof authName === "string" && authName.trim()
+            ? `user:${authName.trim()}`
+            : `ip:${clientIp}`;
+        enforceRateLimit(action, actorKey);
         
         if (!publicActions.includes(action)) {
             if (!auth || !auth.name || !auth.token) {
