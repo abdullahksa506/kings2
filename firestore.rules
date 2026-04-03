@@ -6,6 +6,13 @@ service cloud.firestore {
     // However, ALL write operations are strictly blocked.
     // Mutations must go through the secure Next.js /api/rpc server routes.
 
+    // Users collection contains sensitive auth-related fields (password hashes, reset codes, devices).
+    // Client must never read it directly; profile/public/admin reads go through /api/rpc.
+    match /users/{userId} {
+      allow read: if false;
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read: if true;
       allow write: if false;

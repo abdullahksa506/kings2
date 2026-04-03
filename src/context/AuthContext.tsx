@@ -1,16 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
-import {
-    collection,
-    doc,
-    getDoc,
-    setDoc,
-    updateDoc,
-    getCountFromServer,
-} from "firebase/firestore";
-import { hashPassword, isHashed } from "@/lib/hash";
 import { invokeRpc } from "@/lib/services";
 
 export type UserRole = "dean" | "king" | "user";
@@ -48,18 +38,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const refreshUserProfile = async () => {
         const storedName = localStorage.getItem("king_user_name");
         if (!storedName) return;
-        const userDoc = await getDoc(doc(db, "users", storedName));
-        if (!userDoc.exists()) return;
-        const data = userDoc.data() as Record<string, unknown>;
-        setUser({
-            name: typeof data.name === "string" ? data.name : storedName,
-            role: (data.role as UserRole) || "user",
-            registered: Boolean(data.registered),
-            phoneNumber: typeof data.phoneNumber === "string" ? data.phoneNumber : undefined,
-            nickName: typeof data.nickName === "string" ? data.nickName : undefined,
-            profileImage: typeof data.profileImage === "string" ? data.profileImage : null,
-            showProfileImage: typeof data.showProfileImage === "boolean" ? data.showProfileImage : true,
-        });
+        try {
+            const data = await invokeRpc("getMyProfile");
+            if (!data) return;
+            setUser({
+                name: typeof data.name === "string" ? data.name : storedName,
+                role: (data.role as UserRole) || "user",
+                registered: Boolean(data.registered),
+                phoneNumber: typeof data.phoneNumber === "string" ? data.phoneNumber : undefined,
+                nickName: typeof data.nickName === "string" ? data.nickName : undefined,
+                profileImage: typeof data.profileImage === "string" ? data.profileImage : null,
+                showProfileImage: typeof data.showProfileImage === "boolean" ? data.showProfileImage : true,
+            });
+        } catch {
+            localStorage.removeItem("king_user_name");
+            localStorage.removeItem("king_user_token");
+            setUser(null);
+        }
     };
 
     // Check Local Storage and Fetch Count
@@ -69,41 +64,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const storedName = localStorage.getItem("king_user_name");
                 const storedToken = localStorage.getItem("king_user_token");
                 if (storedName && storedToken) {
-                    const userDoc = await getDoc(doc(db, "users", storedName));
-                    if (userDoc.exists()) {
-                        const data = userDoc.data();
-                        const dbPass = typeof data.password === "string" ? data.password : "";
-                        const tokenMatch =
-                            dbPass === storedToken ||
-                            (isHashed(dbPass) &&
-                                isHashed(storedToken) &&
-                                dbPass.toLowerCase() === storedToken.toLowerCase());
-                        if (tokenMatch) {
-                            // RPC يقارن التوكن مع كلمة المرور في DB حرفياً — نوحّد التخزين إن اختلف الحرف الكبير/الصغير في الهاش
-                            if (isHashed(dbPass) && isHashed(storedToken) && dbPass !== storedToken) {
-                                localStorage.setItem("king_user_token", dbPass);
-                            }
-                            const profile: UserProfile = {
-                                name: data.name,
-                                role: data.role,
-                                registered: data.registered,
-                                phoneNumber: data.phoneNumber,
-                                nickName: data.nickName,
-                                profileImage: data.profileImage || null,
-                                showProfileImage: typeof data.showProfileImage === "boolean" ? data.showProfileImage : true,
-                            };
+                    try {
+                        const result = await invokeRpc("validateSession");
+                        const profile = result?.profile;
+                        const normalizedToken = result?.token;
+                        if (profile) {
                             setUser(profile);
+                            if (typeof normalizedToken === "string" && normalizedToken) {
+                                localStorage.setItem("king_user_token", normalizedToken);
+                            }
                         } else {
-                            // Invalid token, clear storage
                             localStorage.removeItem("king_user_name");
                             localStorage.removeItem("king_user_token");
                         }
+                    } catch {
+                        localStorage.removeItem("king_user_name");
+                        localStorage.removeItem("king_user_token");
                     }
                 }
 
-                // Count registered users securely without fetching all documents
-                const snapshot = await getCountFromServer(collection(db, "users"));
-                setRegisteredNamesCount(snapshot.data().count);
+                const count = await invokeRpc("getRegisteredNamesCount");
+                setRegisteredNamesCount(typeof count === "number" ? count : 0);
             } catch (error) {
                 console.error("Auth init error:", error);
             } finally {
@@ -113,63 +94,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         initAuth();
     }, []);
 
-    const login = async (name: string, password: string, skipDeviceCheck = false) => {
+    const login = async (name: string, password: string, _skipDeviceCheck = false) => {
         if (!VALID_NAMES.includes(name)) throw new Error("اسم غير مصرح به");
 
-        const userRef = doc(db, "users", name);
-        const userDoc = await getDoc(userRef);
-
-        if (!userDoc.exists()) {
-            throw new Error("المستخدم غير مسجل بعد");
-        }
-
-        const raw = userDoc.data() as Record<string, unknown>;
-        const storedPassword = typeof raw.password === "string" ? raw.password : "";
-        const userData = { ...raw, password: storedPassword } as {
-            name: string;
-            role: UserRole;
-            registered: boolean;
-            phoneNumber?: string;
-            password: string;
-        };
-
-        let valid = false;
-
-        if (!storedPassword) {
-            throw new Error("بيانات الحساب ناقصة. تواصل مع العميد.");
-        }
-
-        if (isHashed(storedPassword)) {
-            const hashedInput = await hashPassword(password);
-            if (storedPassword.toLowerCase() === hashedInput.toLowerCase()) {
-                valid = true;
-            }
-        } else {
-            if (storedPassword === password) {
-                valid = true;
-                const newHash = await invokeRpc("login_upgrade", { userName: name, password });
-                userData.password = typeof newHash === "string" ? newHash : await hashPassword(password);
-            }
-        }
-
-        if (!valid) {
-            throw new Error("كلمة المرور غير صحيحة");
-        }
-
-        // Omit password from state
-        const profile: UserProfile = {
-            name: userData.name,
-            role: userData.role,
-            registered: userData.registered,
-            phoneNumber: userData.phoneNumber,
-            nickName: typeof raw.nickName === "string" ? raw.nickName : undefined,
-            profileImage: typeof raw.profileImage === "string" ? raw.profileImage : null,
-            showProfileImage: typeof raw.showProfileImage === "boolean" ? raw.showProfileImage : true,
-        };
-
-        const tokenToStore = isHashed(userData.password)
-            ? userData.password
-            : await hashPassword(password);
+        const result = await invokeRpc("login", { name, password });
+        const profile = result?.profile as UserProfile | undefined;
+        const tokenToStore = typeof result?.token === "string" ? result.token : "";
+        if (!profile || !tokenToStore) throw new Error("فشل تسجيل الدخول");
 
         setUser(profile);
         localStorage.setItem("king_user_name", name);

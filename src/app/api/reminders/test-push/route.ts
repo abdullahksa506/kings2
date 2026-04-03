@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { services } from "@/lib/services";
+import { adminDb } from "@/lib/firebase-admin";
 
 export async function POST() {
     try {
-        const users = await services.getAllUsers();
+        const usersSnap = await adminDb.collection("users").get();
+        const users = usersSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
         let sentCount = 0;
 
         // Web Push setup

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { services } from "@/lib/services";
+import { adminDb } from "@/lib/firebase-admin";
 
 export async function POST(request: Request) {
     try {
@@ -10,7 +10,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: "Missing userName" }, { status: 400 });
         }
 
-        const users = await services.getAllUsers();
+        const usersSnap = await adminDb.collection("users").get();
+        const users = usersSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
         const targetUser = users.find(u => u.name === userName || u.id === userName);
 
         if (!targetUser) {

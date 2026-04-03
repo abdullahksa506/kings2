@@ -1,39 +1,25 @@
 import { db } from "./firebase";
 import {
     collection,
-    doc,
-    getDoc,
     getDocs,
-    setDoc,
-    updateDoc,
     query,
     where,
     orderBy,
     limit,
-    addDoc,
     Timestamp,
     onSnapshot
 } from "firebase/firestore";
-import { hashPassword, isHashed } from "./hash";
 
 // Security verification helper
 export async function verifyIdentity(userName: string): Promise<boolean> {
     if (typeof window === "undefined") return false; // Verify works only on client
-    
-    const storedToken = localStorage.getItem("king_user_token");
-    if (!storedToken) return false;
 
-    const userRef = doc(db, "users", userName);
-    const userDoc = await getDoc(userRef);
-    if (!userDoc.exists()) return false;
-
-    const userData = userDoc.data();
-    const dbPass = typeof userData.password === "string" ? userData.password : "";
-    const token = typeof storedToken === "string" ? storedToken : "";
-    if (dbPass === token) return true;
-    const isHex64 = (s: string) => s.length === 64 && /^[a-f0-9]+$/i.test(s);
-    if (isHex64(dbPass) && isHex64(token)) return dbPass.toLowerCase() === token.toLowerCase();
-    return false;
+    try {
+        const result = await invokeRpc("validateSession");
+        return result?.profile?.name === userName;
+    } catch {
+        return false;
+    }
 }
 
 export interface WeekSession {
@@ -405,8 +391,7 @@ export const services = {
     },
 
     async getAllUsers() {
-        const snap = await getDocs(collection(db, "users"));
-        return snap.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+        return invokeRpc("getAllUsers");
     },
 
     async updateUserStandaloneStatus(userName: string, isStandalone: boolean) {
@@ -418,24 +403,8 @@ export const services = {
     },
 
     async getPushSubscriptions(usernames?: string[]): Promise<any[]> {
-        let q = collection(db, "users") as any;
-        if (usernames && usernames.length > 0) {
-            q = query(collection(db, "users"), where("__name__", "in", usernames));
-        }
-
-        const snap = await getDocs(q);
-        const subs: any[] = [];
-        snap.forEach(doc => {
-            const data = doc.data() as any;
-            if (data.pushSubscription) {
-                try {
-                    subs.push(JSON.parse(data.pushSubscription));
-                } catch (e) {
-                    console.error("Failed to parse push subscription for user:", doc.id);
-                }
-            }
-        });
-        return subs;
+        const result = await invokeRpc("getPushSubscriptions", { usernames });
+        return Array.isArray(result) ? result : [];
     },
 
     // --- Password Management Features ---
@@ -461,29 +430,8 @@ export const services = {
     },
 
     async getUsersWithResetCodes(): Promise<{ id: string, name: string, resetCode: string }[]> {
-        const usersSnap = await getDocs(collection(db, "users"));
-        const requests: { id: string, name: string, resetCode: string }[] = [];
-        const now = Date.now();
-        const FIFTEEN_MINUTES = 15 * 60 * 1000;
-
-        for (const d of usersSnap.docs) {
-            const data = d.data();
-            if (data.resetCode) {
-                const timestamp = data.resetCodeTimestamp;
-                if (timestamp && (now - timestamp > FIFTEEN_MINUTES)) {
-                    // Expired - clear from Firestore
-                    await updateDoc(doc(db, "users", d.id), { resetCode: null, resetCodeTimestamp: null });
-                } else {
-                    requests.push({
-                        id: d.id,
-                        name: data.name || d.id,
-                        resetCode: data.resetCode
-                    });
-                }
-            }
-        }
-
-        return requests;
+        const result = await invokeRpc("getUsersWithResetCodes");
+        return Array.isArray(result) ? result : [];
     },
 
     // --- Suggestions (Anonymous, Dean-only visible) ---
@@ -511,18 +459,26 @@ export const services = {
     },
 
     listenToPublicUserProfiles(callback: (profiles: PublicUserProfile[]) => void) {
-        return onSnapshot(collection(db, "users"), (snap) => {
-            const profiles = snap.docs.map((d) => {
-                const data = d.data() as any;
-                return {
-                    userName: d.id,
-                    nickName: typeof data.nickName === "string" ? data.nickName : d.id,
-                    profileImage: typeof data.profileImage === "string" ? data.profileImage : null,
-                    showProfileImage: typeof data.showProfileImage === "boolean" ? data.showProfileImage : true,
-                } as PublicUserProfile;
-            });
-            callback(profiles);
-        });
+        let stopped = false;
+
+        const fetchProfiles = async () => {
+            try {
+                const result = await invokeRpc("getPublicUserProfiles");
+                if (!stopped && Array.isArray(result)) {
+                    callback(result as PublicUserProfile[]);
+                }
+            } catch (error) {
+                console.error("Failed to fetch public user profiles", error);
+            }
+        };
+
+        void fetchProfiles();
+        const intervalId = window.setInterval(fetchProfiles, 10000);
+
+        return () => {
+            stopped = true;
+            window.clearInterval(intervalId);
+        };
     },
 
     // --- Visit Tracking ---

@@ -8,6 +8,22 @@ const WEEK_DAYS = ["السبت", "الأحد", "الإثنين", "الثلاثا
 const STANDARD_OUTING_DAYS = ["الخميس", "الجمعة"] as const;
 const Timestamp = admin.firestore.Timestamp;
 
+function asTrimmedString(value: unknown): string {
+    return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeAuthProfile(name: string, data: any) {
+    return {
+        name,
+        role: data?.role,
+        registered: Boolean(data?.registered),
+        phoneNumber: typeof data?.phoneNumber === "string" ? data.phoneNumber : undefined,
+        nickName: typeof data?.nickName === "string" ? data.nickName : undefined,
+        profileImage: typeof data?.profileImage === "string" ? data.profileImage : null,
+        showProfileImage: typeof data?.showProfileImage === "boolean" ? data.showProfileImage : true,
+    };
+}
+
 /** يطابق التوكن مع كلمة المرور المخزنة (SHA-256 hex قد يختلف حرف كبير/صغير بين العميل والخادم) */
 function authPasswordMatches(dbPassword: unknown, clientToken: unknown): boolean {
     if (typeof dbPassword !== "string" || typeof clientToken !== "string") return false;
@@ -25,7 +41,17 @@ export async function POST(request: Request) {
         const { action, payload, auth } = body;
 
         // Skip auth check for public actions
-        const publicActions = ["register", "requestPasswordReset", "resetPasswordWithCode", "login_upgrade", "recordVisit", "importHistory"];
+        const publicActions = [
+            "register",
+            "requestPasswordReset",
+            "resetPasswordWithCode",
+            "login_upgrade",
+            "recordVisit",
+            "importHistory",
+            "login",
+            "getRegisteredNamesCount",
+            "getPublicUserProfiles"
+        ];
         
         let userDocData: any = null;
         let authName = auth?.name;
@@ -122,7 +148,27 @@ export async function POST(request: Request) {
             // --- RATINGS ---
             case "submitRating":
                 if (authName !== payload.userName) throw new Error("Identity mismatch");
-                if (payload.score < 1 || payload.score > 5) throw new Error("Invalid score");
+                if (!Number.isInteger(payload.score) || payload.score < 1 || payload.score > 5) throw new Error("Invalid score");
+                if (typeof payload.weekId !== "string" || !payload.weekId.trim()) throw new Error("Invalid week");
+
+                const submitWeekRef = adminDb.collection("weeks").doc(payload.weekId);
+                const submitWeekSnap = await submitWeekRef.get();
+                if (!submitWeekSnap.exists) throw new Error("Week not found");
+
+                const submitWeekData = submitWeekSnap.data() as any;
+                if (!submitWeekData?.ratingEnabled) throw new Error("التقييم غير مفتوح حالياً");
+                if (submitWeekData?.king === payload.userName) throw new Error("الملك لا يصوّت لنفسه");
+                if ((submitWeekData?.absentees || []).includes(payload.userName)) throw new Error("لا يمكن للغائب التصويت");
+                if (!(submitWeekData?.responded || []).includes(payload.userName)) throw new Error("يجب تسجيل الحضور أولاً");
+
+                const existingRatingSnap = await adminDb
+                    .collection("ratings")
+                    .where("weekId", "==", payload.weekId)
+                    .where("userName", "==", payload.userName)
+                    .limit(1)
+                    .get();
+                if (!existingRatingSnap.empty) throw new Error("تم إرسال تقييمك مسبقاً");
+
                 const ratingRef = await adminDb.collection("ratings").add({
                     weekId: payload.weekId,
                     userName: payload.userName,
@@ -133,11 +179,19 @@ export async function POST(request: Request) {
 
             case "submitBathroomRating":
                 if (authName !== payload.userName) throw new Error("Identity mismatch");
-                if (payload.score < 1 || payload.score > 5) throw new Error("Invalid score");
+                if (!Number.isInteger(payload.score) || payload.score < 1 || payload.score > 5) throw new Error("Invalid score");
 
                 const bathroomWeekId = typeof payload.weekId === "string" && payload.weekId.trim()
                     ? payload.weekId.trim()
                     : "general";
+
+                const existingBathroomRatingSnap = await adminDb
+                    .collection("bathroomRatings")
+                    .where("weekId", "==", bathroomWeekId)
+                    .where("userName", "==", payload.userName)
+                    .limit(1)
+                    .get();
+                if (!existingBathroomRatingSnap.empty) throw new Error("تم إرسال تقييم الحمام مسبقاً");
 
                 const normalizedBathroomName = normalizeNickName(
                     payload.bathroomName,
@@ -161,6 +215,146 @@ export async function POST(request: Request) {
                     createdAt: Timestamp.now()
                 });
                 return NextResponse.json({ result: bathroomRef.id });
+
+            case "login":
+                if (!VALID_NAMES_RPC.includes(payload.name)) throw new Error("اسم غير مصرح به");
+                if (typeof payload.password !== "string" || !payload.password) throw new Error("كلمة المرور مطلوبة");
+
+                const loginRef = adminDb.collection("users").doc(payload.name);
+                const loginSnap = await loginRef.get();
+                if (!loginSnap.exists) throw new Error("المستخدم غير مسجل بعد");
+
+                const loginData = loginSnap.data() as any;
+                const storedPassword = typeof loginData?.password === "string" ? loginData.password : "";
+                if (!storedPassword) throw new Error("بيانات الحساب ناقصة. تواصل مع العميد.");
+
+                const hashedInput = await hashPassword(payload.password);
+                let tokenToStore = "";
+
+                if (storedPassword === payload.password) {
+                    tokenToStore = hashedInput;
+                    await loginRef.update({ password: tokenToStore });
+                    loginData.password = tokenToStore;
+                } else if (authPasswordMatches(storedPassword, hashedInput)) {
+                    tokenToStore = storedPassword;
+                } else {
+                    throw new Error("كلمة المرور غير صحيحة");
+                }
+
+                return NextResponse.json({
+                    result: {
+                        profile: normalizeAuthProfile(payload.name, loginData),
+                        token: tokenToStore,
+                    }
+                });
+
+            case "validateSession":
+                if (!authName || !userDocData) throw new Error("Unauthorized");
+                return NextResponse.json({
+                    result: {
+                        profile: normalizeAuthProfile(authName, userDocData),
+                        token: typeof userDocData.password === "string" ? userDocData.password : null,
+                    }
+                });
+
+            case "getMyProfile":
+                if (!authName || !userDocData) throw new Error("Unauthorized");
+                return NextResponse.json({ result: normalizeAuthProfile(authName, userDocData) });
+
+            case "getRegisteredNamesCount":
+                const registeredUsersSnap = await adminDb
+                    .collection("users")
+                    .where("registered", "==", true)
+                    .get();
+                return NextResponse.json({ result: registeredUsersSnap.size });
+
+            case "getPublicUserProfiles":
+                const publicUsersSnap = await adminDb.collection("users").get();
+                return NextResponse.json({
+                    result: publicUsersSnap.docs.map((d) => {
+                        const data = d.data() as any;
+                        return {
+                            userName: d.id,
+                            nickName: typeof data.nickName === "string" ? data.nickName : d.id,
+                            profileImage: typeof data.profileImage === "string" ? data.profileImage : null,
+                            showProfileImage: typeof data.showProfileImage === "boolean" ? data.showProfileImage : true,
+                        };
+                    })
+                });
+
+            case "getAllUsers":
+                if (!isAdmin) throw new Error("Dean only");
+                const allUsersSnap = await adminDb.collection("users").get();
+                return NextResponse.json({
+                    result: allUsersSnap.docs.map((d) => {
+                        const data = d.data() as any;
+                        return {
+                            id: d.id,
+                            name: typeof data.name === "string" ? data.name : d.id,
+                            registered: Boolean(data.registered),
+                            role: typeof data.role === "string" ? data.role : "user",
+                            phoneNumber: typeof data.phoneNumber === "string" ? data.phoneNumber : null,
+                            nickName: typeof data.nickName === "string" ? data.nickName : d.id,
+                            profileImage: typeof data.profileImage === "string" ? data.profileImage : null,
+                            showProfileImage: typeof data.showProfileImage === "boolean" ? data.showProfileImage : true,
+                            isStandalone: data.isStandalone === true,
+                            pushSubscription: typeof data.pushSubscription === "string" ? data.pushSubscription : null,
+                            resetCode: typeof data.resetCode === "string" ? data.resetCode : null,
+                            resetCodeTimestamp: typeof data.resetCodeTimestamp === "number" ? data.resetCodeTimestamp : null,
+                        };
+                    })
+                });
+
+            case "getUsersWithResetCodes":
+                if (!isAdmin) throw new Error("Dean only");
+                const resetSnap = await adminDb.collection("users").get();
+                const now = Date.now();
+                const FIFTEEN_MINUTES = 15 * 60 * 1000;
+                const requests: { id: string; name: string; resetCode: string }[] = [];
+
+                for (const d of resetSnap.docs) {
+                    const data = d.data() as any;
+                    const resetCode = asTrimmedString(data.resetCode);
+                    if (!resetCode) continue;
+
+                    const ts = typeof data.resetCodeTimestamp === "number" ? data.resetCodeTimestamp : 0;
+                    if (ts && now - ts > FIFTEEN_MINUTES) {
+                        await adminDb.collection("users").doc(d.id).update({ resetCode: null, resetCodeTimestamp: null });
+                        continue;
+                    }
+
+                    requests.push({
+                        id: d.id,
+                        name: typeof data.name === "string" ? data.name : d.id,
+                        resetCode,
+                    });
+                }
+                return NextResponse.json({ result: requests });
+
+            case "getPushSubscriptions":
+                if (!isAdmin) throw new Error("Dean only");
+                const usernames: string[] = Array.isArray(payload.usernames)
+                    ? payload.usernames.filter((v: unknown) => typeof v === "string" && v.trim())
+                    : [];
+
+                let pushUsersSnap: admin.firestore.QuerySnapshot;
+                if (usernames.length > 0) {
+                    pushUsersSnap = await adminDb.collection("users").where(admin.firestore.FieldPath.documentId(), "in", usernames).get();
+                } else {
+                    pushUsersSnap = await adminDb.collection("users").get();
+                }
+
+                const subscriptions: any[] = [];
+                for (const d of pushUsersSnap.docs) {
+                    const data = d.data() as any;
+                    if (typeof data.pushSubscription !== "string" || !data.pushSubscription) continue;
+                    try {
+                        subscriptions.push(JSON.parse(data.pushSubscription));
+                    } catch {
+                        // Ignore invalid subscriptions.
+                    }
+                }
+                return NextResponse.json({ result: subscriptions });
 
             // --- USERS & AUTH ---
             case "updateUserStandaloneStatus":
