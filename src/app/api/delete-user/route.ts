@@ -1,9 +1,19 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 
-export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const name = searchParams.get("name");
+function isAdminRequest(request: Request): boolean {
+    const requiredKey = process.env.ADMIN_API_KEY;
+    if (!requiredKey) return false;
+    return request.headers.get("x-admin-key") === requiredKey;
+}
+
+export async function POST(request: Request) {
+    if (!isAdminRequest(request)) {
+        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const name = typeof body?.name === "string" ? body.name.trim() : "";
 
     if (!name) {
         return NextResponse.json({ success: false, error: "Missing name parameter" }, { status: 400 });

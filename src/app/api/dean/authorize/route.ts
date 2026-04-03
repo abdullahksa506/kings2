@@ -4,9 +4,17 @@ import { adminDb } from "@/lib/firebase-admin";
 export async function POST(request: Request) {
     try {
         const { deviceId, deviceName, passcode } = await request.json();
+        const requiredPasscode = process.env.DEAN_DEVICE_PASSCODE;
 
-        // 🛡️ Secret passcode isolated on the server-side! F12 won't see this.
-        if (passcode !== "عبدالله") {
+        if (!requiredPasscode) {
+            return NextResponse.json({ error: "Server not configured" }, { status: 500 });
+        }
+
+        if (typeof deviceId !== "string" || !deviceId.trim()) {
+            return NextResponse.json({ error: "معرف الجهاز غير صالح" }, { status: 400 });
+        }
+
+        if (passcode !== requiredPasscode) {
             return NextResponse.json({ error: "كود التوثيق غير صحيح!" }, { status: 401 });
         }
 
@@ -18,11 +26,12 @@ export async function POST(request: Request) {
         }
         
         const trustedDevices = (deanDoc.data() as any).trustedDevices || [];
-        const exists = trustedDevices.some((d: any) => d.id === deviceId);
+        const normalizedDeviceId = deviceId.trim();
+        const exists = trustedDevices.some((d: any) => d.id === normalizedDeviceId);
         
         if (!exists) {
             trustedDevices.push({
-                id: deviceId,
+                id: normalizedDeviceId,
                 name: deviceName || "جهاز غير معروف",
                 addedAt: Date.now()
             });

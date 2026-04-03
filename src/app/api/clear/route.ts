@@ -1,18 +1,25 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { adminDb } from "@/lib/firebase-admin";
 
-export async function GET() {
+function isAdminRequest(request: Request): boolean {
+    const requiredKey = process.env.ADMIN_API_KEY;
+    if (!requiredKey) return false;
+    return request.headers.get("x-admin-key") === requiredKey;
+}
+
+export async function POST(request: Request) {
+    if (!isAdminRequest(request)) {
+        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     try {
         const collections = ["weeks", "ratings", "users"];
 
         for (const coll of collections) {
-            const q = collection(db, coll);
-            const snap = await getDocs(q);
-
-            await Promise.all(
-                snap.docs.map(d => deleteDoc(doc(db, coll, d.id)))
-            );
+            const snap = await adminDb.collection(coll).get();
+            for (const d of snap.docs) {
+                await d.ref.delete();
+            }
         }
 
         return NextResponse.json({ success: true, message: "Database wiped clean." });

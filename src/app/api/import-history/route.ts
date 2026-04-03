@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, doc, setDoc, Timestamp } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
+import * as admin from 'firebase-admin';
 
 // Expected input structure from the JSON
 interface HistoricalWeekInput {
@@ -31,15 +31,13 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Weeks must be an array" }, { status: 400 });
         }
 
-        const stats = { added: 0, errors: [] };
+        const stats: { added: number; errors: string[] } = { added: 0, errors: [] };
 
         for (const weekData of weeks as HistoricalWeekInput[]) {
             try {
                 // Ensure the date is parsed as a Timestamp for Firestore sorting
                 const dateParsed = new Date(weekData.dateStr);
-                const createdAt = Timestamp.fromDate(isNaN(dateParsed.getTime()) ? new Date() : dateParsed);
-
-                const weekRef = doc(db, "weeks", weekData.id);
+                const createdAt = admin.firestore.Timestamp.fromDate(isNaN(dateParsed.getTime()) ? new Date() : dateParsed);
                 
                 // Construct the WeekSession object matching services.ts
                 const newWeek = {
@@ -57,14 +55,13 @@ export async function POST(req: Request) {
                     createdAt: createdAt
                 };
 
-                await setDoc(weekRef, newWeek);
+                await adminDb.collection("weeks").doc(weekData.id).set(newWeek);
                 stats.added++;
 
                 // Optional: We could also inject average ratings into the 'ratings' collection 
                 // if they provide a 'ratingScore', but keeping it simple for now as requested.
 
             } catch (err: any) {
-                // @ts-ignore
                 stats.errors.push(`Error on week ${weekData.weekNumber}: ${err.message}`);
             }
         }

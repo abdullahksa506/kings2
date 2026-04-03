@@ -1,28 +1,38 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, doc, setDoc, deleteDoc, getDocs, query, Timestamp } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
+import * as admin from 'firebase-admin';
 import historicalWeeks from "@/data/historicalWeeks.json";
 
-export async function GET() {
+function isAdminRequest(request: Request): boolean {
+    const requiredKey = process.env.ADMIN_API_KEY;
+    if (!requiredKey) return false;
+    return request.headers.get("x-admin-key") === requiredKey;
+}
+
+export async function POST(request: Request) {
+    if (!isAdminRequest(request)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     try {
         let added = 0;
         let deleted = 0;
-        let errors = [];
+        let errors: string[] = [];
 
         // 1. Delete all previous historical imports to prevent duplicates
         try {
-            const weeksSnap = await getDocs(collection(db, "weeks"));
+            const weeksSnap = await adminDb.collection("weeks").get();
             for (const d of weeksSnap.docs) {
                 if (d.id.startsWith("history_week_")) {
-                    await deleteDoc(doc(db, "weeks", d.id));
+                    await d.ref.delete();
                     deleted++;
                 }
             }
 
-            const ratingsSnap = await getDocs(collection(db, "ratings"));
+            const ratingsSnap = await adminDb.collection("ratings").get();
             for (const r of ratingsSnap.docs) {
                 if (r.id.startsWith("rating_history_week_")) {
-                    await deleteDoc(doc(db, "ratings", r.id));
+                    await r.ref.delete();
                 }
             }
         } catch (delErr: any) {
@@ -37,9 +47,7 @@ export async function GET() {
                 // A fake old date so they sit at the very bottom of the real history
                 // We space them out slightly just to guarantee sorting if needed
                 const createdAtDate = new Date(`2025-01-0${weekData.weekNumber}T00:00:00Z`);
-                const createdAt = Timestamp.fromDate(createdAtDate);
-
-                const weekRef = doc(db, "weeks", weekData.id);
+                const createdAt = admin.firestore.Timestamp.fromDate(createdAtDate);
                 
                 // Construct the WeekSession object
                 const newWeek = {
@@ -58,11 +66,10 @@ export async function GET() {
                     historicalAverageRating: weekData.historicalAverageRating
                 };
 
-                await setDoc(weekRef, newWeek);
+                await adminDb.collection("weeks").doc(weekData.id).set(newWeek);
 
                 // Inject a fake rating so the leaderboard averages calculate identically
-                const ratingRef = doc(db, "ratings", `rating_${weekData.id}`);
-                await setDoc(ratingRef, {
+                await adminDb.collection("ratings").doc(`rating_${weekData.id}`).set({
                     weekId: weekData.id,
                     userName: "System_Import",
                     score: weekData.historicalAverageRating,

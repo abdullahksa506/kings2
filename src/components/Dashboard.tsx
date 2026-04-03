@@ -695,13 +695,8 @@ export default function Dashboard() {
         if (!confirm("تأكيد استيراد البيانات التاريخية وتحديث السجل؟ سيتم حذف أي استيراد سابق لمنع التكرار.")) return;
         setLoading(true);
         try {
-            const passcode = prompt("أدخل مفتاح العميد:");
-            if (!passcode) {
-                setLoading(false);
-                return;
-            }
             const weeksToImport = historicalWeeks.filter(w => w.weekNumber <= 7);
-            const added = await invokeRpc("importHistory", { weeksToImport, deanPasscode: passcode });
+            const added = await invokeRpc("importHistory", { weeksToImport });
             alert(`تم تنظيف السجل وإضافة ${added} أسابيع للسجل الشامل بنجاح! حدث الصفحة.`);
         } catch (e: any) {
             alert("خطأ: " + e.message);

@@ -101,9 +101,7 @@ export async function POST(request: Request) {
             "register",
             "requestPasswordReset",
             "resetPasswordWithCode",
-            "login_upgrade",
             "recordVisit",
-            "importHistory",
             "login",
             "getRegisteredNamesCount",
             "getPublicUserProfiles"
@@ -592,6 +590,7 @@ export async function POST(request: Request) {
                 return NextResponse.json({ result: { name: payload.name, role, registered: true, token: hp, nickName: payload.name, profileImage: null, showProfileImage: true } });
 
             case "login_upgrade": // Upgrades plain text to hashed on login
+                if (authName !== payload.userName) throw new Error("Identity mismatch");
                 const updRef = adminDb.collection("users").doc(payload.userName);
                 const newHp = await hashPassword(payload.password);
                 await updRef.update({ password: newHp });
@@ -631,7 +630,7 @@ export async function POST(request: Request) {
                 return NextResponse.json({ result: true });
                 
             case "importHistory":
-                if (payload.deanPasscode !== "عبدالله") throw new Error("Unauthorized");
+                if (!isAdmin) throw new Error("Dean only");
                 const { weeksToImport } = payload;
                 // Cleanup existing
                 const wSnap = await adminDb.collection("weeks").get();
