@@ -31,10 +31,10 @@ body {
   min-height: 100vh;
   min-height: 100svh;
   min-height: 100dvh;
-  /* iOS PWA behavior improvements */
-  -webkit-touch-callout: none; /* Disable callout to copy image, etc when tap to hold */
-  -webkit-user-select: none;   /* Disable selection/copy in UI */
-  user-select: none;
+  /* Allow long-press callout and selection for copy interactions */
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
   -webkit-tap-highlight-color: transparent; /* Remove tap highlight */
 }
 
