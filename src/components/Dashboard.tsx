@@ -462,6 +462,14 @@ export default function Dashboard() {
         setSubscribing(false);
     };
 
+    const handleTestNotificationSound = () => {
+        const audio = new Audio("/notification-voice.mp3");
+        audio.play().catch((error) => {
+            console.warn("Failed to play notification test sound:", error);
+            alert("تعذر تشغيل الصوت. تأكد أن ملف الصوت موجود في public/notification-voice.mp3");
+        });
+    };
+
     const resizeImageToDataUrl = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -1809,6 +1817,15 @@ export default function Dashboard() {
 
                             {/* Chat Board */}
                             <ChatBoard userName={user?.name || ""} />
+
+                            <div className="flex justify-center pt-2 pb-4">
+                                <button
+                                    onClick={handleTestNotificationSound}
+                                    className="text-xs px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900/80 text-slate-300 hover:bg-slate-800 hover:text-slate-100 transition-colors"
+                                >
+                                    اختبار صوت الإشعار
+                                </button>
+                            </div>
                         </div>
                     )}
 
