@@ -582,7 +582,7 @@ export default function Dashboard() {
         }
     };
 
-    const handleSubmitDayVote = async (day: "الخميس" | "الجمعة") => {
+    const handleSubmitDayVote = async (day: "الخميس" | "الجمعة" | "الخميس والجمعة") => {
         if (!currentWeek || !user?.name) return;
         setSaving(true);
         try {
@@ -677,7 +677,7 @@ export default function Dashboard() {
     const isHesham = user?.name === "هشام";
     const bathroomWeekForRating = currentWeek || pastWeek;
     const dayVotingEnabled = Boolean(currentWeek && !currentWeek.day);
-    const dayVotes = (currentWeek?.dayVotes || {}) as Record<string, "الخميس" | "الجمعة">;
+    const dayVotes = (currentWeek?.dayVotes || {}) as Record<string, "الخميس" | "الجمعة" | "الخميس والجمعة">;
     const eligibleDayVoters = currentWeek
         ? VALID_NAMES.filter((name) =>
             name !== currentWeek.king &&
@@ -685,8 +685,9 @@ export default function Dashboard() {
             !(currentWeek.absentees || []).includes(name)
         )
         : [];
-    const voteThursdayCount = eligibleDayVoters.filter((name) => dayVotes[name] === "الخميس").length;
-    const voteFridayCount = eligibleDayVoters.filter((name) => dayVotes[name] === "الجمعة").length;
+    const voteThursdayCount = eligibleDayVoters.filter((name) => dayVotes[name] === "الخميس" || dayVotes[name] === "الخميس والجمعة").length;
+    const voteFridayCount = eligibleDayVoters.filter((name) => dayVotes[name] === "الجمعة" || dayVotes[name] === "الخميس والجمعة").length;
+    const registeredDayVotesCount = eligibleDayVoters.filter((name) => Boolean(dayVotes[name])).length;
     const canUserVoteDay = Boolean(
         currentWeek && user?.name &&
         user.name !== currentWeek.king &&
@@ -1298,7 +1299,7 @@ export default function Dashboard() {
                                                 </div>
 
                                                 <p className="text-xs text-slate-500">
-                                                    المصوّتون المؤهلون: {eligibleDayVoters.length} | الأصوات المسجلة: {voteThursdayCount + voteFridayCount}
+                                                    المصوّتون المؤهلون: {eligibleDayVoters.length} | المشاركون في التصويت: {registeredDayVotesCount}
                                                 </p>
 
                                                 {isKing && dayVotingEnabled && !currentWeek.day && (
@@ -1397,6 +1398,15 @@ export default function Dashboard() {
                                                                 : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"}`}
                                                         >
                                                             التصويت: الجمعة
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleSubmitDayVote("الخميس والجمعة")}
+                                                            disabled={saving || !canUserVoteDay}
+                                                            className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${myDayVote === "الخميس والجمعة"
+                                                                ? "bg-emerald-500/25 border-emerald-400/40 text-emerald-300"
+                                                                : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"}`}
+                                                        >
+                                                            التصويت: الخميس والجمعة
                                                         </button>
                                                     </div>
                                                     {dayVotingEnabled && !canUserVoteDay && (

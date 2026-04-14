@@ -34,7 +34,7 @@ export interface WeekSession {
     status: "pending" | "completed" | "skipped";
     ratingEnabled: boolean;
     dayVotingEnabled?: boolean;
-    dayVotes?: Record<string, "الخميس" | "الجمعة">;
+    dayVotes?: Record<string, "الخميس" | "الجمعة" | "الخميس والجمعة">;
     absentees: string[];
     responded: string[];
     createdAt: Timestamp;
@@ -171,7 +171,7 @@ export const services = {
         return invokeRpc("toggleDayVoting", { weekId, enabled, resetVotes });
     },
 
-    async submitDayVote(weekId: string, userName: string, day: "الخميس" | "الجمعة") {
+    async submitDayVote(weekId: string, userName: string, day: "الخميس" | "الجمعة" | "الخميس والجمعة") {
         return invokeRpc("submitDayVote", { weekId, userName, day });
     },
 

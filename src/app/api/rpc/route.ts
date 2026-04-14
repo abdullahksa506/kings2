@@ -6,6 +6,7 @@ import { hashPassword } from "@/lib/hash";
 const VALID_NAMES_RPC = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
 const WEEK_DAYS = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"] as const;
 const STANDARD_OUTING_DAYS = ["الخميس", "الجمعة"] as const;
+const DAY_VOTE_OPTIONS = ["الخميس", "الجمعة", "الخميس والجمعة"] as const;
 const Timestamp = admin.firestore.Timestamp;
 
 type RateLimitRule = { limit: number; windowMs: number };
@@ -77,6 +78,10 @@ function normalizeAuthProfile(name: string, data: any) {
 
 function isStandardOutingDay(value: unknown): value is (typeof STANDARD_OUTING_DAYS)[number] {
     return typeof value === "string" && STANDARD_OUTING_DAYS.includes(value as (typeof STANDARD_OUTING_DAYS)[number]);
+}
+
+function isDayVoteOption(value: unknown): value is (typeof DAY_VOTE_OPTIONS)[number] {
+    return typeof value === "string" && DAY_VOTE_OPTIONS.includes(value as (typeof DAY_VOTE_OPTIONS)[number]);
 }
 
 /** يطابق التوكن مع كلمة المرور المخزنة (SHA-256 hex قد يختلف حرف كبير/صغير بين العميل والخادم) */
@@ -223,7 +228,7 @@ export async function POST(request: Request) {
 
             case "submitDayVote": {
                 if (authName !== payload.userName) throw new Error("Identity mismatch");
-                if (!isStandardOutingDay(payload.day)) throw new Error("Invalid day vote");
+                if (!isDayVoteOption(payload.day)) throw new Error("Invalid day vote");
 
                 const weekVoteRef = adminDb.collection("weeks").doc(payload.weekId);
                 await adminDb.runTransaction(async (tx) => {
@@ -262,6 +267,10 @@ export async function POST(request: Request) {
                     if (!eligible) continue;
                     if (day === "الخميس") thursday += 1;
                     if (day === "الجمعة") friday += 1;
+                    if (day === "الخميس والجمعة") {
+                        thursday += 1;
+                        friday += 1;
+                    }
                 }
 
                 if (thursday === 0 && friday === 0) throw new Error("لا توجد أصوات صالحة لاعتماد اليوم");
