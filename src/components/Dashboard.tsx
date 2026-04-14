@@ -676,7 +676,7 @@ export default function Dashboard() {
     const isDean = user?.role === "dean";
     const isHesham = user?.name === "هشام";
     const bathroomWeekForRating = currentWeek || pastWeek;
-    const dayVotingEnabled = Boolean(currentWeek?.dayVotingEnabled);
+    const dayVotingEnabled = Boolean(currentWeek && !currentWeek.day);
     const dayVotes = (currentWeek?.dayVotes || {}) as Record<string, "الخميس" | "الجمعة">;
     const eligibleDayVoters = currentWeek
         ? VALID_NAMES.filter((name) =>
@@ -1281,7 +1281,7 @@ export default function Dashboard() {
                                                                 ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-300"
                                                                 : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800"}`}
                                                         >
-                                                            {dayVotingEnabled ? "إيقاف التصويت" : "تفعيل التصويت"}
+                                                                {dayVotingEnabled ? "التصويت مفعل" : "تفعيل التصويت"}
                                                         </button>
                                                     )}
                                                 </div>
@@ -1382,7 +1382,7 @@ export default function Dashboard() {
                                                     <div className="flex flex-wrap gap-2">
                                                         <button
                                                             onClick={() => handleSubmitDayVote("الخميس")}
-                                                            disabled={saving || !dayVotingEnabled || !canUserVoteDay}
+                                                            disabled={saving || !canUserVoteDay}
                                                             className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${myDayVote === "الخميس"
                                                                 ? "bg-emerald-500/25 border-emerald-400/40 text-emerald-300"
                                                                 : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"}`}
@@ -1391,7 +1391,7 @@ export default function Dashboard() {
                                                         </button>
                                                         <button
                                                             onClick={() => handleSubmitDayVote("الجمعة")}
-                                                            disabled={saving || !dayVotingEnabled || !canUserVoteDay}
+                                                            disabled={saving || !canUserVoteDay}
                                                             className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${myDayVote === "الجمعة"
                                                                 ? "bg-emerald-500/25 border-emerald-400/40 text-emerald-300"
                                                                 : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"}`}
@@ -1399,9 +1399,6 @@ export default function Dashboard() {
                                                             التصويت: الجمعة
                                                         </button>
                                                     </div>
-                                                    {!dayVotingEnabled && (
-                                                        <p className="text-xs text-slate-500 mt-2">بانتظار الملك لتفعيل التصويت على اليوم.</p>
-                                                    )}
                                                     {dayVotingEnabled && !canUserVoteDay && (
                                                         <p className="text-xs text-slate-500 mt-2">التصويت متاح فقط للحاضرين بعد تأكيد الحضور.</p>
                                                     )}

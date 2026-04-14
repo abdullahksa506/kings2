@@ -199,7 +199,7 @@ export async function POST(request: Request) {
                     day: payload.day,
                     restaurant: payload.restaurant,
                     activity: payload.activity,
-                    dayVotingEnabled: payload.day ? false : (weekChoicesSnap.data() as any).dayVotingEnabled ?? false
+                    dayVotingEnabled: payload.day ? false : true
                 });
                 return NextResponse.json({ result: true });
 
@@ -231,7 +231,6 @@ export async function POST(request: Request) {
                     if (!weekVoteSnap.exists) throw new Error("Week not found");
                     const weekData = weekVoteSnap.data() as any;
 
-                    if (!weekData?.dayVotingEnabled) throw new Error("التصويت على اليوم غير مفعل");
                     if (weekData?.day) throw new Error("تم اعتماد يوم الطلعة بالفعل");
                     if (weekData?.king === authName) throw new Error("الملك يعتمد القرار ولا يصوّت");
                     if ((weekData?.absentees || []).includes(authName)) throw new Error("التصويت متاح للحاضرين فقط");
@@ -239,7 +238,7 @@ export async function POST(request: Request) {
 
                     const currentVotes = { ...(weekData?.dayVotes || {}) } as Record<string, string>;
                     currentVotes[authName] = payload.day;
-                    tx.update(weekVoteRef, { dayVotes: currentVotes });
+                    tx.update(weekVoteRef, { dayVotes: currentVotes, dayVotingEnabled: true });
                 });
                 return NextResponse.json({ result: true });
             }
