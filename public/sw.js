@@ -24,6 +24,7 @@ self.addEventListener('push', function (event) {
     }
 
     event.waitUntil((async () => {
+        const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('king_push_channel') : null
         const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true })
         allClients.forEach((client) => {
             client.postMessage({
@@ -31,6 +32,11 @@ self.addEventListener('push', function (event) {
                 payload: data
             })
         })
+
+        if (channel) {
+            channel.postMessage({ type: 'PUSH_RECEIVED', payload: data })
+            channel.close()
+        }
 
         await self.registration.showNotification(data.title, options)
     })())

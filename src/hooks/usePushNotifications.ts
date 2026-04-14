@@ -136,6 +136,26 @@ export function usePushNotifications() {
     }, [unlockNotificationSound])
 
     useEffect(() => {
+        if (typeof window === 'undefined') return
+
+        const handleFirstInteraction = () => {
+            unlockNotificationSound().catch(() => {
+                // Ignore; browser may still block until explicit button tap.
+            })
+        }
+
+        window.addEventListener('pointerdown', handleFirstInteraction, { passive: true })
+        window.addEventListener('keydown', handleFirstInteraction)
+        window.addEventListener('touchstart', handleFirstInteraction, { passive: true })
+
+        return () => {
+            window.removeEventListener('pointerdown', handleFirstInteraction)
+            window.removeEventListener('keydown', handleFirstInteraction)
+            window.removeEventListener('touchstart', handleFirstInteraction)
+        }
+    }, [unlockNotificationSound])
+
+    useEffect(() => {
         if (!('serviceWorker' in navigator)) return
 
         const onServiceWorkerMessage = (event: MessageEvent) => {
@@ -147,6 +167,21 @@ export function usePushNotifications() {
         navigator.serviceWorker.addEventListener('message', onServiceWorkerMessage)
         return () => {
             navigator.serviceWorker.removeEventListener('message', onServiceWorkerMessage)
+        }
+    }, [playNotificationSound])
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') return
+
+        const channel = new BroadcastChannel('king_push_channel')
+        channel.onmessage = (event) => {
+            if (event.data?.type !== 'PUSH_RECEIVED') return
+            const incomingSound = event.data?.payload?.soundUrl || event.data?.payload?.options?.soundUrl
+            playNotificationSound(incomingSound)
+        }
+
+        return () => {
+            channel.close()
         }
     }, [playNotificationSound])
 
