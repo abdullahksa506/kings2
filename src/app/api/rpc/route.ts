@@ -146,7 +146,7 @@ export async function POST(request: Request) {
                     cycleNumber: payload.cycleNumber,
                     weekNumber: payload.weekNumber,
                     day: null,
-                    dayVotingEnabled: false,
+                    dayVotingEnabled: true,
                     dayVotes: {},
                     restaurant: null,
                     activity: null,

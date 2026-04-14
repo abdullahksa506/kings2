@@ -1264,34 +1264,6 @@ export default function Dashboard() {
                                                         <p className="text-xl font-semibold text-white">
                                                             {currentWeek.day || <span className="text-slate-600 font-normal">لم يحدد بعد</span>}
                                                         </p>
-                                                        {!currentWeek.day && user?.name !== currentWeek.king && (
-                                                            <div className="flex flex-wrap gap-2">
-                                                                <button
-                                                                    onClick={() => handleSubmitDayVote("الخميس")}
-                                                                    disabled={saving || !dayVotingEnabled || !canUserVoteDay}
-                                                                    className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${myDayVote === "الخميس"
-                                                                        ? "bg-emerald-500/25 border-emerald-400/40 text-emerald-300"
-                                                                        : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"}`}
-                                                                >
-                                                                    التصويت: الخميس
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleSubmitDayVote("الجمعة")}
-                                                                    disabled={saving || !dayVotingEnabled || !canUserVoteDay}
-                                                                    className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${myDayVote === "الجمعة"
-                                                                        ? "bg-emerald-500/25 border-emerald-400/40 text-emerald-300"
-                                                                        : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"}`}
-                                                                >
-                                                                    التصويت: الجمعة
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                        {!currentWeek.day && user?.name !== currentWeek.king && !dayVotingEnabled && (
-                                                            <p className="text-xs text-slate-500">بانتظار الملك لتفعيل التصويت على اليوم.</p>
-                                                        )}
-                                                        {!currentWeek.day && dayVotingEnabled && user?.name !== currentWeek.king && !canUserVoteDay && (
-                                                            <p className="text-xs text-slate-500">التصويت متاح فقط للحاضرين بعد تأكيد الحضور.</p>
-                                                        )}
                                                     </div>
                                                 )}
                                             </div>
@@ -1403,6 +1375,38 @@ export default function Dashboard() {
                                                     )}
                                                 </div>
                                             </div>
+
+                                            {!isKing && user?.name && !currentWeek.day && (
+                                                <div className="mb-4 border-t border-slate-800/60 pt-4">
+                                                    <p className="text-sm text-slate-300 mb-2 font-semibold">تصويت يوم الطلعة</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <button
+                                                            onClick={() => handleSubmitDayVote("الخميس")}
+                                                            disabled={saving || !dayVotingEnabled || !canUserVoteDay}
+                                                            className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${myDayVote === "الخميس"
+                                                                ? "bg-emerald-500/25 border-emerald-400/40 text-emerald-300"
+                                                                : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"}`}
+                                                        >
+                                                            التصويت: الخميس
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleSubmitDayVote("الجمعة")}
+                                                            disabled={saving || !dayVotingEnabled || !canUserVoteDay}
+                                                            className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${myDayVote === "الجمعة"
+                                                                ? "bg-emerald-500/25 border-emerald-400/40 text-emerald-300"
+                                                                : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"}`}
+                                                        >
+                                                            التصويت: الجمعة
+                                                        </button>
+                                                    </div>
+                                                    {!dayVotingEnabled && (
+                                                        <p className="text-xs text-slate-500 mt-2">بانتظار الملك لتفعيل التصويت على اليوم.</p>
+                                                    )}
+                                                    {dayVotingEnabled && !canUserVoteDay && (
+                                                        <p className="text-xs text-slate-500 mt-2">التصويت متاح فقط للحاضرين بعد تأكيد الحضور.</p>
+                                                    )}
+                                                </div>
+                                            )}
 
                                             <div className="space-y-4">
                                                 {/* Attendees Section */}
