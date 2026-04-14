@@ -44,10 +44,11 @@ export function usePushNotifications() {
     const registerServiceWorker = useCallback(async () => {
         try {
             console.log('📝 Registering Service Worker...')
-            await navigator.serviceWorker.register('/sw.js')
-            const registration = await navigator.serviceWorker.ready
+            const registration = await navigator.serviceWorker.register('/sw.js')
+            await registration.update()
+            const readyRegistration = await navigator.serviceWorker.ready
             console.log('✅ Service Worker ready')
-            await refreshSubscription(registration)
+            await refreshSubscription(readyRegistration)
         } catch (error) {
             console.error('Service worker registration failed:', error)
         }
