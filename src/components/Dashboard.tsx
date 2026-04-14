@@ -347,7 +347,7 @@ export default function Dashboard() {
         await fetchWeek();
     };
 
-    const { isSupported, isSubscribed, subscribeToPush } = usePushNotifications();
+    const { isSupported, isSubscribed, subscribeToPush, playNotificationSound, unlockNotificationSound } = usePushNotifications();
     const [subscribing, setSubscribing] = useState(false);
     const [showNotifDiagnostics, setShowNotifDiagnostics] = useState(false);
     const [notifStatus, setNotifStatus] = useState<string>("");
@@ -462,12 +462,12 @@ export default function Dashboard() {
         setSubscribing(false);
     };
 
-    const handleTestNotificationSound = () => {
-        const audio = new Audio("/notification-voice.mp3");
-        audio.play().catch((error) => {
-            console.warn("Failed to play notification test sound:", error);
-            alert("تعذر تشغيل الصوت. تأكد أن ملف الصوت موجود في public/notification-voice.mp3");
-        });
+    const handleTestNotificationSound = async () => {
+        await unlockNotificationSound();
+        const played = await playNotificationSound();
+        if (!played) {
+            alert("تعذر تشغيل الصوت. تأكد من إعدادات الصوت/الصلاحيات ووجود الملف public/notification-voice.mp3");
+        }
     };
 
     const resizeImageToDataUrl = (file: File): Promise<string> => {
