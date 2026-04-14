@@ -53,12 +53,40 @@ export function usePushNotifications() {
         }
     }, [refreshSubscription])
 
+    const playNotificationSound = useCallback((soundUrl?: string) => {
+        const fallback = '/notification-voice.mp3'
+        const preferred = typeof window !== 'undefined'
+            ? localStorage.getItem('king_notification_sound_url') || ''
+            : ''
+        const finalSound = soundUrl || preferred || fallback
+
+        const audio = new Audio(finalSound)
+        audio.play().catch((error) => {
+            console.warn('Notification sound playback blocked or failed:', error)
+        })
+    }, [])
+
     useEffect(() => {
         if ('serviceWorker' in navigator && 'PushManager' in window) {
             setIsSupported(true)
             registerServiceWorker()
         }
     }, [registerServiceWorker])
+
+    useEffect(() => {
+        if (!('serviceWorker' in navigator)) return
+
+        const onServiceWorkerMessage = (event: MessageEvent) => {
+            if (event.data?.type !== 'PUSH_RECEIVED') return
+            const incomingSound = event.data?.payload?.soundUrl || event.data?.payload?.options?.soundUrl
+            playNotificationSound(incomingSound)
+        }
+
+        navigator.serviceWorker.addEventListener('message', onServiceWorkerMessage)
+        return () => {
+            navigator.serviceWorker.removeEventListener('message', onServiceWorkerMessage)
+        }
+    }, [playNotificationSound])
 
     const subscribeToPush = async () => {
         if (!isSupported) return null
