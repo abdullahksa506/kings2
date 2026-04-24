@@ -74,6 +74,21 @@ export interface ChatMessage {
     createdAt: Timestamp;
 }
 
+export interface RestaurantReview {
+    id: string;
+    restaurantName: string;
+    text: string;
+    createdAt: Timestamp;
+    isAnonymous: boolean;
+}
+
+export interface ReviewExperiment {
+    id: string;
+    originalText: string;
+    rewrittenText: string;
+    createdAt: Timestamp;
+}
+
 export interface PublicUserProfile {
     userName: string;
     nickName?: string;
@@ -462,6 +477,32 @@ export const services = {
     // --- Public Chat Board ---
     async sendChatMessage(userName: string, text: string) {
         return invokeRpc("sendChatMessage", { userName, text });
+    },
+
+    async submitRestaurantReview(restaurantName: string, text: string): Promise<{ note?: string }> {
+        const result = await invokeRpc("submitRestaurantReview", { restaurantName, text });
+        return result && typeof result === "object" ? result : {};
+    },
+
+    async submitReviewExperiment(text: string): Promise<{ note?: string }> {
+        const result = await invokeRpc("submitReviewExperiment", { text });
+        return result && typeof result === "object" ? result : {};
+    },
+
+    listenToRestaurantReviews(callback: (reviews: RestaurantReview[]) => void) {
+        const q = query(collection(db, "restaurantReviews"), orderBy("createdAt", "desc"), limit(50));
+        return onSnapshot(q, (snap) => {
+            const reviews = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as RestaurantReview));
+            callback(reviews);
+        });
+    },
+
+    listenToReviewExperiments(callback: (entries: ReviewExperiment[]) => void) {
+        const q = query(collection(db, "reviewExperiments"), orderBy("createdAt", "desc"), limit(50));
+        return onSnapshot(q, (snap) => {
+            const entries = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ReviewExperiment));
+            callback(entries);
+        });
     },
 
     listenToChatMessages(callback: (messages: ChatMessage[]) => void) {

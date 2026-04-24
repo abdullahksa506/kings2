@@ -19,6 +19,8 @@ import BathroomRatingsDisplay from "./BathroomRatingsDisplay";
 import BathroomLeaderboard from "./BathroomLeaderboard";
 import SuggestionBox from "./SuggestionBox";
 import ChatBoard from "./ChatBoard";
+import RestaurantReviews from "./RestaurantReviews";
+import ReviewExperimentsFun from "./ReviewExperimentsFun";
 import StatisticsPanel from "./StatisticsPanel";
 import { Gamepad2, Bath, UploadCloud, BarChart3, Swords } from "lucide-react";
 import RatingsExplorer from "./RatingsExplorer";
@@ -1814,6 +1816,12 @@ export default function Dashboard() {
 
                             {/* Suggestion Box */}
                             <SuggestionBox isDean={user?.role === "dean"} />
+
+                            {/* Restaurant Reviews */}
+                            <RestaurantReviews />
+
+                            {/* Review Rewrite Fun */}
+                            <ReviewExperimentsFun />
 
                             {/* Chat Board */}
                             <ChatBoard userName={user?.name || ""} />
