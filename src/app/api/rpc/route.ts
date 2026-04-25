@@ -835,6 +835,34 @@ export async function POST(request: Request) {
                 });
                 return NextResponse.json({ result: profiles });
             }
+
+            case "deleteWeek": {
+                if (!isAdmin) throw new Error("Dean only");
+                const { weekNumber } = payload;
+                if (!Number.isInteger(weekNumber)) throw new Error("Invalid week number");
+
+                const weekQuery = await adminDb.collection("weeks").where("weekNumber", "==", weekNumber).limit(1).get();
+                if (weekQuery.empty) {
+                    return NextResponse.json({ error: `Week ${weekNumber} not found` }, { status: 404 });
+                }
+
+                const weekDoc = weekQuery.docs[0];
+                const weekId = weekDoc.id;
+
+                const ratingsQuery = await adminDb.collection("ratings").where("weekId", "==", weekId).get();
+                
+                const batch = adminDb.batch();
+                let deletedRatingsCount = 0;
+                ratingsQuery.forEach(doc => {
+                    batch.delete(doc.ref);
+                    deletedRatingsCount++;
+                });
+
+                batch.delete(weekDoc.ref);
+                await batch.commit();
+
+                return NextResponse.json({ result: { deletedWeekId: weekId, deletedRatingsCount } });
+            }
         }
         return NextResponse.json({ error: "Unknown action" }, { status: 400 });
     } catch (error: any) {
