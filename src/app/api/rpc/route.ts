@@ -10,9 +10,17 @@ const STANDARD_OUTING_DAYS = ["الخميس", "الجمعة"] as const;
 const DAY_VOTE_OPTIONS = ["الخميس", "الجمعة", "الخميس والجمعة"] as const;
 const Timestamp = admin.firestore.Timestamp;
 const SPECIAL_REVIEW_HELP_TRIGGER = "AIzaSyBkQ8RiJQQL_AN0iF8eQAxqpqoYK6phaM4";
-const openAiClient = process.env.OPENAI_API_KEY
-    ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const openAiApiKey = process.env.OPENAI_API_KEY || process.env.GROQ_API_KEY || "";
+const usesGroqOpenAiCompat = openAiApiKey.startsWith("gsk_");
+const openAiClient = openAiApiKey
+    ? new OpenAI({
+        apiKey: openAiApiKey,
+        ...(usesGroqOpenAiCompat ? { baseURL: process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1" } : {}),
+    })
     : null;
+const openAiModel = usesGroqOpenAiCompat
+    ? (process.env.GROQ_MODEL || "llama-3.1-8b-instant")
+    : (process.env.OPENAI_MODEL || "gpt-4o-mini");
 const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
 const geminiModel = process.env.GEMINI_MODEL || "gemini-flash-latest";
 
@@ -108,26 +116,41 @@ async function rewriteReviewToMoroccanDarija(text: string, restaurantName: strin
 
     if (openAiClient) {
         try {
-            const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
-            const response = await openAiClient.responses.create({
-                model,
-                temperature: 0.35,
-                max_output_tokens: 220,
-                input: [
-                    {
-                        role: "system",
-                        content: [{ type: "input_text", text: systemPrompt }],
-                    },
-                    {
-                        role: "user",
-                        content: [{ type: "input_text", text: userPrompt }],
-                    },
-                ],
-            });
+            let rewritten = "";
+            if (usesGroqOpenAiCompat) {
+                const response = await openAiClient.chat.completions.create({
+                    model: openAiModel,
+                    temperature: 0.35,
+                    max_tokens: 220,
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: userPrompt },
+                    ],
+                });
+                const content = response.choices?.[0]?.message?.content;
+                rewritten = typeof content === "string" ? content.trim() : "";
+            } else {
+                const response = await openAiClient.responses.create({
+                    model: openAiModel,
+                    temperature: 0.35,
+                    max_output_tokens: 220,
+                    input: [
+                        {
+                            role: "system",
+                            content: [{ type: "input_text", text: systemPrompt }],
+                        },
+                        {
+                            role: "user",
+                            content: [{ type: "input_text", text: userPrompt }],
+                        },
+                    ],
+                });
 
-            const rewritten = typeof response.output_text === "string"
-                ? response.output_text.trim()
-                : "";
+                rewritten = typeof response.output_text === "string"
+                    ? response.output_text.trim()
+                    : "";
+            }
+
             if (rewritten) return rewritten;
             errors.push("openai_empty_output");
         } catch (error: any) {
