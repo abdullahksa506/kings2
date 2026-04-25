@@ -445,7 +445,16 @@ export async function POST(request: Request) {
                         throw new Error("اسم المطعم غير صالح للمراجعة");
                     }
 
-                    const rewrittenFromRating = await rewriteReviewToMoroccanDarija(submittedReviewText, submittedRestaurantName);
+                    let rewrittenFromRating = submittedReviewText;
+                    try {
+                        rewrittenFromRating = await rewriteReviewToMoroccanDarija(submittedReviewText, submittedRestaurantName);
+                    } catch (error: any) {
+                        const msg = typeof error?.message === "string" ? error.message : "";
+                        const missingProvider = msg.includes("openai_not_configured") && msg.includes("gemini_not_configured");
+                        if (!missingProvider) {
+                            throw error;
+                        }
+                    }
                     await adminDb.collection("restaurantReviews").add({
                         restaurantName: submittedRestaurantName,
                         text: rewrittenFromRating,
@@ -763,7 +772,22 @@ export async function POST(request: Request) {
                     throw new Error("اسم المطعم بعد التنظيف غير صالح.");
                 }
 
-                const rewritten = await rewriteReviewToMoroccanDarija(reviewText, restaurantName);
+                let rewritten = reviewText;
+                let aiFallbackNote: string | undefined;
+
+                try {
+                    rewritten = await rewriteReviewToMoroccanDarija(reviewText, restaurantName);
+                } catch (error: any) {
+                    const msg = typeof error?.message === "string" ? error.message : "";
+                    const missingProvider = msg.includes("openai_not_configured") && msg.includes("gemini_not_configured");
+
+                    if (missingProvider) {
+                        aiFallbackNote = "تم حفظ المراجعة بدون إعادة صياغة لأن مزود الذكاء غير مهيأ حاليًا.";
+                    } else {
+                        throw error;
+                    }
+                }
+
                 await adminDb.collection("restaurantReviews").add({
                     restaurantName,
                     text: rewritten,
@@ -773,7 +797,7 @@ export async function POST(request: Request) {
 
                 const note = needsExplainNote
                     ? "اللي بيصير ببساطة: ننظف النص، نعيد صياغته للمغربية بنفس المعنى، ثم ننشره كمراجعة سرية بدون إظهار هويتك."
-                    : undefined;
+                    : aiFallbackNote;
 
                 return NextResponse.json({ result: { note } });
             }
