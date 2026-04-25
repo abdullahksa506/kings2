@@ -835,11 +835,8 @@ export async function POST(request: Request) {
                 });
                 return NextResponse.json({ result: profiles });
             }
-
-            default:
-                return NextResponse.json({ error: "Unknown action" }, { status: 400 });
         }
-
+        return NextResponse.json({ error: "Unknown action" }, { status: 400 });
     } catch (error: any) {
         console.error(`RPC Error (${(error as any)?.action || 'unknown'}):`, error);
         return NextResponse.json({ error: error.message || "An unexpected error occurred." }, { status: 500 });
