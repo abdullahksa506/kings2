@@ -116,6 +116,7 @@ export interface MemberProfileData {
     worstWeekAsKing: { weekId: string; restaurant: string | null; score: number } | null;
     favoriteDay: "الخميس" | "الجمعة" | "تعادل";
     lastSeenOutingAt: Timestamp | null;
+    restaurantRatings: { restaurant: string; score: number; weekId: string }[];
 }
 
 export const VALID_NAMES = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
@@ -395,6 +396,20 @@ export const services = {
             ? Math.round((memberGivenRatings.reduce((sum, r) => sum + r.score, 0) / memberGivenRatings.length) * 10) / 10
             : 0;
 
+        const completedWeeksById = new Map(completedWeeks.map((week) => [week.id, week]));
+        const restaurantRatings = memberGivenRatings
+            .map((rating) => {
+                const week = completedWeeksById.get(rating.weekId);
+                if (!week) return null;
+                return {
+                    restaurant: week.restaurant || "غير محدد",
+                    score: rating.score,
+                    weekId: rating.weekId,
+                };
+            })
+            .filter((item): item is { restaurant: string; score: number; weekId: string } => item !== null)
+            .sort((a, b) => b.score - a.score || a.restaurant.localeCompare(b.restaurant, "ar"));
+
         let thursdayCount = 0;
         let fridayCount = 0;
         for (const week of memberWeeks) {
@@ -428,6 +443,7 @@ export const services = {
             } : null,
             favoriteDay,
             lastSeenOutingAt: lastSeenWeek?.createdAt || null,
+            restaurantRatings,
         };
     },
 
