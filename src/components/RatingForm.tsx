@@ -4,16 +4,35 @@ import { useState } from "react";
 import { services } from "@/lib/services";
 import { Star, Send, Lock } from "lucide-react";
 
-export default function RatingForm({ weekId, userName, onRated, disabled = false }: { weekId: string, userName: string, onRated: () => void, disabled?: boolean }) {
+export default function RatingForm({
+    weekId,
+    userName,
+    restaurantName,
+    onRated,
+    disabled = false,
+}: {
+    weekId: string,
+    userName: string,
+    restaurantName?: string | null,
+    onRated: () => void,
+    disabled?: boolean,
+}) {
     const [hoveredStar, setHoveredStar] = useState(0);
     const [score, setScore] = useState(0);
+    const [reviewText, setReviewText] = useState("");
     const [submitting, setSubmitting] = useState(false);
 
     const handleSubmit = async () => {
         if (score === 0 || disabled) return;
         setSubmitting(true);
         try {
-            await services.submitRating(weekId, userName, score);
+            await services.submitRating(
+                weekId,
+                userName,
+                score,
+                reviewText.trim() || undefined,
+                restaurantName || undefined
+            );
             onRated();
         } catch (e) {
             console.error(e);
@@ -55,6 +74,21 @@ export default function RatingForm({ weekId, userName, onRated, disabled = false
             {score > 0 && (
                 <p className="text-sm text-amber-400 mb-4">اخترت: {score} من 5 ⭐</p>
             )}
+
+            <div className="mb-5 text-right max-w-xl mx-auto">
+                <label className="block text-xs text-slate-400 mb-2">
+                    مراجعتك الأساسية (اختيارية) - تظهر في قسم المراجعات كقائمة
+                </label>
+                <textarea
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    rows={3}
+                    maxLength={800}
+                    disabled={disabled || submitting}
+                    placeholder="اكتب انطباعك عن المطعم والخدمة والنظافة..."
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-slate-100 outline-none focus:border-amber-500/60 resize-y disabled:opacity-60"
+                />
+            </div>
 
             <button
                 onClick={handleSubmit}

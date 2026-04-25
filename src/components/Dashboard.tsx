@@ -1212,6 +1212,7 @@ export default function Dashboard() {
                                     <RatingForm
                                         weekId={currentWeek.id}
                                         userName={user?.name || ""}
+                                        restaurantName={currentWeek.restaurant}
                                         onRated={() => setHasRatedCurrentWeek(true)}
                                         disabled={false}
                                     />
@@ -1225,6 +1226,7 @@ export default function Dashboard() {
                                     <RatingForm
                                         weekId={pastWeek.id}
                                         userName={user?.name || ""}
+                                        restaurantName={pastWeek.restaurant}
                                         onRated={() => setHasRatedPastWeek(true)}
                                         disabled={false}
                                     />

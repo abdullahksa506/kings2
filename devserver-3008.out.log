@@ -1,0 +1,27 @@
+
+> kingapp@0.1.0 dev
+> next dev -p 3008
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3008
+- Network:       http://169.254.83.107:3008
+- Environments: .env.local
+
+✓ Starting...
+✓ Ready in 1140ms
+Firebase Admin Initialized successfully.
+Persisting failed: Unable to commit operations
+
+Caused by:
+    0: Unable to write meta file 00001958.meta
+    1: The requested operation cannot be performed on a file with a user-mapped section open. (os error 1224)
+ POST /api/chat-board/clear 200 in 7.2s (compile: 459ms, render: 6.7s)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)

@@ -1,4 +1,4 @@
-import { db } from "./firebase";
+import { db } from "./firebase.ts";
 import {
     collection,
     getDocs,
@@ -122,11 +122,14 @@ export const VALID_NAMES = ["خالد", "طلال", "شوكا", "حكير", "ه�
 export const MAX_BUDGET = 175;
 
 export async function invokeRpc(action: string, payload: any = {}) {
-    if (typeof window === "undefined") return null;
-    const name = localStorage.getItem("king_user_name");
-    const token = localStorage.getItem("king_user_token");
+    const baseUrl = typeof window === "undefined" ? "http://localhost:3000" : "";
+    if (typeof window === "undefined") {
+        // Node.js environment
+    }
+    const name = typeof window !== "undefined" ? localStorage.getItem("king_user_name") : global.localStorage.getItem("king_user_name");
+    const token = typeof window !== "undefined" ? localStorage.getItem("king_user_token") : global.localStorage.getItem("king_user_token");
 
-    const res = await fetch("/api/rpc", {
+    const res = await fetch(`${baseUrl}/api/rpc`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, payload, auth: { name, token } })
@@ -203,8 +206,21 @@ export const services = {
         return invokeRpc("toggleRatingEnabled", { weekId, enabled });
     },
 
-    async submitRating(weekId: string, userName: string, score: number) {
-        return invokeRpc("submitRating", { weekId, userName, score });
+    async submitRating(payload: {
+        weekId: string;
+        rating: number;
+        reviewText?: string;
+        restaurantName?: string;
+    }) {
+        // The backend expects `score` and `userName` in the payload.
+        // `invokeRpc` automatically adds `userName` from auth context.
+        const { weekId, rating, reviewText, restaurantName } = payload;
+        return invokeRpc("submitRating", {
+            weekId,
+            score: rating, // Translate from client-facing 'rating' to backend 'score'
+            reviewText,
+            restaurantName,
+        });
     },
 
     // Dean only
@@ -484,8 +500,8 @@ export const services = {
         return result && typeof result === "object" ? result : {};
     },
 
-    async submitReviewExperiment(text: string): Promise<{ note?: string }> {
-        const result = await invokeRpc("submitReviewExperiment", { text });
+    async submitReviewExperiment(originalText: string): Promise<{ rewritten?: string }> {
+        const result = await invokeRpc("submitReviewExperiment", { originalText });
         return result && typeof result === "object" ? result : {};
     },
 
@@ -1102,5 +1118,13 @@ export const services = {
             prediction,
             insights,
         };
-    }
+    },
+
+    async createTestUser() {
+        return invokeRpc("createTestUser");
+    },
+
+    async createTestWeek() {
+        return invokeRpc("createTestWeek");
+    },
 };
