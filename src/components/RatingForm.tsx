@@ -26,13 +26,12 @@ export default function RatingForm({
         if (score === 0 || disabled) return;
         setSubmitting(true);
         try {
-            await services.submitRating(
+            await services.submitRating({
                 weekId,
-                userName,
-                score,
-                reviewText.trim() || undefined,
-                restaurantName || undefined
-            );
+                rating: score,
+                reviewText: reviewText.trim() || undefined,
+                restaurantName: restaurantName || undefined,
+            });
             onRated();
         } catch (e) {
             console.error(e);
