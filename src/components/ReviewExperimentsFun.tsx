@@ -47,7 +47,7 @@ export default function ReviewExperimentsFun() {
         try {
             const result = await services.submitReviewExperiment(trimmed);
             setText("");
-            setSuccess(result.note || "تمت التجربة ونزلت للجميع.");
+            setSuccess(result.rewritten ? "تمت إعادة صياغة النص بنجاح!" : "تمت التجربة ونزلت للجميع.");
         } catch (e: any) {
             setError(e?.message || "تعذرت التجربة حالياً.");
         } finally {
