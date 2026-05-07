@@ -5,7 +5,7 @@ import { services, VALID_NAMES } from "@/lib/services";
 import {
     BarChart3, Eye, Castle, Users, UtensilsCrossed,
     Flame, TrendingUp, X,
-    Award, Clock
+    Award, Clock, LineChart as LineChartIcon
 } from "lucide-react";
 
 interface StatisticsPanelProps {
@@ -62,6 +62,24 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                     </div>
                 ) : stats ? (
                     <div className="space-y-4">
+
+                        {/* Visual Charts */}
+                        {stats.weeklyTrend && stats.weeklyTrend.length > 0 && (
+                            <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-indigo-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+                                <div className="absolute -right-8 -top-8 w-28 h-28 bg-indigo-500/10 rounded-full blur-2xl" />
+                                <div className="flex items-center gap-2 mb-4 relative z-10">
+                                    <LineChartIcon className="w-5 h-5 text-indigo-400" />
+                                    <h3 className="font-bold text-indigo-300 text-lg">رسوم بيانية</h3>
+                                </div>
+
+                                <div className="space-y-5 relative z-10">
+                                    <RatingTrendChart data={stats.weeklyTrend} />
+                                    <AttendanceTrendChart data={stats.weeklyTrend} />
+                                    <MemberAttendanceBarChart memberStats={stats.memberStats} />
+                                    <RestaurantFrequencyBarChart data={stats.sortedRestaurants} />
+                                </div>
+                            </div>
+                        )}
 
                         {/* Visit Stats */}
                         <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-violet-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
@@ -450,6 +468,254 @@ function FunFactRow({ icon, label, value }: { icon: string; label: string; value
             <div className="flex-1 min-w-0">
                 <p className="text-xs text-slate-500">{label}</p>
                 <p className="text-sm font-semibold text-white truncate">{value}</p>
+            </div>
+        </div>
+    );
+}
+
+// --- Charts ---
+
+interface WeeklyTrendPoint {
+    weekId: string;
+    weekNumber: number;
+    cycleNumber: number;
+    day: string | null;
+    restaurant: string | null;
+    king: string | null;
+    avgRating: number | null;
+    attendance: number;
+}
+
+function RatingTrendChart({ data }: { data: WeeklyTrendPoint[] }) {
+    const recent = data.slice(-12);
+    const values = recent.map((p) => p.avgRating ?? 0);
+
+    if (recent.length === 0) {
+        return (
+            <p className="text-xs text-slate-500 text-center py-3">لا توجد بيانات تقييم بعد</p>
+        );
+    }
+
+    const width = 320;
+    const height = 110;
+    const padX = 18;
+    const padY = 14;
+    const maxY = 5;
+    const minY = 0;
+
+    const xStep = recent.length > 1 ? (width - 2 * padX) / (recent.length - 1) : 0;
+    const yScale = (value: number) =>
+        height - padY - ((value - minY) / (maxY - minY)) * (height - 2 * padY);
+
+    const points = recent.map((point, idx) => {
+        const x = padX + idx * xStep;
+        const y = yScale(point.avgRating ?? 0);
+        return { ...point, x, y };
+    });
+
+    const path = points
+        .map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+        .join(" ");
+
+    const lastValue = values[values.length - 1];
+    const firstValue = values[0];
+    const trend = lastValue - firstValue;
+
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-slate-300">متوسط التقييم لكل طلعة</p>
+                <span
+                    className={`text-[11px] font-bold ${
+                        trend > 0
+                            ? "text-emerald-400"
+                            : trend < 0
+                                ? "text-red-400"
+                                : "text-slate-400"
+                    }`}
+                >
+                    {trend > 0 ? "▲" : trend < 0 ? "▼" : "—"} {Math.abs(trend).toFixed(1)}
+                </span>
+            </div>
+            <svg
+                viewBox={`0 0 ${width} ${height}`}
+                className="w-full h-28"
+                preserveAspectRatio="none"
+            >
+                {[1, 2, 3, 4, 5].map((tick) => (
+                    <line
+                        key={tick}
+                        x1={padX}
+                        x2={width - padX}
+                        y1={yScale(tick)}
+                        y2={yScale(tick)}
+                        stroke="rgba(148, 163, 184, 0.12)"
+                        strokeDasharray="2 3"
+                    />
+                ))}
+                <path d={path} fill="none" stroke="#a78bfa" strokeWidth={2} strokeLinejoin="round" />
+                {points.map((p) => (
+                    <circle key={p.weekId} cx={p.x} cy={p.y} r={3} fill="#a78bfa" />
+                ))}
+            </svg>
+            <div className="flex justify-between mt-1 text-[10px] text-slate-500">
+                <span>أسبوع {recent[0].weekNumber}</span>
+                <span>أسبوع {recent[recent.length - 1].weekNumber}</span>
+            </div>
+        </div>
+    );
+}
+
+function AttendanceTrendChart({ data }: { data: WeeklyTrendPoint[] }) {
+    const recent = data.slice(-12);
+    if (recent.length === 0) return null;
+
+    const width = 320;
+    const height = 110;
+    const padX = 18;
+    const padY = 14;
+    const maxAttendance = Math.max(VALID_NAMES.length, ...recent.map((p) => p.attendance));
+
+    const barWidth = (width - 2 * padX) / recent.length - 4;
+
+    return (
+        <div>
+            <p className="text-xs font-semibold text-slate-300 mb-2">عدد الحاضرين لكل طلعة</p>
+            <svg
+                viewBox={`0 0 ${width} ${height}`}
+                className="w-full h-28"
+                preserveAspectRatio="none"
+            >
+                {[1, Math.ceil(maxAttendance / 2), maxAttendance].map((tick) => {
+                    const y = height - padY - (tick / maxAttendance) * (height - 2 * padY);
+                    return (
+                        <line
+                            key={tick}
+                            x1={padX}
+                            x2={width - padX}
+                            y1={y}
+                            y2={y}
+                            stroke="rgba(148, 163, 184, 0.12)"
+                            strokeDasharray="2 3"
+                        />
+                    );
+                })}
+                {recent.map((point, idx) => {
+                    const totalSlot = (width - 2 * padX) / recent.length;
+                    const x = padX + idx * totalSlot + (totalSlot - barWidth) / 2;
+                    const barHeight =
+                        ((point.attendance) / maxAttendance) * (height - 2 * padY);
+                    const y = height - padY - barHeight;
+                    return (
+                        <rect
+                            key={point.weekId}
+                            x={x}
+                            y={y}
+                            width={barWidth}
+                            height={barHeight}
+                            fill="#34d399"
+                            opacity={0.85}
+                            rx={2}
+                        />
+                    );
+                })}
+            </svg>
+            <div className="flex justify-between mt-1 text-[10px] text-slate-500">
+                <span>أسبوع {recent[0].weekNumber}</span>
+                <span>أسبوع {recent[recent.length - 1].weekNumber}</span>
+            </div>
+        </div>
+    );
+}
+
+function MemberAttendanceBarChart({
+    memberStats,
+}: {
+    memberStats: Record<string, { attended: number; absent: number; totalWeeks: number; timesAsKing: number }>;
+}) {
+    const rows = VALID_NAMES.map((name) => {
+        const m = memberStats[name];
+        if (!m) return { name, attended: 0, absent: 0, total: 0 };
+        return { name, attended: m.attended, absent: m.absent, total: m.totalWeeks };
+    });
+    const maxTotal = Math.max(1, ...rows.map((r) => r.total));
+
+    return (
+        <div>
+            <p className="text-xs font-semibold text-slate-300 mb-2">حضور الأعضاء (مقابل الاعتذارات)</p>
+            <div className="space-y-1.5">
+                {rows.map((row) => {
+                    const attendedPct = (row.attended / maxTotal) * 100;
+                    const absentPct = (row.absent / maxTotal) * 100;
+                    return (
+                        <div key={row.name} className="flex items-center gap-2">
+                            <span className="text-[11px] text-slate-300 w-12 truncate text-right">
+                                {row.name}
+                            </span>
+                            <div className="flex-1 h-4 bg-slate-900/80 rounded-full overflow-hidden flex">
+                                <div
+                                    className="h-full bg-emerald-500/80"
+                                    style={{ width: `${attendedPct}%` }}
+                                />
+                                <div
+                                    className="h-full bg-red-500/70"
+                                    style={{ width: `${absentPct}%` }}
+                                />
+                            </div>
+                            <span className="text-[10px] text-slate-500 w-12 text-left">
+                                {row.attended}/{row.total}
+                            </span>
+                        </div>
+                    );
+                })}
+            </div>
+            <div className="flex items-center gap-3 mt-2 text-[10px] text-slate-500">
+                <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> حضور
+                </span>
+                <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-red-500" /> اعتذار
+                </span>
+            </div>
+        </div>
+    );
+}
+
+function RestaurantFrequencyBarChart({ data }: { data: [string, number][] }) {
+    if (!data || data.length === 0) return null;
+    const top = data.slice(0, 6);
+    const max = top[0]?.[1] || 1;
+
+    return (
+        <div>
+            <p className="text-xs font-semibold text-slate-300 mb-2">أكثر 6 مطاعم تكراراً</p>
+            <div className="space-y-1.5">
+                {top.map(([name, count], idx) => {
+                    const pct = (count / max) * 100;
+                    return (
+                        <div key={name} className="flex items-center gap-2">
+                            <span className="text-[11px] text-slate-400 w-5 text-center">
+                                {idx + 1}
+                            </span>
+                            <span
+                                className="text-[11px] text-slate-200 truncate"
+                                style={{ width: 90 }}
+                                title={name}
+                            >
+                                {name}
+                            </span>
+                            <div className="flex-1 h-3.5 bg-slate-900/80 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-gradient-to-r from-sky-500 to-cyan-400"
+                                    style={{ width: `${pct}%` }}
+                                />
+                            </div>
+                            <span className="text-[10px] text-sky-400 font-semibold w-6 text-left">
+                                {count}x
+                            </span>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );
