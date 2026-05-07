@@ -20,6 +20,8 @@ import BathroomLeaderboard from "./BathroomLeaderboard";
 import SuggestionBox from "./SuggestionBox";
 import ChatBoard from "./ChatBoard";
 import StatisticsPanel from "./StatisticsPanel";
+import SmartReminders from "./SmartReminders";
+import FutureFeaturesVoting from "./FutureFeaturesVoting";
 import { Gamepad2, Bath, UploadCloud, BarChart3, Swords } from "lucide-react";
 import RatingsExplorer from "./RatingsExplorer";
 import MemberProfilePanel from "./MemberProfilePanel";
@@ -1201,6 +1203,17 @@ export default function Dashboard() {
                     {activeTab === "week" && (
                         <div className="space-y-8 max-w-3xl mx-auto">
 
+                            {/* Smart Reminders (#11) */}
+                            <SmartReminders
+                                userName={user?.name || ""}
+                                currentWeek={currentWeek}
+                                pastWeek={pastWeek}
+                                hasRatedCurrentWeek={hasRatedCurrentWeek}
+                                hasRatedPastWeek={hasRatedPastWeek}
+                                hasRatedBathroomCurrentWeek={hasRatedBathroomCurrentWeek}
+                                hasRatedBathroomPastWeek={hasRatedBathroomPastWeek}
+                            />
+
                             {/* CURRENT WEEK RATING */}
                             {currentWeek && currentWeek.ratingEnabled && !hasRatedCurrentWeek && user?.name !== currentWeek.king && !(currentWeek.absentees || []).includes(user?.name || "") && (
                                 <div className="mb-6 relative">
@@ -1483,6 +1496,15 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                             )}
+
+                            {/* Future Features Voting (#5, #7, #8, #9) */}
+                            <FutureFeaturesVoting
+                                userName={user?.name || ""}
+                                isDean={user?.role === "dean"}
+                                accentSoftClass={activeThemeStyle.accentSoftClass}
+                                accentBorderClass={activeThemeStyle.accentBorderClass}
+                                accentTextClass={activeThemeStyle.accentTextClass}
+                            />
                         </div>
                     )}
 

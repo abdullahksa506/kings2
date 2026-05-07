@@ -21,6 +21,8 @@ const RATE_LIMIT_RULES: Record<string, RateLimitRule> = {
     submitDayVote: { limit: 12, windowMs: 60 * 1000 },
     submitSuggestion: { limit: 12, windowMs: 60 * 1000 },
     sendChatMessage: { limit: 30, windowMs: 60 * 1000 },
+    submitFeatureVote: { limit: 30, windowMs: 60 * 1000 },
+    setFeatureRemoved: { limit: 20, windowMs: 60 * 1000 },
 };
 
 const rateLimitStore = new Map<string, RateLimitBucket>();
@@ -668,6 +670,58 @@ export async function POST(request: Request) {
                     };
                 });
                 return NextResponse.json({ result: profiles });
+            }
+
+            case "submitFeatureVote": {
+                const featureId = asTrimmedString(payload?.featureId);
+                if (!featureId || featureId.length > 64) throw new Error("Invalid feature id");
+                const vote = payload?.vote;
+                if (vote !== "yes" && vote !== "no" && vote !== null) {
+                    throw new Error("Invalid vote value");
+                }
+                if (!authName) throw new Error("Unauthorized");
+
+                const featureRef = adminDb.collection("featureFeedback").doc(featureId);
+                await adminDb.runTransaction(async (tx) => {
+                    const snap = await tx.get(featureRef);
+                    const current = snap.exists ? (snap.data() as any) : {};
+                    const votes: Record<string, string> = { ...(current.votes || {}) };
+                    if (vote === null) {
+                        delete votes[authName];
+                    } else {
+                        votes[authName] = vote;
+                    }
+                    if (snap.exists) {
+                        tx.update(featureRef, { votes });
+                    } else {
+                        tx.set(featureRef, {
+                            votes,
+                            removed: false,
+                            createdAt: Timestamp.now(),
+                        });
+                    }
+                });
+                return NextResponse.json({ result: true });
+            }
+
+            case "setFeatureRemoved": {
+                if (!isAdmin) throw new Error("Dean only");
+                const featureId = asTrimmedString(payload?.featureId);
+                if (!featureId || featureId.length > 64) throw new Error("Invalid feature id");
+                const removed = Boolean(payload?.removed);
+
+                const featureRef = adminDb.collection("featureFeedback").doc(featureId);
+                const snap = await featureRef.get();
+                if (snap.exists) {
+                    await featureRef.update({ removed });
+                } else {
+                    await featureRef.set({
+                        votes: {},
+                        removed,
+                        createdAt: Timestamp.now(),
+                    });
+                }
+                return NextResponse.json({ result: true });
             }
 
             case "deleteWeek": {
