@@ -475,6 +475,14 @@ export const services = {
         return invokeRpc("resetCycleLeaderboard", { weekId: currentWeekId, newCycleNumber });
     },
 
+    async setWeekCycle(weekId: string, cycleNumber: number) {
+        return invokeRpc("setWeekCycle", { weekId, cycleNumber });
+    },
+
+    async bulkSetWeekCycle(weekIds: string[], cycleNumber: number) {
+        return invokeRpc("bulkSetWeekCycle", { weekIds, cycleNumber });
+    },
+
     async getAllUsers() {
         return invokeRpc("getAllUsers");
     },

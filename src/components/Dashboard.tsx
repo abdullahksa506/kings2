@@ -8,6 +8,7 @@ import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import RatingForm from "./RatingForm";
 import DeanDashboard from "./DeanDashboard";
+import CycleManagerModal from "./CycleManagerModal";
 import Leaderboard from "./Leaderboard";
 import GlobalLeaderboard from "./GlobalLeaderboard";
 import KingsLeaderboard from "./KingsLeaderboard";
@@ -291,6 +292,7 @@ export default function Dashboard() {
 
     // Statistics State
     const [isStatsOpen, setIsStatsOpen] = useState(false);
+    const [isCycleManagerOpen, setIsCycleManagerOpen] = useState(false);
     const [isMemberProfileOpen, setIsMemberProfileOpen] = useState(false);
 
     // Tab State
@@ -1302,6 +1304,20 @@ export default function Dashboard() {
                         </div>
                     </div>
 
+                    {/* Cycle Manager — restore lost weeks / reassign cycle numbers */}
+                    <div className="w-full bg-slate-950/40 p-4 rounded-xl border border-amber-500/20 mt-4">
+                        <h3 className="text-amber-500 font-semibold mb-2">إدارة دورات الأسابيع</h3>
+                        <p className="text-xs text-slate-400 mb-3">
+                            استعادة أسابيع لدورة، تعديل رقم الدورة لأي أسبوع، أو نقل أكثر من أسبوع دفعة واحدة.
+                        </p>
+                        <button
+                            onClick={() => setIsCycleManagerOpen(true)}
+                            className="bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-semibold py-2 px-4 rounded-xl text-sm"
+                        >
+                            فتح مدير الدورات
+                        </button>
+                    </div>
+
                     {/* Dean can see stats + reset codes + phone numbers */}
                     <DeanDashboard currentWeekId={currentWeek?.id} pastWeekId={pastWeek?.id} />
                 </div>
@@ -1642,6 +1658,18 @@ export default function Dashboard() {
                                 cycleNumber={currentWeek ? currentWeek.cycleNumber : (pastWeek ? pastWeek.cycleNumber : 1)}
                                 isDean={user?.role === "dean"}
                                 onReset={currentWeek ? async () => {
+                                    const ok1 = window.confirm(
+                                        `⚠️ تأكيد أول:\n\nهذا يبدأ دورة جديدة (${currentWeek.cycleNumber + 1}) ويخفي مطاعم هذه الدورة من قائمة الشرف.\n\nمتأكد؟`
+                                    );
+                                    if (!ok1) return;
+                                    const typed = window.prompt(
+                                        `⚠️ تأكيد ثاني:\n\nاكتب "تصفير" بالضبط للموافقة:`,
+                                        ""
+                                    );
+                                    if (typed?.trim() !== "تصفير") {
+                                        alert("تم الإلغاء.");
+                                        return;
+                                    }
                                     setSaving(true);
                                     await services.resetCycleLeaderboard(currentWeek.id, currentWeek.cycleNumber + 1);
                                     await fetchWeek();
@@ -2047,6 +2075,17 @@ export default function Dashboard() {
                 onClose={() => setIsMemberProfileOpen(false)}
                 currentUserName={user?.name || ""}
             />
+
+            {user?.role === "dean" && (
+                <CycleManagerModal
+                    isOpen={isCycleManagerOpen}
+                    onClose={() => setIsCycleManagerOpen(false)}
+                    currentCycleNumber={currentWeek?.cycleNumber || pastWeek?.cycleNumber || 1}
+                    onAfterSave={() => {
+                        fetchWeek();
+                    }}
+                />
+            )}
         </div >
     );
 }

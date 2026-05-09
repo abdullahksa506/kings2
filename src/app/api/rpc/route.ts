@@ -304,6 +304,39 @@ export async function POST(request: Request) {
                 if (action === "resetCycleLeaderboard") await adminWeekRef.update({ cycleNumber: payload.newCycleNumber });
                 return NextResponse.json({ result: true });
 
+            case "setWeekCycle": {
+                if (!isAdmin) throw new Error("Dean only");
+                const weekId = asTrimmedString(payload?.weekId);
+                if (!weekId) throw new Error("Missing weekId");
+                const newCycle = Number(payload?.cycleNumber);
+                if (!Number.isInteger(newCycle) || newCycle < 1) {
+                    throw new Error("Invalid cycle number");
+                }
+                await adminDb.collection("weeks").doc(weekId).update({ cycleNumber: newCycle });
+                return NextResponse.json({ result: true });
+            }
+
+            case "bulkSetWeekCycle": {
+                if (!isAdmin) throw new Error("Dean only");
+                const weekIds: unknown = payload?.weekIds;
+                const newCycle = Number(payload?.cycleNumber);
+                if (!Array.isArray(weekIds) || weekIds.length === 0) {
+                    throw new Error("Missing weekIds");
+                }
+                if (!Number.isInteger(newCycle) || newCycle < 1) {
+                    throw new Error("Invalid cycle number");
+                }
+                const batch = adminDb.batch();
+                let count = 0;
+                for (const id of weekIds) {
+                    if (typeof id !== "string" || !id.trim()) continue;
+                    batch.update(adminDb.collection("weeks").doc(id.trim()), { cycleNumber: newCycle });
+                    count++;
+                }
+                await batch.commit();
+                return NextResponse.json({ result: { updated: count } });
+            }
+
             // --- RATINGS ---
             case "submitRating":
                 // Note: authName is now reliably set for all authenticated requests
