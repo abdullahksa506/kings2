@@ -1,4 +1,5 @@
-import { X, BookOpen, ScrollText } from "lucide-react";
+import { ScrollText, BookOpen } from "lucide-react";
+import BottomSheet from "./BottomSheet";
 
 export default function ConstitutionModal({
     isOpen,
@@ -7,29 +8,15 @@ export default function ConstitutionModal({
     isOpen: boolean;
     onClose: () => void;
 }) {
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md">
-            <div className="bg-slate-900 border border-slate-700/50 shadow-2xl rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col relative overflow-hidden">
-
-                {/* Header */}
-                <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-800 bg-slate-900/50">
-                    <h2 className="text-xl sm:text-2xl font-bold text-amber-500 flex items-center gap-3">
-                        <ScrollText className="w-6 h-6 sm:w-8 sm:h-8" />
-                        دستور عرش الخميس لسنة 2026
-                    </h2>
-                    <button
-                        onClick={onClose}
-                        className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 p-2 rounded-full transition-colors focus:outline-none"
-                        aria-label="إغلاق التقرير"
-                    >
-                        <X className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </button>
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-5 sm:space-y-8 text-slate-300 text-sm sm:text-base leading-relaxed font-sans scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+        <BottomSheet
+            isOpen={isOpen}
+            onClose={onClose}
+            title="دستور عرش الخميس لسنة 2026"
+            icon={<ScrollText className="w-6 h-6" />}
+            headerAccentClass="from-amber-500/20 via-amber-500/10 to-transparent"
+        >
+                <div className="space-y-5 sm:space-y-8 text-slate-300 text-sm sm:text-base leading-relaxed font-sans">
 
                     {/* المادة 1 */}
                     <div className="bg-amber-900/10 border border-amber-500/20 p-4 sm:p-5 rounded-xl space-y-3">
@@ -236,16 +223,12 @@ export default function ConstitutionModal({
 
                 </div>
 
-                {/* Footer */}
-                <div className="p-4 sm:p-5 border-t border-slate-800 bg-slate-900/80 flex justify-end">
-                    <button
-                        onClick={onClose}
-                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-2 px-6 rounded-xl transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-slate-500"
-                    >
-                        فهمت الدستور
-                    </button>
-                </div>
-            </div>
-        </div>
+                <button
+                    onClick={onClose}
+                    className="w-full mt-4 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-semibold py-3 rounded-xl transition-all"
+                >
+                    فهمت الدستور
+                </button>
+        </BottomSheet>
     );
 }

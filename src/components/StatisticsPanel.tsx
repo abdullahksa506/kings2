@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import { services, VALID_NAMES } from "@/lib/services";
 import {
     BarChart3, Eye, Castle, Users, UtensilsCrossed,
-    Flame, TrendingUp, X,
+    Flame, TrendingUp,
     Award, Clock, LineChart as LineChartIcon
 } from "lucide-react";
+import BottomSheet from "./BottomSheet";
 
 interface StatisticsPanelProps {
     isOpen: boolean;
@@ -29,32 +30,16 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
         });
     }, [isOpen]);
 
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 z-50 flex items-start justify-center p-2 md:p-3 bg-slate-950/90 backdrop-blur-md overflow-y-auto">
-            <div className="w-full max-w-2xl my-2 md:my-4 animate-[slideUp_0.4s_ease-out]">
-                {/* Header */}
-                <div className="sticky top-0 z-20 flex items-center justify-between mb-4 md:mb-6 bg-slate-950/80 backdrop-blur-sm rounded-xl p-2">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-gradient-to-br from-violet-500/30 to-purple-600/30 p-3 rounded-2xl border border-violet-500/30">
-                            <BarChart3 className="w-7 h-7 text-violet-400" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-violet-300 to-purple-400 bg-clip-text text-transparent">
-                                إحصائيات عرش الخميس
-                            </h2>
-                            <p className="text-xs text-slate-500 mt-0.5">أرقام وتفاصيل عن كل شي</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 p-2 rounded-xl transition-colors"
-                    >
-                        <X className="w-5 h-5 text-slate-400" />
-                    </button>
-                </div>
-
+        <BottomSheet
+            isOpen={isOpen}
+            onClose={onClose}
+            title="إحصائيات عرش الخميس"
+            subtitle="أرقام وتفاصيل عن كل شي"
+            icon={<BarChart3 className="w-6 h-6" />}
+            headerAccentClass="from-violet-500/20 via-purple-500/10 to-transparent"
+        >
+            <div>
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-20">
                         <div className="w-12 h-12 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
@@ -410,13 +395,6 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                             </div>
                         </div>
 
-                        {/* Close Button */}
-                        <button
-                            onClick={onClose}
-                            className="w-full bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 text-slate-300 font-semibold py-3 rounded-xl transition-all mt-2 mb-4"
-                        >
-                            إغلاق
-                        </button>
                     </div>
                 ) : (
                     <div className="text-center py-16">
@@ -424,14 +402,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                     </div>
                 )}
             </div>
-
-            <style jsx>{`
-                @keyframes slideUp {
-                    from { opacity: 0; transform: translateY(30px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-            `}</style>
-        </div>
+        </BottomSheet>
     );
 }
 

@@ -23,6 +23,9 @@ import StatisticsPanel from "./StatisticsPanel";
 import SmartReminders from "./SmartReminders";
 import FutureFeaturesVoting from "./FutureFeaturesVoting";
 import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
+import { useTabSwipe } from "@/hooks/useTabSwipe";
+import Onboarding from "./Onboarding";
+import ContextualFAB from "./ContextualFAB";
 import { Gamepad2, Bath, UploadCloud, BarChart3, Swords } from "lucide-react";
 import RatingsExplorer from "./RatingsExplorer";
 import MemberProfilePanel from "./MemberProfilePanel";
@@ -295,7 +298,14 @@ export default function Dashboard() {
 
     // Tab State
     type TabType = "week" | "leaderboard" | "bathroom" | "more";
+    const TAB_ORDER: TabType[] = ["week", "leaderboard", "bathroom", "more"];
     const [activeTab, setActiveTab] = useState<TabType>("week");
+
+    useTabSwipe({
+        tabs: TAB_ORDER,
+        activeTab,
+        onChange: (next) => setActiveTab(next as TabType),
+    });
     const [selectedTheme, setSelectedTheme] = useState<ThemeKey>("royal-amber");
     const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
 
@@ -1217,7 +1227,7 @@ export default function Dashboard() {
 
                             {/* CURRENT WEEK RATING */}
                             {currentWeek && currentWeek.ratingEnabled && !hasRatedCurrentWeek && user?.name !== currentWeek.king && !(currentWeek.absentees || []).includes(user?.name || "") && (
-                                <div className="mb-6 relative">
+                                <div id="rating-form" className="mb-6 relative">
                                     <div className="flex justify-between items-center mb-3">
                                         <h3 className="text-emerald-400 font-bold flex items-center gap-2"><Unlock className="w-5 h-5" /> تقييم طلعة هذا الأسبوع متاح الآن</h3>
                                     </div>
@@ -1233,7 +1243,7 @@ export default function Dashboard() {
 
                             {/* PAST WEEK RATING */}
                             {pastWeek && pastWeek.ratingEnabled && !hasRatedPastWeek && user?.name !== pastWeek.king && !(pastWeek.absentees || []).includes(user?.name || "") && (
-                                <div className="mb-6">
+                                <div id="rating-form" className="mb-6">
                                     <h3 className="text-amber-400 font-bold mb-3 flex items-center gap-2"><Unlock className="w-5 h-5" /> تقييم طلعة الأسبوع الماضي متاح</h3>
                                     <RatingForm
                                         weekId={pastWeek.id}
@@ -1276,7 +1286,7 @@ export default function Dashboard() {
                                     </div>
 
                                     <div className="space-y-6 relative z-10">
-                                        <div className="bg-gradient-to-br from-slate-950/80 to-slate-900/40 rounded-2xl p-5 border border-amber-500/15 hover:border-amber-500/25 transition-colors flex items-center gap-4 shadow-[inset_0_0_20px_rgba(245,158,11,0.04)]">
+                                        <div id="king-decisions" className="bg-gradient-to-br from-slate-950/80 to-slate-900/40 rounded-2xl p-5 border border-amber-500/15 hover:border-amber-500/25 transition-colors flex items-center gap-4 shadow-[inset_0_0_20px_rgba(245,158,11,0.04)] scroll-mt-20">
                                             <div className="bg-amber-500/10 p-2 rounded-xl border border-amber-500/15">
                                                 <Calendar className="w-7 h-7 text-amber-400/80" />
                                             </div>
@@ -1870,7 +1880,7 @@ export default function Dashboard() {
 
             {/* ===== BOTTOM TAB BAR ===== */}
             {!loading && (
-                <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 pb-safe">
+                <div data-no-swipe className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 pb-safe">
                     <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-2">
                         {[
                             { id: "week" as TabType, icon: Calendar, label: "الأسبوع" },
@@ -1933,6 +1943,19 @@ export default function Dashboard() {
                 onClose={() => setIsMemberProfileOpen(false)}
                 currentUserName={user?.name || ""}
             />
+
+            <ContextualFAB
+                userName={user?.name || ""}
+                activeTab={activeTab}
+                currentWeek={currentWeek}
+                pastWeek={pastWeek}
+                hasRatedCurrentWeek={hasRatedCurrentWeek}
+                hasRatedPastWeek={hasRatedPastWeek}
+                onConfirmAttendance={() => handleAttendanceChoice(false)}
+                onNavigate={(tab) => setActiveTab(tab as TabType)}
+            />
+
+            <Onboarding />
         </div >
     );
 }

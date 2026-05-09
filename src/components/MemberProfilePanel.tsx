@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { UserCircle2, X } from "lucide-react";
+import { UserCircle2 } from "lucide-react";
 import { MemberProfileData, services } from "@/lib/services";
+import BottomSheet from "./BottomSheet";
 
 interface MemberProfilePanelProps {
     isOpen: boolean;
@@ -32,24 +33,16 @@ export default function MemberProfilePanel({ isOpen, onClose, currentUserName }:
         }
     }, [isOpen]);
 
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-950/80 backdrop-blur-sm p-3">
-            <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-6 max-h-[92vh] overflow-y-auto">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-white font-bold text-lg flex items-center gap-2">
-                        <UserCircle2 className="w-5 h-5 text-cyan-400" />
-                        ملفي الإحصائي
-                    </h3>
-                    <button onClick={onClose} className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700">
-                        <X className="w-4 h-4 text-slate-400" />
-                    </button>
-                </div>
-
-                <div className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 mb-4">
-                    العضو: {currentUserName}
-                </div>
+        <BottomSheet
+            isOpen={isOpen}
+            onClose={onClose}
+            title="ملفي الإحصائي"
+            subtitle={`العضو: ${currentUserName}`}
+            icon={<UserCircle2 className="w-6 h-6" />}
+            headerAccentClass="from-cyan-500/20 via-cyan-400/10 to-transparent"
+        >
+            <div>
 
                 {loading || !profile ? (
                     <p className="text-center text-slate-500 py-10">جاري تحميل الملف...</p>
@@ -101,7 +94,7 @@ export default function MemberProfilePanel({ isOpen, onClose, currentUserName }:
                     </div>
                 )}
             </div>
-        </div>
+        </BottomSheet>
     );
 }
 
