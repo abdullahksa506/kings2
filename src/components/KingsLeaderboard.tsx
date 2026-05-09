@@ -5,6 +5,7 @@ import { PublicUserProfile, services, WeekSession, VALID_NAMES } from "@/lib/ser
 import { Trophy, Star, Crown, Download, ListFilter, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as xlsx from "xlsx";
+import { OrnamentalDivider, RoyalGoldFrame } from "./RoyalDecor";
 
 interface LeaderboardEntry {
     week: WeekSession;
@@ -109,22 +110,25 @@ export default function KingsLeaderboard() {
     }
 
     return (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <h3 className="font-semibold text-lg text-slate-200 flex items-center gap-2">
-                    <Trophy className="w-6 h-6 text-amber-500" />
+        <RoyalGoldFrame className="rounded-3xl">
+        <div className="bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 border border-amber-400/15 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_-10%,rgba(251,191,36,0.10),transparent_55%)]" />
+            <div className="flex flex-col items-center text-center mb-3 relative z-10">
+                <Trophy className="w-7 h-7 text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.45)]" />
+                <h3 className="mt-2 font-bold text-xl text-transparent bg-clip-text bg-gradient-to-b from-amber-200 via-amber-300 to-amber-500">
                     قائمة الملوك
                 </h3>
-                
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <button
-                        onClick={exportToExcel}
-                        className="flex shrink-0 items-center justify-center gap-2 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-2 rounded-xl hover:bg-emerald-500/20 transition-colors h-full w-full sm:w-auto"
-                    >
-                        <Download className="w-4 h-4" />
-                        <span>تحميل القائمة</span>
-                    </button>
-                </div>
+                <p className="text-[10px] tracking-[0.45em] text-amber-400/60 uppercase mt-1">متوسط تقييم الطلعات</p>
+            </div>
+            <div className="mb-5 relative z-10"><OrnamentalDivider /></div>
+            <div className="flex justify-end mb-4 relative z-10">
+                <button
+                    onClick={exportToExcel}
+                    className="flex shrink-0 items-center justify-center gap-2 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-2 rounded-xl hover:bg-emerald-500/20 transition-colors"
+                >
+                    <Download className="w-4 h-4" />
+                    <span>تحميل القائمة</span>
+                </button>
             </div>
 
             <div className="space-y-3">
@@ -139,18 +143,22 @@ export default function KingsLeaderboard() {
                         let rankColor = "text-slate-500";
                         let rankBg = "bg-slate-800";
                         
+                        let cardBg = "bg-slate-950/50";
                         if (index === 0) {
-                            ringColor = "border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.15)]";
-                            rankColor = "text-amber-500";
-                            rankBg = "bg-amber-500/10 border border-amber-500/20";
+                            ringColor = "border-amber-400/60 shadow-[0_0_25px_rgba(245,158,11,0.25)]";
+                            rankColor = "text-amber-300";
+                            rankBg = "bg-gradient-to-br from-amber-400/40 to-amber-700/20 border border-amber-400/40 shadow-[inset_0_0_8px_rgba(255,200,90,0.35)]";
+                            cardBg = "bg-gradient-to-l from-amber-500/15 via-amber-600/5 to-transparent";
                         } else if (index === 1) {
-                            ringColor = "border-slate-400/50";
-                            rankColor = "text-slate-300";
-                            rankBg = "bg-slate-500/10 border border-slate-400/20";
+                            ringColor = "border-slate-300/50";
+                            rankColor = "text-slate-200";
+                            rankBg = "bg-gradient-to-br from-slate-300/30 to-slate-600/15 border border-slate-300/30";
+                            cardBg = "bg-gradient-to-l from-slate-400/10 to-transparent";
                         } else if (index === 2) {
-                            ringColor = "border-orange-500/40";
-                            rankColor = "text-orange-400";
-                            rankBg = "bg-orange-500/10 border border-orange-500/20";
+                            ringColor = "border-orange-500/50";
+                            rankColor = "text-orange-300";
+                            rankBg = "bg-gradient-to-br from-orange-400/30 to-orange-700/15 border border-orange-400/30";
+                            cardBg = "bg-gradient-to-l from-orange-500/10 to-transparent";
                         }
 
                         return (
@@ -161,11 +169,15 @@ export default function KingsLeaderboard() {
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 transition={{ duration: 0.2 }}
                                 key={entry.king}
-                                className={`flex items-center justify-between p-4 rounded-2xl border bg-slate-950/50 hover:bg-slate-800/40 transition-all ${ringColor}`}
+                                className={`flex items-center justify-between p-4 rounded-2xl border ${cardBg} hover:bg-slate-800/40 transition-all ${ringColor}`}
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${rankBg}`}>
-                                        <span className={`text-xs font-mono font-bold ${rankColor}`}>{index + 1}</span>
+                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${rankBg}`}>
+                                        {index === 0 ? (
+                                            <Crown className="w-4 h-4 text-amber-200" />
+                                        ) : (
+                                            <span className={`text-xs font-mono font-bold ${rankColor}`}>{index + 1}</span>
+                                        )}
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-white text-base leading-tight mb-1 flex items-center gap-2">
@@ -199,5 +211,6 @@ export default function KingsLeaderboard() {
                 </AnimatePresence>
             </div>
         </div>
+        </RoyalGoldFrame>
     );
 }
