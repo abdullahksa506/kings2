@@ -22,6 +22,7 @@ import ChatBoard from "./ChatBoard";
 import StatisticsPanel from "./StatisticsPanel";
 import SmartReminders from "./SmartReminders";
 import FutureFeaturesVoting from "./FutureFeaturesVoting";
+import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
 import { Gamepad2, Bath, UploadCloud, BarChart3, Swords } from "lucide-react";
 import RatingsExplorer from "./RatingsExplorer";
 import MemberProfilePanel from "./MemberProfilePanel";
@@ -1251,28 +1252,36 @@ export default function Dashboard() {
                                     <p className="text-slate-500 mt-2">ننتظر العميد لبدء الدورة الجديدة.</p>
                                 </div>
                             ) : (
-                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                                <RoyalGoldFrame className="rounded-3xl">
+                                <div className="bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 border border-amber-400/15 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
                                     <div className={`absolute -top-20 -right-20 w-64 h-64 ${activeThemeStyle.accentSoftClass} rounded-full blur-3xl`} />
+                                    <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_-10%,rgba(251,191,36,0.12),transparent_55%)]" />
 
-                                    <div className="flex items-start justify-between mb-8 relative z-10">
-                                        <div>
-                                            <h3 className="text-slate-400 font-medium mb-1">دورة هذا الأسبوع</h3>
-                                            <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-                                                ملك الأسبوع: <span className={activeThemeStyle.accentTextClass}>{currentWeek.king || "عشوائي"}</span>
-                                                {currentWeek.king === user?.name && (
-                                                    <span className={`text-xs ${activeThemeStyle.accentSoftClass} ${activeThemeStyle.accentTextClass} px-3 py-1 rounded-full border ${activeThemeStyle.accentBorderClass}`}>
-                                                        أنت الملك!
-                                                    </span>
-                                                )}
-                                            </h2>
+                                    <div className="flex flex-col items-center text-center mb-6 relative z-10">
+                                        <span className="text-[10px] tracking-[0.5em] text-amber-400/70 font-semibold uppercase mb-1">
+                                            دورة هذا الأسبوع
+                                        </span>
+                                        <Crown className="w-9 h-9 text-amber-400 drop-shadow-[0_0_12px_rgba(245,158,11,0.45)] mb-2" />
+                                        <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3 flex-wrap justify-center">
+                                            <span className="bg-gradient-to-b from-amber-200 via-amber-300 to-amber-500 bg-clip-text text-transparent">
+                                                {currentWeek.king || "أسبوع عشوائي"}
+                                            </span>
+                                            {currentWeek.king === user?.name && (
+                                                <CrownBadge label="أنت الملك!" />
+                                            )}
+                                        </h2>
+                                        <div className="mt-4 w-full max-w-md">
+                                            <OrnamentalDivider />
                                         </div>
                                     </div>
 
                                     <div className="space-y-6 relative z-10">
-                                        <div className="bg-slate-950/50 rounded-2xl p-5 border border-slate-800 flex items-center gap-4">
-                                            <Calendar className="w-10 h-10 text-slate-500" />
+                                        <div className="bg-gradient-to-br from-slate-950/80 to-slate-900/40 rounded-2xl p-5 border border-amber-500/15 hover:border-amber-500/25 transition-colors flex items-center gap-4 shadow-[inset_0_0_20px_rgba(245,158,11,0.04)]">
+                                            <div className="bg-amber-500/10 p-2 rounded-xl border border-amber-500/15">
+                                                <Calendar className="w-7 h-7 text-amber-400/80" />
+                                            </div>
                                             <div className="flex-1">
-                                                <p className="text-sm text-slate-400 mb-1">يوم الطلعة</p>
+                                                <p className="text-[11px] tracking-[0.3em] text-amber-400/70 uppercase mb-1 font-semibold">يوم الطلعة</p>
                                                 {isKing ? (
                                                     <select
                                                         value={selectedDay}
@@ -1347,10 +1356,12 @@ export default function Dashboard() {
                                             </div>
                                         )}
 
-                                        <div className="bg-slate-950/50 rounded-2xl p-5 border border-slate-800 flex items-center gap-4">
-                                            <MapPin className="w-10 h-10 text-slate-500" />
+                                        <div className="bg-gradient-to-br from-slate-950/80 to-slate-900/40 rounded-2xl p-5 border border-amber-500/15 hover:border-amber-500/25 transition-colors flex items-center gap-4 shadow-[inset_0_0_20px_rgba(245,158,11,0.04)]">
+                                            <div className="bg-amber-500/10 p-2 rounded-xl border border-amber-500/15">
+                                                <MapPin className="w-7 h-7 text-amber-400/80" />
+                                            </div>
                                             <div className="flex-1">
-                                                <p className="text-sm text-slate-400 mb-1">المطعم المختار (الميزانية أقل من 175 ريال)</p>
+                                                <p className="text-[11px] tracking-[0.3em] text-amber-400/70 uppercase mb-1 font-semibold">المطعم المختار · الميزانية ≤ 175﷼</p>
                                                 {isKing ? (
                                                     <input
                                                         type="text"
@@ -1495,6 +1506,7 @@ export default function Dashboard() {
                                         )}
                                     </div>
                                 </div>
+                                </RoyalGoldFrame>
                             )}
 
                             {/* Future Features Voting (#5, #7, #8, #9) */}

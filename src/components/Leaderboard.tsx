@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { PublicUserProfile, services, WeekSession } from "@/lib/services";
-import { Trophy, Medal, Star, RotateCcw } from "lucide-react";
+import { Trophy, Medal, Star, RotateCcw, Crown } from "lucide-react";
 import { motion } from "framer-motion";
+import { OrnamentalDivider, RoyalGoldFrame } from "./RoyalDecor";
 
 interface LeaderboardEntry {
     week: WeekSession;
@@ -61,15 +62,21 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
     }
 
     return (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+        <RoyalGoldFrame className="rounded-3xl">
+        <div className="bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 border border-amber-400/15 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_-10%,rgba(251,191,36,0.10),transparent_55%)]" />
             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="flex items-center justify-between mb-6">
-                <h3 className="font-semibold text-lg text-slate-200 flex items-center gap-2">
-                    <Trophy className="w-6 h-6 text-amber-500" />
-                    قائمة الشرف للمطاعم
+            <div className="flex flex-col items-center text-center mb-3 relative z-10">
+                <Crown className="w-7 h-7 text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.45)]" />
+                <h3 className="mt-2 font-bold text-xl text-transparent bg-clip-text bg-gradient-to-b from-amber-200 via-amber-300 to-amber-500">
+                    قائمة شرف المطاعم
                 </h3>
-                {isDean && onReset && (
+                <p className="text-[10px] tracking-[0.45em] text-amber-400/60 uppercase mt-1">دورة هذا الموسم</p>
+            </div>
+            <div className="mb-4 relative z-10"><OrnamentalDivider /></div>
+            {isDean && onReset && (
+                <div className="flex justify-end mb-4 relative z-10">
                     <button
                         onClick={onReset}
                         className="text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all"
@@ -77,8 +84,8 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
                         <RotateCcw className="w-3.5 h-3.5" />
                         تصفير الدورة
                     </button>
-                )}
-            </div>
+                </div>
+            )}
 
             <div className="space-y-3 relative z-10">
                 {data.map((entry, index) => {
@@ -102,11 +109,23 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.1 }}
                             key={entry.week.id}
-                            className={`flex items-center justify-between p-4 rounded-2xl border ${isFirst ? 'bg-gradient-to-r from-amber-500/10 to-transparent border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.1)]' : 'bg-slate-950/50 border-slate-800/60'}`}
+                            className={`flex items-center justify-between p-4 rounded-2xl border ${
+                                isFirst
+                                    ? 'bg-gradient-to-l from-amber-500/15 via-amber-600/5 to-transparent border-amber-400/50 shadow-[0_0_25px_rgba(245,158,11,0.2)]'
+                                    : isSecond
+                                        ? 'bg-gradient-to-l from-slate-400/10 to-transparent border-slate-300/40'
+                                        : isThird
+                                            ? 'bg-gradient-to-l from-orange-500/10 to-transparent border-orange-500/40'
+                                            : 'bg-slate-950/50 border-slate-800/60'
+                            }`}
                         >
                             <div className="flex items-center gap-4">
-                                <div className="w-8 shrink-0 flex justify-center text-lg font-bold">
-                                    {(isFirst || isSecond || isThird) ? (
+                                <div className="w-9 h-9 shrink-0 flex items-center justify-center text-lg font-bold rounded-full bg-slate-950/40">
+                                    {isFirst ? (
+                                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400/40 to-amber-700/20 border border-amber-400/40 flex items-center justify-center shadow-[inset_0_0_8px_rgba(255,200,90,0.35)]">
+                                            <Crown className="w-4 h-4 text-amber-200" />
+                                        </div>
+                                    ) : (isSecond || isThird) ? (
                                         <Medal className={`w-6 h-6 ${medalColor}`} />
                                     ) : (
                                         <span className="text-slate-600">#{index + 1}</span>
@@ -141,5 +160,6 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
                 })}
             </div>
         </div>
+        </RoyalGoldFrame>
     );
 }
