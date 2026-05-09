@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { services } from "@/lib/services";
-import { adminDb } from "@/lib/firebase-admin";
 import { authenticateServerRequest } from "@/lib/serverRequestAuth";
+import { sendPushNotification } from "@/lib/pushHelper";
 
 export async function POST(request: Request) {
     const auth = await authenticateServerRequest(request, { allowAdminKey: true });
@@ -31,54 +31,30 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: "King has already made choices." });
         }
 
-        const usersSnap = await adminDb.collection("users").get();
-        const users = usersSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
-        let sentCount = 0;
-        const kingUser = users.find(u => u.name === week.king);
-
-        if (!kingUser || !kingUser.pushSubscription) {
-            return NextResponse.json({ message: "King has no active push subscription.", noSub: true }, { status: 400 });
+        if (!week.king) {
+            return NextResponse.json({ message: "No king set for this week." }, { status: 400 });
         }
 
-        // Web Push setup
-        const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
-        let webPushInitialized = false;
+        const result = await sendPushNotification(
+            {
+                title: "يا ملكنا 👑 ننتظر قرارك!",
+                body: "ننتظر قرارك بخصوص يوم الطلعة والمطعم 🍔 لا تتأخر علينا!",
+                type: "king-decision",
+                tag: `king-decision-${weekId}`,
+                url: "/?action=king-decisions",
+                payload: { weekId },
+            },
+            { userNames: [week.king] }
+        );
 
-        if (vapidPublicKey && vapidPrivateKey) {
-            try {
-                const webpush = require('web-push');
-                webpush.setVapidDetails(
-                    'mailto:abo0odi_8@yahoo.com',
-                    vapidPublicKey,
-                    vapidPrivateKey
-                );
-                webPushInitialized = true;
-            } catch (e) {
-                console.error("Web push library not installed or configured correctly.");
-            }
+        if (result.sentCount === 0) {
+            return NextResponse.json({
+                message: "King has no active push subscription.",
+                noSub: true
+            }, { status: 400 });
         }
 
-        let success = false;
-        if (webPushInitialized) {
-            try {
-                const sub = JSON.parse(kingUser.pushSubscription);
-                const webpush = require('web-push');
-                await webpush.sendNotification(sub, JSON.stringify({
-                    title: "يا ملكنا 👑 ننتظر قرارك!",
-                    body: `ننتظر قرارك بخصوص يوم المطعم والمكان 🍔 لا تتأخر علينا!`,
-                    url: '/',
-                    icon: '/icon.png'
-                }));
-                sentCount++;
-                success = true;
-            } catch (err: any) {
-                console.error(`Failed to send Web Push to King ${kingUser.name}:`, err.message);
-                return NextResponse.json({ message: "Failed to send push." }, { status: 500 });
-            }
-        }
-
-        return NextResponse.json({ success, message: `Notification sent to King ${week.king}.` });
+        return NextResponse.json({ success: true, message: `Notification sent to King ${week.king}.` });
     } catch (error: any) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }

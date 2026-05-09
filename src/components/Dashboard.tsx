@@ -355,6 +355,54 @@ export default function Dashboard() {
     const [showNotifDiagnostics, setShowNotifDiagnostics] = useState(false);
     const [notifStatus, setNotifStatus] = useState<string>("");
 
+    // ----- Handle deep-links from notifications (?action=…&tab=…) -----
+    const [pendingDeepAction, setPendingDeepAction] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get("tab");
+        const action = params.get("action");
+        if (tab && ["week", "leaderboard", "bathroom", "more"].includes(tab)) {
+            setActiveTab(tab as TabType);
+        }
+        if (action) {
+            setPendingDeepAction(action);
+        }
+        // Clean URL so a refresh won't replay the action.
+        if (tab || action) {
+            const cleanUrl = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, "", cleanUrl);
+        }
+
+        // Also listen for in-app messages from the SW (notification tap on an
+        // already-open tab posts NOTIFICATION_ACTION to all clients).
+        const handleSwMessage = (event: MessageEvent) => {
+            const data = event.data;
+            if (!data || typeof data !== "object") return;
+            if (data.type === "NOTIFICATION_ACTION") {
+                if (data.action) {
+                    setPendingDeepAction(String(data.action));
+                }
+                if (data.targetUrl) {
+                    try {
+                        const target = new URL(data.targetUrl, window.location.origin);
+                        const t = target.searchParams.get("tab");
+                        if (t && ["week", "leaderboard", "bathroom", "more"].includes(t)) {
+                            setActiveTab(t as TabType);
+                        }
+                    } catch {
+                        // ignore
+                    }
+                }
+            }
+        };
+        navigator.serviceWorker?.addEventListener?.("message", handleSwMessage);
+        return () => {
+            navigator.serviceWorker?.removeEventListener?.("message", handleSwMessage);
+        };
+    }, []);
+
     useEffect(() => {
         fetchPastWeekOnly();
 
@@ -733,6 +781,47 @@ export default function Dashboard() {
             setSaving(false);
         }
     };
+
+    // Run pending deep-link actions once user + currentWeek are loaded.
+    useEffect(() => {
+        if (!pendingDeepAction || !user || loading) return;
+        const action = pendingDeepAction;
+        setPendingDeepAction(null);
+
+        const scrollToId = (id: string) => {
+            setTimeout(() => {
+                const el = document.getElementById(id);
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 200);
+        };
+
+        switch (action) {
+            case "attend":
+                if (currentWeek && user.name !== currentWeek.king) {
+                    handleAttendanceChoice(false);
+                }
+                break;
+            case "absent":
+                if (currentWeek && user.name !== currentWeek.king) {
+                    handleAttendanceChoice(true);
+                }
+                break;
+            case "rate":
+                setActiveTab("week");
+                scrollToId("rating-form");
+                break;
+            case "king-decisions":
+                setActiveTab("week");
+                scrollToId("king-decisions");
+                break;
+            case "open-attendance":
+                setActiveTab("week");
+                scrollToId("attendance-section");
+                break;
+            default:
+                break;
+        }
+    }, [pendingDeepAction, user, loading, currentWeek]);
 
     const handleSecretImport = async () => {
         if (!confirm("تأكيد استيراد البيانات التاريخية وتحديث السجل؟ سيتم حذف أي استيراد سابق لمنع التكرار.")) return;
@@ -1379,7 +1468,7 @@ export default function Dashboard() {
                                         </div>
 
                                         {/* Attendance Section */}
-                                        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-inner">
+                                        <div id="attendance-section" className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-inner scroll-mt-20">
                                             <div className="flex justify-between items-start mb-4">
                                                 <div>
                                                     <h3 className="text-lg font-semibold text-slate-300">قائمة الحضور والتأكيد</h3>
