@@ -1258,8 +1258,8 @@ export default function Dashboard() {
                                     <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_-10%,rgba(251,191,36,0.12),transparent_55%)]" />
 
                                     <div className="flex flex-col items-center text-center mb-6 relative z-10">
-                                        <span className="text-[10px] tracking-[0.5em] text-amber-400/70 font-semibold uppercase mb-1">
-                                            دورة هذا الأسبوع
+                                        <span className="text-xs text-amber-400/70 font-semibold mb-1">
+                                            ✦ دورة هذا الأسبوع ✦
                                         </span>
                                         <Crown className="w-9 h-9 text-amber-400 drop-shadow-[0_0_12px_rgba(245,158,11,0.45)] mb-2" />
                                         <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3 flex-wrap justify-center">
@@ -1281,7 +1281,7 @@ export default function Dashboard() {
                                                 <Calendar className="w-7 h-7 text-amber-400/80" />
                                             </div>
                                             <div className="flex-1">
-                                                <p className="text-[11px] tracking-[0.3em] text-amber-400/70 uppercase mb-1 font-semibold">يوم الطلعة</p>
+                                                <p className="text-xs text-amber-400/80 mb-1 font-semibold">يوم الطلعة</p>
                                                 {isKing ? (
                                                     <select
                                                         value={selectedDay}
@@ -1361,7 +1361,7 @@ export default function Dashboard() {
                                                 <MapPin className="w-7 h-7 text-amber-400/80" />
                                             </div>
                                             <div className="flex-1">
-                                                <p className="text-[11px] tracking-[0.3em] text-amber-400/70 uppercase mb-1 font-semibold">المطعم المختار · الميزانية ≤ 175﷼</p>
+                                                <p className="text-xs text-amber-400/80 mb-1 font-semibold">المطعم المختار · الميزانية ≤ 175﷼</p>
                                                 {isKing ? (
                                                     <input
                                                         type="text"

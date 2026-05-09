@@ -25,7 +25,7 @@ export function OrnamentalDivider({
                 <path d="M12 3 L15 9 L21 12 L15 15 L12 21 L9 15 L3 12 L9 9 Z" />
             </svg>
             {centerLabel ? (
-                <span className="text-[11px] tracking-[0.4em] font-semibold uppercase">
+                <span className="text-xs font-semibold">
                     {centerLabel}
                 </span>
             ) : null}

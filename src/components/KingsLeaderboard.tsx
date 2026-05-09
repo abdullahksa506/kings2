@@ -118,7 +118,7 @@ export default function KingsLeaderboard() {
                 <h3 className="mt-2 font-bold text-xl text-transparent bg-clip-text bg-gradient-to-b from-amber-200 via-amber-300 to-amber-500">
                     قائمة الملوك
                 </h3>
-                <p className="text-[10px] tracking-[0.45em] text-amber-400/60 uppercase mt-1">متوسط تقييم الطلعات</p>
+                <p className="text-[11px] text-amber-400/70 mt-1.5 font-medium">متوسط تقييم الطلعات</p>
             </div>
             <div className="mb-5 relative z-10"><OrnamentalDivider /></div>
             <div className="flex justify-end mb-4 relative z-10">
