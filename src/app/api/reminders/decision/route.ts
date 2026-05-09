@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { services } from "@/lib/services";
-import { adminDb } from "@/lib/firebase-admin";
+import { services, VALID_NAMES } from "@/lib/services";
 import { authenticateServerRequest } from "@/lib/serverRequestAuth";
+import { sendPushNotification } from "@/lib/pushHelper";
 
 export async function POST(request: Request) {
     const auth = await authenticateServerRequest(request, { allowAdminKey: true });
@@ -31,57 +31,25 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: "Restaurant or day not fully decided yet." }, { status: 400 });
         }
 
-        const usersSnap = await adminDb.collection("users").get();
-        const users = usersSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
-        let sentCount = 0;
+        const absentees = new Set(week.absentees || []);
+        const targets = VALID_NAMES.filter((name) => !absentees.has(name));
 
-        // Web Push setup
-        const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
-        let webPushInitialized = false;
+        const result = await sendPushNotification(
+            {
+                title: "تم تحديد الطلعة! 👑",
+                body: `الملك ${week.king} اختار يوم ${week.day} في "${week.restaurant}". استعدوا!`,
+                type: "voting",
+                tag: `decision-${weekId}`,
+                url: "/?tab=week",
+                payload: { weekId, day: week.day, restaurant: week.restaurant },
+            },
+            { userNames: targets }
+        );
 
-        if (vapidPublicKey && vapidPrivateKey) {
-            try {
-                const webpush = require('web-push');
-                webpush.setVapidDetails(
-                    'mailto:abo0odi_8@yahoo.com',
-                    vapidPublicKey,
-                    vapidPrivateKey
-                );
-                webPushInitialized = true;
-            } catch (e) {
-                console.error("Web push library not installed or configured correctly.");
-            }
-        }
-
-        for (const user of users) {
-            // Skip absent users
-            if ((week.absentees || []).includes(user.name)) continue;
-
-            // We can notify the king too, or skip them. Let's send to everyone so they know it's locked in!
-
-            const messageTitle = `تم تحديد الطلعة! 👑`;
-            const messageBody = `الملك ${week.king} قرر الطلعة يوم ${week.day} في مطعم "${week.restaurant}". استعدوا!`;
-
-            // Send Native Web Push (iPhone)
-            if (webPushInitialized && user.pushSubscription) {
-                try {
-                    const sub = JSON.parse(user.pushSubscription);
-                    const webpush = require('web-push');
-                    await webpush.sendNotification(sub, JSON.stringify({
-                        title: messageTitle,
-                        body: messageBody,
-                        url: '/',
-                        icon: '/icon.png'
-                    }));
-                    sentCount++;
-                } catch (err: any) {
-                    console.error(`Failed to send Web Push to ${user.name}:`, err.message);
-                }
-            }
-        }
-
-        return NextResponse.json({ success: true, message: `Notifications sent to ${sentCount} members.` });
+        return NextResponse.json({
+            success: true,
+            message: `تم إرسال إشعار القرار لـ ${result.sentCount} عضو.`,
+        });
     } catch (error: any) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }

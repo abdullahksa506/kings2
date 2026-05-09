@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { services } from "@/lib/services";
-import { adminDb } from "@/lib/firebase-admin";
+import { services, VALID_NAMES } from "@/lib/services";
 import { authenticateServerRequest } from "@/lib/serverRequestAuth";
+import { sendPushNotification } from "@/lib/pushHelper";
 
 export async function POST(request: Request) {
     const auth = await authenticateServerRequest(request, { allowedRoles: ["dean"], allowAdminKey: true });
@@ -19,66 +19,33 @@ export async function POST(request: Request) {
 
         const week = await services.getCurrentWeek();
         const pastWeek = await services.getPreviousWeek();
-
-        // Check if weekId matches either current or past week
         const targetWeek = (week && week.id === weekId) ? week : ((pastWeek && pastWeek.id === weekId) ? pastWeek : null);
 
         if (!targetWeek) {
             return NextResponse.json({ message: "Week not found." }, { status: 400 });
         }
 
-        const usersSnap = await adminDb.collection("users").get();
-        const users = usersSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
-        let sentCount = 0;
+        const absentees = new Set(targetWeek.absentees || []);
+        const targets = VALID_NAMES.filter(
+            (name) => name !== targetWeek.king && !absentees.has(name)
+        );
 
-        // Web Push setup
-        const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
-        let webPushInitialized = false;
+        const result = await sendPushNotification(
+            {
+                title: "التصويت متاح الآن! ⭐",
+                body: `تم فتح تقييم "${targetWeek.restaurant || "هذا الأسبوع"}". خذ ثانيتين وقيّم.`,
+                type: "rating-unlocked",
+                tag: `rating-unlocked-${weekId}`,
+                url: "/?action=rate",
+                payload: { weekId },
+            },
+            { userNames: targets }
+        );
 
-        if (vapidPublicKey && vapidPrivateKey) {
-            try {
-                const webpush = require('web-push');
-                webpush.setVapidDetails(
-                    'mailto:abo0odi_8@yahoo.com',
-                    vapidPublicKey,
-                    vapidPrivateKey
-                );
-                webPushInitialized = true;
-            } catch (e) {
-                console.error("Web push library not installed or configured correctly.");
-            }
-        }
-
-        for (const user of users) {
-            // Skip the king since they don't vote on their own restaurant
-            if (user.name === targetWeek.king) continue;
-
-            // Skip absent users
-            if ((targetWeek.absentees || []).includes(user.name)) continue;
-
-            const messageTitle = `التصويت متاح الآن! ⭐️`;
-            const messageBody = `تم فتح باب التقييم لمطعم "${targetWeek.restaurant || 'هذا الأسبوع'}". ادخل قيم الآن! 👑`;
-
-            // Send Native Web Push (iPhone)
-            if (webPushInitialized && user.pushSubscription) {
-                try {
-                    const sub = JSON.parse(user.pushSubscription);
-                    const webpush = require('web-push');
-                    await webpush.sendNotification(sub, JSON.stringify({
-                        title: messageTitle,
-                        body: messageBody,
-                        url: '/',
-                        icon: '/icon.png'
-                    }));
-                    sentCount++;
-                } catch (err: any) {
-                    console.error(`Failed to send Web Push to ${user.name}:`, err.message);
-                }
-            }
-        }
-
-        return NextResponse.json({ success: true, message: `Rating notifications sent to ${sentCount} members.` });
+        return NextResponse.json({
+            success: true,
+            message: `تم إرسال تنبيه التقييم لـ ${result.sentCount} عضو.`,
+        });
     } catch (error: any) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
