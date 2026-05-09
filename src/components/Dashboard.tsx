@@ -1274,6 +1274,31 @@ export default function Dashboard() {
                                 <Bell className="w-4 h-4" />
                                 تذكير الحاضرين بالتقييم
                             </button>
+
+                            <button
+                                onClick={async () => {
+                                    if (!confirm("إرسال تنبيه أخير للأعضاء اللي ما قيّموا (التقييم بيقفل بعد نص ساعة)؟")) return;
+                                    setSaving(true);
+                                    try {
+                                        const res = await fetch("/api/reminders/rating-final-warning", {
+                                            method: "POST",
+                                            headers: getReminderAuthHeaders(),
+                                            body: JSON.stringify({ minutesUntilClose: 30 })
+                                        });
+                                        const data = await res.json();
+                                        alert(data.message || "تم إرسال التنبيه الأخير بنجاح");
+                                    } catch (e) {
+                                        console.error("Failed to send final warning:", e);
+                                        alert("خطأ في إرسال التنبيه الأخير");
+                                    }
+                                    setSaving(false);
+                                }}
+                                disabled={saving || !(currentWeek?.ratingEnabled || pastWeek?.ratingEnabled)}
+                                className="bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 font-semibold py-2 px-4 rounded-xl flex items-center gap-2 transition-all w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Bell className="w-4 h-4" />
+                                ⚠️ تنبيه أخير: التقييم يقفل بعد نص ساعة
+                            </button>
                         </div>
                     </div>
 
