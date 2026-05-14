@@ -23,6 +23,7 @@ const RATE_LIMIT_RULES: Record<string, RateLimitRule> = {
     sendChatMessage: { limit: 30, windowMs: 60 * 1000 },
     submitFeatureVote: { limit: 30, windowMs: 60 * 1000 },
     setFeatureRemoved: { limit: 20, windowMs: 60 * 1000 },
+    recordActivity: { limit: 40, windowMs: 60 * 1000 },
 };
 
 const rateLimitStore = new Map<string, RateLimitBucket>();
@@ -672,6 +673,39 @@ export async function POST(request: Request) {
                 const today = new Date().toISOString().split("T")[0];
                 await adminDb.collection("siteVisits").add({ date: today, timestamp: Timestamp.now() });
                 return NextResponse.json({ result: true });
+
+            case "recordActivity": {
+                if (!authName) throw new Error("Unauthorized");
+                const tab = asTrimmedString(payload?.tab);
+                const seconds = Number(payload?.seconds);
+                const VALID_TABS = ["week", "leaderboard", "bathroom", "more"];
+                if (!VALID_TABS.includes(tab)) {
+                    throw new Error("Invalid tab");
+                }
+                // Cap a single flush at 15 minutes to guard against bad clients.
+                if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 900) {
+                    throw new Error("Invalid seconds");
+                }
+                const monthKey = new Date().toISOString().slice(0, 7); // YYYY-MM
+                const increment = admin.firestore.FieldValue.increment(Math.round(seconds));
+                const activityRef = adminDb.collection("userActivity").doc(authName);
+                await activityRef.set(
+                    {
+                        userName: authName,
+                        lastSeenAt: Timestamp.now(),
+                        monthly: {
+                            [monthKey]: {
+                                totalSeconds: increment,
+                                tabSeconds: {
+                                    [tab]: increment,
+                                },
+                            },
+                        },
+                    },
+                    { merge: true }
+                );
+                return NextResponse.json({ result: true });
+            }
                 
             case "importHistory":
                 if (!isAdmin) throw new Error("Dean only");
