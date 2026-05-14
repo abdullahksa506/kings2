@@ -86,6 +86,15 @@ export interface FeatureFeedbackEntry {
     removed: boolean;
 }
 
+export interface MemberActivityStat {
+    userName: string;
+    totalMinutes: number;
+    totalSeconds: number;
+    favoriteTab: string | null;
+    favoriteTabLabel: string | null;
+    lastSeenAt: Timestamp | null;
+}
+
 export interface FutureFeatureSeed {
     id: string;
     title: string;
@@ -595,6 +604,60 @@ export const services = {
             });
             callback(next);
         });
+    },
+
+    // --- Member Activity Tracking (feature suggested by هشام) ---
+    async recordActivity(tab: string, seconds: number) {
+        return invokeRpc("recordActivity", { tab, seconds });
+    },
+
+    /**
+     * Reads /userActivity and returns per-member activity for the given month
+     * (defaults to the current month). totalSeconds → minutes, and the tab
+     * with the most accumulated time is the member's favourite page.
+     */
+    async getActivityStats(monthKey?: string): Promise<MemberActivityStat[]> {
+        const month = monthKey || new Date().toISOString().slice(0, 7);
+        const snap = await getDocs(collection(db, "userActivity"));
+
+        const TAB_LABELS: Record<string, string> = {
+            week: "الأسبوع",
+            leaderboard: "المتصدرين",
+            bathroom: "الحمامات",
+            more: "المزيد",
+        };
+
+        const stats: MemberActivityStat[] = [];
+        snap.forEach((doc) => {
+            const data = doc.data() as any;
+            const userName: string = data?.userName || doc.id;
+            const monthly = data?.monthly?.[month] || {};
+            const totalSeconds: number = Number(monthly?.totalSeconds) || 0;
+            const tabSeconds: Record<string, number> = monthly?.tabSeconds || {};
+
+            let favoriteTab: string | null = null;
+            let favoriteSeconds = 0;
+            for (const [tab, secs] of Object.entries(tabSeconds)) {
+                const s = Number(secs) || 0;
+                if (s > favoriteSeconds) {
+                    favoriteSeconds = s;
+                    favoriteTab = tab;
+                }
+            }
+
+            const lastSeenAt = data?.lastSeenAt instanceof Timestamp ? data.lastSeenAt : null;
+
+            stats.push({
+                userName,
+                totalMinutes: Math.round(totalSeconds / 60),
+                totalSeconds,
+                favoriteTab,
+                favoriteTabLabel: favoriteTab ? (TAB_LABELS[favoriteTab] || favoriteTab) : null,
+                lastSeenAt,
+            });
+        });
+
+        return stats.sort((a, b) => b.totalSeconds - a.totalSeconds);
     },
 
     // --- Visit Tracking ---

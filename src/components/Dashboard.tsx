@@ -6,6 +6,7 @@ import { services, WeekSession, VALID_NAMES, invokeRpc, PublicUserProfile } from
 import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users, KeyRound, LogOut, Palette } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useActivityTracker } from "@/hooks/useActivityTracker";
 import RatingForm from "./RatingForm";
 import DeanDashboard from "./DeanDashboard";
 import CycleManagerModal from "./CycleManagerModal";
@@ -300,6 +301,9 @@ export default function Dashboard() {
     const [activeTab, setActiveTab] = useState<TabType>("week");
     const [selectedTheme, setSelectedTheme] = useState<ThemeKey>("royal-amber");
     const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
+
+    // Activity tracking (feature suggested by هشام): minutes spent + favourite tab.
+    useActivityTracker(activeTab, user?.name);
 
     const fetchPastWeekOnly = async () => {
         const previous = await services.getPreviousWeek();

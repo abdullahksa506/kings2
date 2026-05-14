@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { services, VALID_NAMES } from "@/lib/services";
+import { services, VALID_NAMES, MemberActivityStat } from "@/lib/services";
 import {
     BarChart3, Eye, Castle, Users, UtensilsCrossed,
     Flame, TrendingUp, X,
-    Award, Clock, LineChart as LineChartIcon
+    Award, Clock, LineChart as LineChartIcon, Timer
 } from "lucide-react";
 
 interface StatisticsPanelProps {
@@ -16,6 +16,7 @@ interface StatisticsPanelProps {
 export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProps) {
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [activityStats, setActivityStats] = useState<MemberActivityStat[]>([]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -26,6 +27,12 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
         }).catch(e => {
             console.error("Failed to load stats:", e);
             setLoading(false);
+        });
+        services.getActivityStats().then(data => {
+            setActivityStats(data);
+        }).catch(e => {
+            console.error("Failed to load activity stats:", e);
+            setActivityStats([]);
         });
     }, [isOpen]);
 
@@ -95,6 +102,9 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                                 <StatBox label="هذا الشهر" value={stats.visitStats.thisMonth} color="pink" icon="🗓️" />
                             </div>
                         </div>
+
+                        {/* Member Activity (feature suggested by هشام) */}
+                        <MemberActivitySection activityStats={activityStats} />
 
                         {/* Outings Stats */}
                         <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-amber-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
@@ -468,6 +478,106 @@ function FunFactRow({ icon, label, value }: { icon: string; label: string; value
             <div className="flex-1 min-w-0">
                 <p className="text-xs text-slate-500">{label}</p>
                 <p className="text-sm font-semibold text-white truncate">{value}</p>
+            </div>
+        </div>
+    );
+}
+
+// --- Member Activity (feature suggested by هشام) ---
+
+function formatDuration(totalMinutes: number): string {
+    if (totalMinutes <= 0) return "—";
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours > 0 && minutes > 0) return `${hours} س ${minutes} د`;
+    if (hours > 0) return `${hours} ساعة`;
+    return `${minutes} دقيقة`;
+}
+
+function timeAgo(date: Date): string {
+    const diffMs = Date.now() - date.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return "الآن";
+    if (diffMin < 60) return `قبل ${diffMin} دقيقة`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `قبل ${diffHr} ساعة`;
+    const diffDay = Math.floor(diffHr / 24);
+    return `قبل ${diffDay} يوم`;
+}
+
+function MemberActivitySection({ activityStats }: { activityStats: MemberActivityStat[] }) {
+    const monthLabel = new Date().toLocaleDateString("ar", { month: "long", year: "numeric" });
+    const maxSeconds = activityStats.reduce((m, a) => Math.max(m, a.totalSeconds), 0);
+    const hasData = activityStats.some((a) => a.totalSeconds > 0);
+
+    return (
+        <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-teal-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+            <div className="absolute -left-8 -top-8 w-28 h-28 bg-teal-500/10 rounded-full blur-2xl" />
+            <div className="flex items-center gap-2 mb-1 relative z-10">
+                <Timer className="w-5 h-5 text-teal-400" />
+                <h3 className="font-bold text-teal-300 text-lg">نشاط الأعضاء</h3>
+            </div>
+            <p className="text-xs text-slate-500 mb-4 relative z-10">
+                دقائق الاستخدام والصفحة المفضلة لكل عضو — {monthLabel}
+            </p>
+
+            {!hasData ? (
+                <p className="text-sm text-slate-500 text-center py-6 relative z-10">
+                    لسه ما فيه بيانات نشاط هذا الشهر. البيانات تتجمع مع استخدام الموقع.
+                </p>
+            ) : (
+                <div className="space-y-2 relative z-10">
+                    {activityStats
+                        .filter((a) => a.totalSeconds > 0)
+                        .map((a, i) => {
+                            const pct = maxSeconds > 0 ? (a.totalSeconds / maxSeconds) * 100 : 0;
+                            const lastSeen = a.lastSeenAt ? a.lastSeenAt.toDate() : null;
+                            return (
+                                <div
+                                    key={a.userName}
+                                    className="bg-slate-950/60 border border-slate-800/50 rounded-xl p-3"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span
+                                            className={`text-sm font-bold w-6 text-center ${
+                                                i === 0 ? "text-teal-300" : "text-slate-500"
+                                            }`}
+                                        >
+                                            {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}
+                                        </span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="font-semibold text-white text-sm">
+                                                    {a.userName}
+                                                </span>
+                                                <span className="text-teal-300 font-bold text-sm">
+                                                    {formatDuration(a.totalMinutes)}
+                                                </span>
+                                            </div>
+                                            <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-1.5">
+                                                <div
+                                                    className="h-full bg-gradient-to-r from-teal-500 to-cyan-400 rounded-full"
+                                                    style={{ width: `${pct}%` }}
+                                                />
+                                            </div>
+                                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 text-[11px] text-slate-400">
+                                                {a.favoriteTabLabel && (
+                                                    <span>📌 المفضلة: {a.favoriteTabLabel}</span>
+                                                )}
+                                                {lastSeen && <span>👁️ {timeAgo(lastSeen)}</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                </div>
+            )}
+
+            {/* Credit */}
+            <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-center gap-1.5 relative z-10">
+                <span className="text-[11px] text-slate-500">💡 فكرة هذه الميزة من اقتراح</span>
+                <span className="text-[11px] font-bold text-teal-300">هشام</span>
             </div>
         </div>
     );
