@@ -40,7 +40,21 @@ const PHASE_LABEL: Record<string, string> = {
 function RemoteAudio({ stream }: { stream: MediaStream }) {
     const ref = useRef<HTMLAudioElement>(null);
     useEffect(() => {
-        if (ref.current) ref.current.srcObject = stream;
+        const el = ref.current;
+        if (!el) return;
+        el.srcObject = stream;
+        el.muted = false;
+        el.volume = 1;
+        const tryPlay = () => el.play().catch(() => {});
+        tryPlay();
+        // Browsers may block autoplay until a user gesture — retry on next interaction.
+        const onInteract = () => tryPlay();
+        document.addEventListener("click", onInteract);
+        document.addEventListener("touchstart", onInteract);
+        return () => {
+            document.removeEventListener("click", onInteract);
+            document.removeEventListener("touchstart", onInteract);
+        };
     }, [stream]);
     return <audio ref={ref} autoPlay playsInline />;
 }
