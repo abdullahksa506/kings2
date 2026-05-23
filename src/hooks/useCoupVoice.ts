@@ -6,18 +6,26 @@ import { coupServices, CoupSignal } from "@/lib/coupServices";
 // Mesh WebRTC voice for small rooms (<=4). Signaling goes through Firestore via
 // the RPC layer. STUN is free; TURN uses the public OpenRelay project by default
 // (overridable via NEXT_PUBLIC_TURN_* env vars for a private/free Metered package).
+const TURN_USER = process.env.NEXT_PUBLIC_TURN_USERNAME || "openrelayproject";
+const TURN_CRED = process.env.NEXT_PUBLIC_TURN_CREDENTIAL || "openrelayproject";
+
 const ICE_SERVERS: RTCIceServer[] = [
-    { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
     {
-        urls: process.env.NEXT_PUBLIC_TURN_URL || "turn:openrelay.metered.ca:80",
-        username: process.env.NEXT_PUBLIC_TURN_USERNAME || "openrelayproject",
-        credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL || "openrelayproject",
+        urls: [
+            "stun:stun.l.google.com:19302",
+            "stun:stun1.l.google.com:19302",
+            "stun:stun2.l.google.com:19302",
+        ],
     },
-    {
-        urls: "turn:openrelay.metered.ca:443",
-        username: process.env.NEXT_PUBLIC_TURN_USERNAME || "openrelayproject",
-        credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL || "openrelayproject",
-    },
+    // Free public TURN (OpenRelay). Override via NEXT_PUBLIC_TURN_* for a private package.
+    ...(process.env.NEXT_PUBLIC_TURN_URL
+        ? [{ urls: process.env.NEXT_PUBLIC_TURN_URL, username: TURN_USER, credential: TURN_CRED }]
+        : [
+              { urls: "turn:openrelay.metered.ca:80", username: TURN_USER, credential: TURN_CRED },
+              { urls: "turn:openrelay.metered.ca:80?transport=tcp", username: TURN_USER, credential: TURN_CRED },
+              { urls: "turn:openrelay.metered.ca:443", username: TURN_USER, credential: TURN_CRED },
+              { urls: "turns:openrelay.metered.ca:443?transport=tcp", username: TURN_USER, credential: TURN_CRED },
+          ]),
 ];
 
 interface UseCoupVoiceResult {
@@ -41,6 +49,7 @@ export function useCoupVoice(roomId: string | null, myName: string, peerNames: s
     const localStreamRef = useRef<MediaStream | null>(null);
     const peersRef = useRef<Record<string, RTCPeerConnection>>({});
     const processedSignals = useRef<Set<string>>(new Set());
+    const pendingCandidatesRef = useRef<Record<string, RTCIceCandidateInit[]>>({});
     const peerNamesRef = useRef<string[]>(peerNames);
     const joinedRef = useRef(false);
 
@@ -61,6 +70,7 @@ export function useCoupVoice(roomId: string | null, myName: string, peerNames: s
             }
             delete peersRef.current[name];
         }
+        delete pendingCandidatesRef.current[name];
         setRemoteStreams((prev) => {
             if (!prev[name]) return prev;
             const next = { ...prev };
@@ -92,15 +102,27 @@ export function useCoupVoice(roomId: string | null, myName: string, peerNames: s
             };
 
             pc.ontrack = (e) => {
-                const [stream] = e.streams;
-                if (stream) {
-                    setRemoteStreams((prev) => ({ ...prev, [remoteName]: stream }));
+                let stream = e.streams && e.streams[0];
+                if (!stream) {
+                    stream = new MediaStream();
+                    stream.addTrack(e.track);
                 }
+                setRemoteStreams((prev) => ({ ...prev, [remoteName]: stream as MediaStream }));
             };
 
             pc.onconnectionstatechange = () => {
-                if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+                if (pc.connectionState === "closed") {
                     closePeer(remoteName);
+                }
+            };
+
+            pc.oniceconnectionstatechange = () => {
+                if (pc.iceConnectionState === "failed") {
+                    try {
+                        pc.restartIce();
+                    } catch {
+                        /* ignore */
+                    }
                 }
             };
 
@@ -152,6 +174,19 @@ export function useCoupVoice(roomId: string | null, myName: string, peerNames: s
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [joined, roomId, myName]);
 
+    const flushCandidates = useCallback(async (from: string, pc: RTCPeerConnection) => {
+        const queued = pendingCandidatesRef.current[from];
+        if (!queued) return;
+        delete pendingCandidatesRef.current[from];
+        for (const c of queued) {
+            try {
+                await pc.addIceCandidate(new RTCIceCandidate(c));
+            } catch {
+                /* ignore */
+            }
+        }
+    }, []);
+
     const handleSignal = useCallback(
         async (sig: CoupSignal) => {
             if (!roomId) return;
@@ -161,19 +196,28 @@ export function useCoupVoice(roomId: string | null, myName: string, peerNames: s
                 if (data.kind === "offer") {
                     const pc = createPeer(from);
                     await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                    await flushCandidates(from, pc);
                     const answer = await pc.createAnswer();
                     await pc.setLocalDescription(answer);
                     await coupServices.voiceSignal(roomId, from, { kind: "answer", sdp: pc.localDescription });
                 } else if (data.kind === "answer") {
                     const pc = peersRef.current[from];
-                    if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                    if (pc) {
+                        await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                        await flushCandidates(from, pc);
+                    }
                 } else if (data.kind === "candidate") {
                     const pc = peersRef.current[from];
-                    if (pc && data.candidate) {
-                        try {
-                            await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-                        } catch {
-                            /* ignore late candidates */
+                    if (data.candidate) {
+                        // Buffer candidates that arrive before the remote description is set.
+                        if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+                            try {
+                                await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                            } catch {
+                                /* ignore */
+                            }
+                        } else {
+                            (pendingCandidatesRef.current[from] ||= []).push(data.candidate);
                         }
                     }
                 }
@@ -181,7 +225,7 @@ export function useCoupVoice(roomId: string | null, myName: string, peerNames: s
                 /* ignore malformed signal */
             }
         },
-        [roomId, createPeer],
+        [roomId, createPeer, flushCandidates],
     );
 
     const join = useCallback(async () => {
