@@ -16,6 +16,7 @@ import KingsLeaderboard from "./KingsLeaderboard";
 import ConstitutionModal from "./ConstitutionModal";
 import HungryKingsArena from "./HungryKingsArena";
 import RoyalDuelArena from "./RoyalDuelArena";
+import CoupArena from "./CoupArena";
 import BathroomRatingForm from "./BathroomRatingForm";
 import BathroomRatingsDisplay from "./BathroomRatingsDisplay";
 import BathroomLeaderboard from "./BathroomLeaderboard";
@@ -290,6 +291,7 @@ export default function Dashboard() {
     // Mini-game State
     const [isGameOpen, setIsGameOpen] = useState(false);
     const [isDuelOpen, setIsDuelOpen] = useState(false);
+    const [isCoupOpen, setIsCoupOpen] = useState(false);
 
     // Statistics State
     const [isStatsOpen, setIsStatsOpen] = useState(false);
@@ -1953,6 +1955,29 @@ export default function Dashboard() {
                                 </div>
                             </div>
 
+                            {/* Mini-Game Banner — Coup */}
+                            <div className="bg-gradient-to-br from-rose-900/40 to-slate-900 border border-rose-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
+                                <div className="absolute -right-10 -top-10 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl group-hover:bg-rose-500/20 transition-all duration-500" />
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="bg-rose-500/20 p-2 rounded-xl text-rose-400">
+                                            <Swords className="w-6 h-6" />
+                                        </div>
+                                        <h3 className="font-bold text-xl text-white">Coup — انقلاب 🎭</h3>
+                                    </div>
+                                    <p className="text-sm text-slate-300 mb-5 leading-relaxed">
+                                        لعبة خداع وذكاء لـ 2-4 لاعبين. ادّعِ الشخصيات، اكذب، وتحدّى خصومك — مع دردشة صوتية داخل اللعبة عشان الكذب يصير واقعي!
+                                    </p>
+                                    <button
+                                        onClick={() => setIsCoupOpen(true)}
+                                        className="w-full bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-500/20"
+                                    >
+                                        <PlayCircle className="w-5 h-5 fill-current" />
+                                        ادخل الحلبة
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* Mini-Game Banner */}
                             <div className="bg-gradient-to-br from-amber-900/40 to-slate-900 border border-amber-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
                                 <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500" />
@@ -2064,6 +2089,16 @@ export default function Dashboard() {
                     <RoyalDuelArena
                         isOpen={isDuelOpen}
                         onClose={() => setIsDuelOpen(false)}
+                        userName={user.name}
+                    />
+                )
+            }
+
+            {
+                user && (
+                    <CoupArena
+                        isOpen={isCoupOpen}
+                        onClose={() => setIsCoupOpen(false)}
                         userName={user.name}
                     />
                 )
