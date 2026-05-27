@@ -618,9 +618,9 @@ export default function Dashboard() {
             }
 
             await fetchWeek();
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert("حدث خطأ أثناء الحفظ");
+            alert(e?.message ? `حدث خطأ أثناء الحفظ:\n${e.message}` : "حدث خطأ أثناء الحفظ");
         } finally {
             setSaving(false);
         }
