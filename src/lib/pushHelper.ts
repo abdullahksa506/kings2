@@ -14,6 +14,7 @@ export type NotificationType =
     | "voting"
     | "outing-today"
     | "restaurant-change"
+    | "day-change"
     | "default";
 
 export interface PushPayload {
