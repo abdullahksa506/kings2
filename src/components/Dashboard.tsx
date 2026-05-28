@@ -1074,6 +1074,7 @@ export default function Dashboard() {
                                     <button
                                         onClick={async () => {
                                             if (!currentWeek) return;
+                                            const dayActuallyChanged = deanSelectedDay !== currentWeek.day;
                                             setSaving(true);
                                             try {
                                                 await services.setWeekChoices(
@@ -1082,6 +1083,22 @@ export default function Dashboard() {
                                                     currentWeek.restaurant || null,
                                                     currentWeek.activity || null
                                                 );
+                                                // Notify everyone the outing day changed (Web Push).
+                                                if (dayActuallyChanged) {
+                                                    try {
+                                                        await fetch("/api/reminders/day-change", {
+                                                            method: "POST",
+                                                            headers: getReminderAuthHeaders(),
+                                                            body: JSON.stringify({
+                                                                weekId: currentWeek.id,
+                                                                newDay: deanSelectedDay,
+                                                                changedBy: user?.name,
+                                                            }),
+                                                        });
+                                                    } catch (e) {
+                                                        console.error("Failed to notify members about the day change:", e);
+                                                    }
+                                                }
                                                 await fetchWeek();
                                             } catch (e) {
                                                 console.error(e);

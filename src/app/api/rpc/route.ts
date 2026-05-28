@@ -257,7 +257,7 @@ export async function POST(request: Request) {
                 const justCompleted = responded.length >= requiredCount && ((weekSnap.data() as any).responded || []).length < requiredCount;
                 return NextResponse.json({ result: justCompleted });
 
-            case "setWeekChoices":
+            case "setWeekChoices": {
                 const weekChoicesRef = adminDb.collection("weeks").doc(payload.weekId);
                 const weekChoicesSnap = await weekChoicesRef.get();
                 if (!weekChoicesSnap.exists || (weekChoicesSnap.data() as any).king !== authName) {
@@ -266,8 +266,16 @@ export async function POST(request: Request) {
                 if (payload.day !== null && !WEEK_DAYS.includes(payload.day)) {
                     throw new Error("Invalid day");
                 }
-                // Only Dean can choose any day. Others are limited to Thursday/Friday.
-                if (!isAdmin && payload.day !== null && !STANDARD_OUTING_DAYS.includes(payload.day)) {
+                // Only the Dean may PICK a non-standard day. But a King may keep a
+                // non-standard day the Dean already set (e.g. while only changing the
+                // restaurant) — otherwise the King gets locked out of editing.
+                const existingDay = (weekChoicesSnap.data() as any).day ?? null;
+                if (
+                    !isAdmin &&
+                    payload.day !== null &&
+                    !STANDARD_OUTING_DAYS.includes(payload.day) &&
+                    payload.day !== existingDay
+                ) {
                     throw new Error("Only the Dean can pick a non-standard day");
                 }
                 await weekChoicesRef.update({
@@ -277,6 +285,7 @@ export async function POST(request: Request) {
                     dayVotingEnabled: payload.day ? false : true
                 });
                 return NextResponse.json({ result: true });
+            }
 
             case "toggleDayVoting": {
                 const weekVotingRef = adminDb.collection("weeks").doc(payload.weekId);

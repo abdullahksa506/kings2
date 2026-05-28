@@ -16,6 +16,7 @@ const VIBRATION_PATTERNS = {
     'voting':              [100, 50, 100],
     'outing-today':        [300, 100, 300],
     'restaurant-change':   [120, 60, 120, 60, 120],
+    'day-change':          [200, 80, 200, 80, 200],
     'default':             [100, 50, 100],
 }
 
