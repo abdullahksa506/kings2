@@ -1,5 +1,11 @@
 'use client'
 
+/*
+ * 🤖 نكتة AI:
+ * ChatGPT قال لـ Claude: "أنا أرسل إشعارات أسرع منك!"
+ * Claude رد: "أنا أرسل إشعارات أذكى... وما أهلوس 😂🔔"
+ */
+
 import { useState, useEffect, useCallback, useRef } from 'react'
 
 const urlBase64ToUint8Array = (base64String: string) => {
@@ -84,11 +90,49 @@ export function usePushNotifications() {
     const registerServiceWorker = useCallback(async () => {
         try {
             console.log('📝 Registering Service Worker...')
-            const registration = await navigator.serviceWorker.register('/sw.js')
+            // Add cache-busting timestamp to force iOS to check for updates
+            const swUrl = `/sw.js?v=${Date.now()}`
+            const registration = await navigator.serviceWorker.register(swUrl, { scope: '/' })
+
+            // Check for updates immediately
             await registration.update()
+
+            // Set up periodic update checks (every 60 seconds)
+            const updateInterval = setInterval(() => {
+                registration.update().catch(err =>
+                    console.warn('SW update check failed:', err)
+                )
+            }, 60000)
+
+            // Listen for new service worker installations
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing
+                if (!newWorker) return
+
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        console.log('🆕 New version available! Activating...')
+                        // Tell the new SW to skip waiting and take control
+                        newWorker.postMessage({ type: 'SKIP_WAITING' })
+                    }
+                })
+            })
+
+            // Listen for SW update messages and reload the page
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data?.type === 'SW_UPDATED') {
+                    console.log(`🔄 Service Worker updated to version ${event.data.version}`)
+                    // Optionally reload the page to get the latest assets
+                    // window.location.reload()
+                }
+            })
+
             const readyRegistration = await navigator.serviceWorker.ready
             console.log('✅ Service Worker ready')
             await refreshSubscription(readyRegistration)
+
+            // Cleanup interval on page unload
+            window.addEventListener('beforeunload', () => clearInterval(updateInterval))
         } catch (error) {
             console.error('Service worker registration failed:', error)
         }

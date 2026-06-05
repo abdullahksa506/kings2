@@ -1,3 +1,9 @@
+/*
+ * 🤖 نكتة الذكاء الاصطناعي:
+ * سألوا كلود: "ليش تكتب كود حلو؟"
+ * قال: "لأن عندي tokens أكثر من المبرمجين عندهم قهوة ☕😂"
+ */
+
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import * as admin from 'firebase-admin';
@@ -5,6 +11,7 @@ import { hashPassword } from "@/lib/hash";
 import * as coup from "@/lib/coup/engine";
 import { encryptState, decryptState } from "@/lib/coup/secret";
 import { ActionType, Character, CoupGameState, ResponseType } from "@/lib/coup/types";
+import { sendPushNotification } from "@/lib/pushHelper";
 
 const VALID_NAMES_RPC = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
 const WEEK_DAYS = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"] as const;
@@ -472,6 +479,21 @@ export async function POST(request: Request) {
                     restaurantOverridden: false,
                     restaurantOverrideValue: null,
                     restaurant: null, // Clear any previous direct selection
+                });
+
+                // Send push notification to all members (fire-and-forget)
+                sendPushNotification(
+                    {
+                        title: "التصويت على المطعم بدأ! 🗳️",
+                        body: "صوّت الآن على مطعم الطلعة القادمة",
+                        type: "voting",
+                        tag: `restaurant-voting-${payload.weekId}`,
+                        url: "/?tab=week",
+                        payload: { weekId: payload.weekId },
+                    },
+                    {} // Send to all members including king
+                ).catch((err) => {
+                    console.error("Failed to send voting start notification:", err);
                 });
 
                 return NextResponse.json({ result: true });
