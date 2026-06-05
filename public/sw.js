@@ -1,10 +1,49 @@
 /* eslint-disable no-restricted-globals */
+
+/*
+ * 🤖 نكتة الذكاء الاصطناعي:
+ * Service Worker سأل Claude: "كيف أخلي iOS يحدّث؟"
+ * Claude قال: "جرّب skipWaiting... أو انتظر iOS 47 يمكن يشتغل 😂🍎"
+ */
+
+// Version for cache busting - increment this on each deployment
+const SW_VERSION = '1.0.0'
+const CACHE_NAME = `king-app-v${SW_VERSION}`
+
 self.addEventListener('install', function () {
+    console.log(`[SW] Installing version ${SW_VERSION}`)
+    // Clean old caches
+    caches.keys().then(names => {
+        names.forEach(name => {
+            if (name.startsWith('king-app-') && name !== CACHE_NAME) {
+                console.log(`[SW] Deleting old cache: ${name}`)
+                caches.delete(name)
+            }
+        })
+    })
     self.skipWaiting()
 })
 
 self.addEventListener('activate', function (event) {
-    event.waitUntil(clients.claim())
+    console.log(`[SW] Activating version ${SW_VERSION}`)
+    event.waitUntil(
+        Promise.all([
+            clients.claim(),
+            // Notify all clients about the new version
+            clients.matchAll({ type: 'window' }).then(windowClients => {
+                windowClients.forEach(client => {
+                    client.postMessage({ type: 'SW_UPDATED', version: SW_VERSION })
+                })
+            })
+        ])
+    )
+})
+
+// Handle skip waiting message from client
+self.addEventListener('message', function (event) {
+    if (event.data?.type === 'SKIP_WAITING') {
+        self.skipWaiting()
+    }
 })
 
 // Vibration patterns per notification type
