@@ -34,6 +34,8 @@ const RATE_LIMIT_RULES: Record<string, RateLimitRule> = {
     coupReaction: { limit: 60, windowMs: 60 * 1000 },
     coupVoiceSignal: { limit: 400, windowMs: 60 * 1000 },
     coupVoiceState: { limit: 60, windowMs: 60 * 1000 },
+    setRestaurantLocation: { limit: 20, windowMs: 60 * 1000 },
+    deleteRestaurantLocation: { limit: 20, windowMs: 60 * 1000 },
 };
 
 const rateLimitStore = new Map<string, RateLimitBucket>();
@@ -1050,6 +1052,55 @@ export async function POST(request: Request) {
                     old.forEach((d) => batch.delete(d.ref));
                     await batch.commit();
                 }
+                return NextResponse.json({ result: true });
+            }
+
+            // ---------- RESTAURANT MAP ----------
+            case "setRestaurantLocation": {
+                if (!authName) throw new Error("Unauthorized");
+                const name = asTrimmedString(payload?.name);
+                const lat = Number(payload?.lat);
+                const lng = Number(payload?.lng);
+                if (!name) throw new Error("اسم المطعم مطلوب");
+                if (!Number.isFinite(lat) || Math.abs(lat) > 90) throw new Error("خط عرض غير صالح");
+                if (!Number.isFinite(lng) || Math.abs(lng) > 180) throw new Error("خط طول غير صالح");
+
+                const address = asTrimmedString(payload?.address).slice(0, 300) || null;
+                const mapsUrl = asTrimmedString(payload?.mapsUrl).slice(0, 600) || null;
+
+                // Deterministic, path-safe doc id; the canonical name is kept as a field.
+                const slug =
+                    name.normalize("NFKC").replace(/[\/\.\#\$\[\]]/g, "_").trim().slice(0, 120) || "restaurant";
+
+                await adminDb.collection("restaurantLocations").doc(slug).set(
+                    {
+                        name,
+                        lat,
+                        lng,
+                        address,
+                        mapsUrl,
+                        addedBy: authName,
+                        updatedAt: Timestamp.now(),
+                    },
+                    { merge: true }
+                );
+                return NextResponse.json({ result: true });
+            }
+
+            case "deleteRestaurantLocation": {
+                if (!authName) throw new Error("Unauthorized");
+                const name = asTrimmedString(payload?.name);
+                if (!name) throw new Error("اسم المطعم مطلوب");
+                const slug =
+                    name.normalize("NFKC").replace(/[\/\.\#\$\[\]]/g, "_").trim().slice(0, 120) || "restaurant";
+                const ref = adminDb.collection("restaurantLocations").doc(slug);
+                const snap = await ref.get();
+                if (!snap.exists) return NextResponse.json({ result: true });
+                const data = snap.data() as any;
+                if (data?.addedBy !== authName && !isAdmin) {
+                    throw new Error("غير مصرح لك بحذف هذا الموقع");
+                }
+                await ref.delete();
                 return NextResponse.json({ result: true });
             }
         }
