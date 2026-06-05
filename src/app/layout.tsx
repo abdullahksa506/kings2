@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import ClientSecurity from "@/components/ClientSecurity";
+import RandomJokePopup from "@/components/RandomJokePopup";
 import { Toaster } from "sonner";
 import { Viewport } from "next";
 
@@ -33,6 +34,7 @@ export default function RootLayout({
     <html lang="ar" dir="rtl">
       <body className={`${inter.className} bg-slate-950 text-slate-50 min-h-screen selection:bg-amber-500/30 pb-safe pt-safe pl-safe pr-safe`}>
         <ClientSecurity />
+        <RandomJokePopup />
         <Toaster position="top-center" theme="dark" />
         <AuthProvider>
           {children}
