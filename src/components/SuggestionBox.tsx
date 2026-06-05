@@ -48,7 +48,7 @@ export default function SuggestionBox({ isDean }: { isDean: boolean }) {
                     <Lightbulb className="w-6 h-6" />
                 </div>
                 <div>
-                    <h3 className="font-bold text-xl text-white">صندوق الاقتراحات</h3>
+                    <h3 className="font-bold text-xl text-white">صندووق الاقتراحات؟؟ 💡✨ يعني أحس 📦🤷</h3>
                     <p className="text-xs text-slate-500">اقتراحك سري ولا يظهر اسمك</p>
                 </div>
             </div>
@@ -56,8 +56,8 @@ export default function SuggestionBox({ isDean }: { isDean: boolean }) {
             {submitted ? (
                 <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-6 text-center">
                     <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
-                    <p className="text-emerald-400 font-bold text-lg mb-1">شكراً لك!</p>
-                    <p className="text-slate-400 text-sm">تم استلام اقتراحك وسيتم النظر فيه من قبل العميد 🙏</p>
+                    <p className="text-emerald-400 font-bold text-lg mb-1">شكرااا؟؟ 💚✨ يعني أحس 🙏</p>
+                    <p className="text-slate-400 text-sm">والله شوف أحسس تم الاستلاام؟؟ 📬💥 العميد يشوفه يمكن 🤷👑✨</p>
                 </div>
             ) : (
                 <div className="space-y-3">
@@ -77,7 +77,7 @@ export default function SuggestionBox({ isDean }: { isDean: boolean }) {
                             className="bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2.5 px-6 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                         >
                             <Send className="w-4 h-4 rotate-180" />
-                            {submitting ? "جاري الإرسال..." : "إرسال"}
+                            {submitting ? "يرسسل... 📤✨" : "ارساال؟؟ 🚀 لو تبي ✨"}
                         </button>
                     </div>
                 </div>

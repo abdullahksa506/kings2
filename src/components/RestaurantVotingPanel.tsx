@@ -186,8 +186,8 @@ export default function RestaurantVotingPanel({
                             <Vote className="w-6 h-6 text-purple-400" />
                         </div>
                         <div>
-                            <p className="text-sm font-semibold text-purple-300">التصويت الديموقراطي</p>
-                            <p className="text-xs text-slate-400">اختر المطعم المفضل</p>
+                            <p className="text-sm font-semibold text-purple-300">التصوييت الديموقراطي؟؟ 🗳️✨ أحس 🤷</p>
+                            <p className="text-xs text-slate-400">والله شوف اخترر المطعم لو تبي يعني 🍔💥</p>
                         </div>
                     </div>
                     {timeRemaining && (
@@ -246,7 +246,7 @@ export default function RestaurantVotingPanel({
                     ) : myVote ? (
                         <span className="text-purple-300">صوّتت لـ {myVote}</span>
                     ) : (
-                        "اختر مطعمك المفضل"
+                        "والله شووف... اخترر مطعمك لو تبي يعني 🍕🤷✨"
                     )}
                     <span className="mx-2">·</span>
                     <span>{totalVotes} صوت حتى الآن</span>
@@ -260,7 +260,7 @@ export default function RestaurantVotingPanel({
                             disabled={saving}
                             className="px-4 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 text-sm font-semibold transition-colors disabled:opacity-50"
                         >
-                            إنهاء التصويت
+                            انهااء التصويت؟؟ 🏁 يعني لو تبي ✨
                         </button>
                         <button
                             onClick={handleCancelVoting}
