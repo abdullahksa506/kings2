@@ -33,11 +33,11 @@ export default function AuthScreen() {
             if (isForgotPassword) {
                 if (forgotPasswordStep === 1) {
                     await services.requestPasswordReset(selectedName);
-                    toast.success("تم إرسال كود الاسترجاع إلى العميد. يرجى التواصل معه للحصول على الكود.", { duration: 5000 });
+                    toast.success("أحسس تم الارساال للعميد؟؟ 📨✨ يعني والله شوف مدري بس يمكن وصل 🤷 تواصل معاه لو تبي الكوود 🔐💥", { duration: 5000 });
                     setForgotPasswordStep(2);
                 } else {
                     await services.resetPasswordWithCode(selectedName, resetCode, newPassword);
-                    toast.success("تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.");
+                    toast.success("والله شووف أحس تغيرت كلمة المرورر؟؟ 🔑✨ يعني لو تبي سجل دخوول الحين 🚀🎉 أو لا؟ 🤷");
                     setIsForgotPassword(false);
                     setForgotPasswordStep(1);
                     setPassword("");
@@ -176,8 +176,8 @@ export default function AuthScreen() {
                         ) : (
                             <>
                                 {isForgotPassword
-                                    ? (forgotPasswordStep === 1 ? "طلب كود الاسترجاع" : "تأكيد كلمة المرور الجديدة")
-                                    : (isRegistering && !allRegistered ? "إنشاء حساب" : "تسجيل الدخول")}
+                                    ? (forgotPasswordStep === 1 ? "طلب الكوود؟؟ 🔑 يعني لو تبي 📨✨" : "تأكييد؟؟ 🔐 أحس يمكن 🤷✨")
+                                    : (isRegistering && !allRegistered ? "انشااء حساب؟؟ 🎉 والله شوف 👑✨" : "دخوول؟؟ 🚀 يعني أحس ✨🔥")}
                                 <ArrowRight className="w-4 h-4 rotate-180" />
                             </>
                         )}
@@ -191,7 +191,7 @@ export default function AuthScreen() {
                             onClick={toggleForgotPassword}
                             className="text-slate-400 hover:text-amber-400 font-medium transition-colors"
                         >
-                            نسيت كلمة المرور؟
+                            نسييت كلمة المرور؟؟ 🔐🤔 يعني أحس ✨
                         </button>
                     )}
 
@@ -214,7 +214,7 @@ export default function AuthScreen() {
                                     onClick={() => setIsRegistering(!isRegistering)}
                                     className="text-amber-500 hover:text-amber-400 font-medium transition-colors"
                                 >
-                                    {isRegistering ? "تسجيل الدخول" : "إنشاء حساب"}
+                                    {isRegistering ? "دخوول؟ 🚀✨" : "انشااء حساب؟ 🎉👑"}
                                 </button>
                             </div>
                         )

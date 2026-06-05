@@ -35,7 +35,7 @@ export default function RatingForm({
             onRated();
         } catch (e) {
             console.error(e);
-            alert("حدث خطأ أثناء التقييم");
+            alert("أحسس صار خطأ؟؟ 😅💥 والله شوف مدري بس يمكن جرب مره ثانيه 🤷✨");
         } finally {
             setSubmitting(false);
         }
@@ -43,7 +43,7 @@ export default function RatingForm({
 
     return (
         <div className={`bg-slate-900 border rounded-2xl p-4 md:p-6 text-center ${disabled ? "border-slate-800/50 opacity-60" : "border-slate-800"}`}>
-            <h3 className="text-lg md:text-xl font-bold text-white mb-2">كيف كانت طلعة هذا الأسبوع؟</h3>
+            <h3 className="text-lg md:text-xl font-bold text-white mb-2">والله شووف... كيف كانت الطلعه؟؟ 🍔🤔 يعني أحس 👑✨</h3>
             <p className="text-slate-400 text-xs md:text-sm mb-5">تقييمك سري ولن يراه سوى عميد الدستور.</p>
 
             {disabled && (
@@ -71,7 +71,7 @@ export default function RatingForm({
                 ))}
             </div>
             {score > 0 && (
-                <p className="text-sm text-amber-400 mb-4">اخترت: {score} من 5 ⭐</p>
+                <p className="text-sm text-amber-400 mb-4">أحسس اخترت {score} من 5؟؟ ⭐✨ يعني والله شوف 🤷🔥</p>
             )}
 
             <div className="mb-5 text-right max-w-xl mx-auto">
@@ -94,7 +94,7 @@ export default function RatingForm({
                 disabled={score === 0 || submitting || disabled}
                 className="w-full md:w-auto bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-6 md:px-8 rounded-xl transition-all shadow-lg hover:shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 mx-auto"
             >
-                {disabled ? "التقييم مقفل" : submitting ? "جاري الإرسال..." : "إرسال التقييم"}
+                {disabled ? "مقفوول؟؟ 🔒 أحس" : submitting ? "يرسسل... 📤✨ يعني أحس" : "ارساال التقييم؟؟ 🚀 لو تبي 🎉✨"}
                 {disabled ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4 rotate-180" />}
             </button>
         </div>
