@@ -6,6 +6,7 @@ import { services, WeekSession, Rating, VALID_NAMES } from "@/lib/services";
 import { Star, ShieldAlert, BarChart3, KeyRound, Users, CheckCircle2, Bell, Lock } from "lucide-react";
 import Link from "next/link";
 import ExportDataButton from "./ExportDataButton";
+import RestaurantNameCleanup from "./RestaurantNameCleanup";
 
 export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWeekId?: string, pastWeekId?: string }) {
     const { user } = useAuth();
@@ -248,6 +249,9 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
                     الانتقال لصفحة اختبار الإشعارات الفردية
                 </Link>
             </div>
+
+            {/* Restaurant Name Cleanup */}
+            <RestaurantNameCleanup />
 
             {/* Export Data Section */}
             <div className="mt-8 pt-6 border-t border-emerald-900/50">
