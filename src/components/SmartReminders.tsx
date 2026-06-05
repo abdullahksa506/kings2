@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { AlertCircle, Bell, Calendar, Crown, Lock, MessageSquare, Star } from "lucide-react";
+import { AlertCircle, Bell, Calendar, Crown, Lock, MessageSquare, Star, Vote } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { WeekSession } from "@/lib/services";
 
@@ -118,6 +118,24 @@ export default function SmartReminders({
                     icon: Calendar,
                     title: "صوّت على يوم الطلعة 🗳️",
                     body: "فيه تصويت مفتوح على اليوم. رأيك يفرق.",
+                });
+            }
+
+            // Restaurant voting reminders
+            const restaurantVotes = (currentWeek.restaurantVotes || {}) as Record<string, string>;
+            const hasVotedRestaurant = Boolean(restaurantVotes[userName]);
+
+            if (
+                !isKing &&
+                currentWeek.restaurantVotingActive &&
+                !hasVotedRestaurant
+            ) {
+                items.push({
+                    id: "restaurant-vote-pending",
+                    severity: "high",
+                    icon: Vote,
+                    title: "صوّت على المطعم! 🗳️",
+                    body: "التصويت الديموقراطي مفتوح. اختر مطعمك المفضل.",
                 });
             }
 

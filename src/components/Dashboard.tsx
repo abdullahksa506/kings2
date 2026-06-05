@@ -25,6 +25,7 @@ import SuggestionBox from "./SuggestionBox";
 import ChatBoard from "./ChatBoard";
 import StatisticsPanel from "./StatisticsPanel";
 import SmartReminders from "./SmartReminders";
+import RestaurantVotingPanel from "./RestaurantVotingPanel";
 import FutureFeaturesVoting from "./FutureFeaturesVoting";
 import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
 import { Gamepad2, Bath, UploadCloud, BarChart3, Swords } from "lucide-react";
@@ -1511,27 +1512,14 @@ export default function Dashboard() {
                                             </div>
                                         )}
 
-                                        <div className="bg-gradient-to-br from-slate-950/80 to-slate-900/40 rounded-2xl p-5 border border-amber-500/15 hover:border-amber-500/25 transition-colors flex items-center gap-4 shadow-[inset_0_0_20px_rgba(245,158,11,0.04)]">
-                                            <div className="bg-amber-500/10 p-2 rounded-xl border border-amber-500/15">
-                                                <MapPin className="w-7 h-7 text-amber-400/80" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-xs text-amber-400/80 mb-1 font-semibold">المطعم المختار · الميزانية ≤ 175﷼</p>
-                                                {isKing ? (
-                                                    <input
-                                                        type="text"
-                                                        placeholder="اسم المطعم..."
-                                                        value={restaurant}
-                                                        onChange={e => setRestaurant(e.target.value)}
-                                                        className="bg-slate-900 text-white border border-slate-700 rounded-lg p-3 outline-none w-full max-w-sm focus:border-slate-400"
-                                                    />
-                                                ) : (
-                                                    <p className="text-xl font-semibold text-white">
-                                                        {currentWeek.restaurant || <span className="text-slate-600 font-normal">لم يحدد بعد</span>}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
+                                        <RestaurantVotingPanel
+                                            currentWeek={currentWeek}
+                                            userName={user?.name || ""}
+                                            isKing={isKing}
+                                            onRefresh={fetchWeek}
+                                            restaurant={restaurant}
+                                            setRestaurant={setRestaurant}
+                                        />
 
                                         {/* Attendance Section */}
                                         <div id="attendance-section" className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-inner scroll-mt-20">
