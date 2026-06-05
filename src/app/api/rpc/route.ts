@@ -36,6 +36,7 @@ const RATE_LIMIT_RULES: Record<string, RateLimitRule> = {
     coupVoiceState: { limit: 60, windowMs: 60 * 1000 },
     setRestaurantLocation: { limit: 20, windowMs: 60 * 1000 },
     deleteRestaurantLocation: { limit: 20, windowMs: 60 * 1000 },
+    mergeRestaurantNames: { limit: 30, windowMs: 60 * 1000 },
 };
 
 const rateLimitStore = new Map<string, RateLimitBucket>();
@@ -120,6 +121,11 @@ const COUP_VALID_CHARACTERS: Character[] = ["duke", "assassin", "captain", "amba
 
 function coupRoomRef(roomId: string) {
     return adminDb.collection("coupRooms").doc(roomId);
+}
+
+// Deterministic, path-safe doc id for the restaurantLocations collection.
+function restaurantSlug(name: string): string {
+    return name.normalize("NFKC").replace(/[\/\.\#\$\[\]]/g, "_").trim().slice(0, 120) || "restaurant";
 }
 
 function validRoomId(id: unknown): string {
@@ -1068,9 +1074,7 @@ export async function POST(request: Request) {
                 const address = asTrimmedString(payload?.address).slice(0, 300) || null;
                 const mapsUrl = asTrimmedString(payload?.mapsUrl).slice(0, 600) || null;
 
-                // Deterministic, path-safe doc id; the canonical name is kept as a field.
-                const slug =
-                    name.normalize("NFKC").replace(/[\/\.\#\$\[\]]/g, "_").trim().slice(0, 120) || "restaurant";
+                const slug = restaurantSlug(name);
 
                 await adminDb.collection("restaurantLocations").doc(slug).set(
                     {
@@ -1091,8 +1095,7 @@ export async function POST(request: Request) {
                 if (!authName) throw new Error("Unauthorized");
                 const name = asTrimmedString(payload?.name);
                 if (!name) throw new Error("اسم المطعم مطلوب");
-                const slug =
-                    name.normalize("NFKC").replace(/[\/\.\#\$\[\]]/g, "_").trim().slice(0, 120) || "restaurant";
+                const slug = restaurantSlug(name);
                 const ref = adminDb.collection("restaurantLocations").doc(slug);
                 const snap = await ref.get();
                 if (!snap.exists) return NextResponse.json({ result: true });
@@ -1102,6 +1105,73 @@ export async function POST(request: Request) {
                 }
                 await ref.delete();
                 return NextResponse.json({ result: true });
+            }
+
+            case "mergeRestaurantNames": {
+                if (!isAdmin) throw new Error("Dean only");
+                const toName = asTrimmedString(payload?.toName);
+                const rawFrom: unknown = payload?.fromNames;
+                if (!toName) throw new Error("الاسم الجديد مطلوب");
+                if (!Array.isArray(rawFrom)) throw new Error("قائمة الأسماء مطلوبة");
+
+                // Normalize + dedupe the source names; drop any equal to the target.
+                const fromNames = Array.from(
+                    new Set(
+                        rawFrom
+                            .map((n) => asTrimmedString(n))
+                            .filter((n) => n && n !== toName)
+                    )
+                ).slice(0, 100);
+                if (fromNames.length === 0) throw new Error("لا يوجد أسماء لدمجها");
+
+                // Update every week whose restaurant matches one of the source names.
+                // Firestore "in" allows max 30 values, so query in chunks.
+                const matchedDocs: admin.firestore.QueryDocumentSnapshot[] = [];
+                for (let i = 0; i < fromNames.length; i += 30) {
+                    const chunk = fromNames.slice(i, i + 30);
+                    const snap = await adminDb.collection("weeks").where("restaurant", "in", chunk).get();
+                    snap.forEach((d) => matchedDocs.push(d));
+                }
+
+                let updatedWeeks = 0;
+                for (let i = 0; i < matchedDocs.length; i += 400) {
+                    const batch = adminDb.batch();
+                    for (const doc of matchedDocs.slice(i, i + 400)) {
+                        batch.update(doc.ref, { restaurant: toName });
+                        updatedWeeks++;
+                    }
+                    await batch.commit();
+                }
+
+                // Migrate the map location: keep the target's location if it has one,
+                // otherwise adopt the first source location; then delete the source docs.
+                const toLocRef = adminDb.collection("restaurantLocations").doc(restaurantSlug(toName));
+                const toLocSnap = await toLocRef.get();
+                let targetHasLocation = toLocSnap.exists;
+                for (const fromName of fromNames) {
+                    const fromRef = adminDb.collection("restaurantLocations").doc(restaurantSlug(fromName));
+                    const fromSnap = await fromRef.get();
+                    if (!fromSnap.exists) continue;
+                    if (!targetHasLocation) {
+                        const d = fromSnap.data() as any;
+                        await toLocRef.set(
+                            {
+                                name: toName,
+                                lat: d?.lat,
+                                lng: d?.lng,
+                                address: d?.address ?? null,
+                                mapsUrl: d?.mapsUrl ?? null,
+                                addedBy: d?.addedBy ?? authName,
+                                updatedAt: Timestamp.now(),
+                            },
+                            { merge: true }
+                        );
+                        targetHasLocation = true;
+                    }
+                    await fromRef.delete();
+                }
+
+                return NextResponse.json({ result: { updatedWeeks, mergedNames: fromNames.length } });
             }
         }
         return NextResponse.json({ error: "Unknown action" }, { status: 400 });

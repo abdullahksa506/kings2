@@ -148,6 +148,95 @@ export function deleteRestaurantLocation(name: string) {
     return invokeRpc("deleteRestaurantLocation", { name });
 }
 
+// --- Name cleanup (dean-only) ---
+
+export interface RestaurantNameEntry {
+    name: string; // representative (most common) raw spelling
+    count: number;
+    variants: string[]; // every distinct raw string that maps to this canonical name
+}
+
+/**
+ * All distinct restaurant names across ALL weeks (any status), grouped by
+ * canonical form. `variants` holds every raw spelling (e.g. trailing space /
+ * tatweel differences) so a merge can update them all, not just the displayed one.
+ */
+export async function getAllRestaurantNames(): Promise<RestaurantNameEntry[]> {
+    const snap = await getDocs(collection(db, "weeks"));
+    const groups = new Map<string, { total: number; variantCounts: Map<string, number> }>();
+    snap.forEach((doc) => {
+        const raw: string = (doc.data() as any)?.restaurant || "";
+        const name = raw.trim();
+        if (!name) return;
+        const key = canonRestaurant(name);
+        let g = groups.get(key);
+        if (!g) {
+            g = { total: 0, variantCounts: new Map() };
+            groups.set(key, g);
+        }
+        g.total += 1;
+        g.variantCounts.set(name, (g.variantCounts.get(name) || 0) + 1);
+    });
+
+    return Array.from(groups.values())
+        .map((g) => {
+            const variants = Array.from(g.variantCounts.entries()).sort((a, b) => b[1] - a[1]);
+            return {
+                name: variants[0][0], // most common spelling
+                count: g.total,
+                variants: variants.map((v) => v[0]),
+            };
+        })
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "ar"));
+}
+
+export function mergeRestaurantNames(fromNames: string[], toName: string): Promise<{ updatedWeeks: number; mergedNames: number }> {
+    return invokeRpc("mergeRestaurantNames", { fromNames, toName });
+}
+
+/**
+ * Levenshtein-based similarity (0..1). Used to surface likely-duplicate /
+ * mistyped restaurant names for the cleanup tool.
+ */
+export function nameSimilarity(a: string, b: string): number {
+    const s = canonRestaurant(a).replace(/^مطعم\s+/, "").toLowerCase();
+    const t = canonRestaurant(b).replace(/^مطعم\s+/, "").toLowerCase();
+    if (s === t) return 1;
+    if (!s.length || !t.length) return 0;
+    const m = s.length;
+    const n = t.length;
+    const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...new Array(n).fill(0)]);
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            const cost = s[i - 1] === t[j - 1] ? 0 : 1;
+            dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+        }
+    }
+    const dist = dp[m][n];
+    return 1 - dist / Math.max(m, n);
+}
+
+/** Groups names that are likely the same place (normalized-equal or highly similar). */
+export function findSimilarGroups(entries: RestaurantNameEntry[], threshold = 0.8): RestaurantNameEntry[][] {
+    const groups: RestaurantNameEntry[][] = [];
+    const used = new Set<number>();
+    for (let i = 0; i < entries.length; i++) {
+        if (used.has(i)) continue;
+        const group = [entries[i]];
+        used.add(i);
+        for (let j = i + 1; j < entries.length; j++) {
+            if (used.has(j)) continue;
+            if (nameSimilarity(entries[i].name, entries[j].name) >= threshold) {
+                group.push(entries[j]);
+                used.add(j);
+            }
+        }
+        if (group.length > 1) groups.push(group);
+    }
+    return groups;
+}
+
 // --- Geocoding ---
 
 export async function geocodeSearch(q: string): Promise<GeocodeResult[]> {
