@@ -22,6 +22,11 @@ const RATE_LIMIT_RULES: Record<string, RateLimitRule> = {
     submitRating: { limit: 8, windowMs: 60 * 1000 },
     submitBathroomRating: { limit: 8, windowMs: 60 * 1000 },
     submitDayVote: { limit: 12, windowMs: 60 * 1000 },
+    startRestaurantVoting: { limit: 5, windowMs: 60 * 1000 },
+    submitRestaurantVote: { limit: 10, windowMs: 60 * 1000 },
+    endRestaurantVoting: { limit: 5, windowMs: 60 * 1000 },
+    overrideRestaurantResult: { limit: 5, windowMs: 60 * 1000 },
+    cancelRestaurantVoting: { limit: 5, windowMs: 60 * 1000 },
     submitSuggestion: { limit: 12, windowMs: 60 * 1000 },
     sendChatMessage: { limit: 30, windowMs: 60 * 1000 },
     submitFeatureVote: { limit: 30, windowMs: 60 * 1000 },
@@ -95,6 +100,60 @@ function isStandardOutingDay(value: unknown): value is (typeof STANDARD_OUTING_D
 
 function isDayVoteOption(value: unknown): value is (typeof DAY_VOTE_OPTIONS)[number] {
     return typeof value === "string" && DAY_VOTE_OPTIONS.includes(value as (typeof DAY_VOTE_OPTIONS)[number]);
+}
+
+const RESTAURANT_VOTING_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/** Auto-end restaurant voting if 24h have passed (lazy expiration check) */
+async function autoEndExpiredRestaurantVoting(weekRef: FirebaseFirestore.DocumentReference): Promise<void> {
+    const weekSnap = await weekRef.get();
+    if (!weekSnap.exists) return;
+
+    const weekData = weekSnap.data() as any;
+    if (!weekData.restaurantVotingActive) return;
+
+    const startedAt = weekData.restaurantVotingStartedAt;
+    if (!startedAt) return;
+
+    const startMs = startedAt.toMillis ? startedAt.toMillis() : (startedAt.seconds || 0) * 1000;
+    const now = Date.now();
+
+    if (now - startMs < RESTAURANT_VOTING_DURATION_MS) return; // Not expired yet
+
+    // Voting has expired - auto-end it
+    const votes = weekData.restaurantVotes || {};
+    const candidates: string[] = weekData.restaurantCandidates || [];
+    const voteCounts: Record<string, number> = {};
+
+    for (const candidate of candidates) {
+        voteCounts[candidate] = 0;
+    }
+    for (const vote of Object.values(votes)) {
+        if (typeof vote === "string" && voteCounts[vote] !== undefined) {
+            voteCounts[vote]++;
+        }
+    }
+
+    const maxVotes = Math.max(...Object.values(voteCounts), 0);
+    const winners = candidates.filter((c: string) => voteCounts[c] === maxVotes);
+
+    let winner: string;
+    if (maxVotes === 0 && candidates.length > 0) {
+        winner = candidates[Math.floor(Math.random() * candidates.length)];
+    } else if (winners.length > 1) {
+        winner = winners[Math.floor(Math.random() * winners.length)];
+    } else if (winners.length === 1) {
+        winner = winners[0];
+    } else {
+        return; // No candidates, nothing to do
+    }
+
+    await weekRef.update({
+        restaurantVotingActive: false,
+        restaurantVotingEndedAt: Timestamp.now(),
+        restaurantVotingResult: winner,
+        restaurant: winner,
+    });
 }
 
 /** يطابق التوكن مع كلمة المرور المخزنة (SHA-256 hex قد يختلف حرف كبير/صغير بين العميل والخادم) */
@@ -366,6 +425,201 @@ export async function POST(request: Request) {
 
                 await weekApplyRef.update({ day: chosen, dayVotingEnabled: false });
                 return NextResponse.json({ result: chosen });
+            }
+
+            // --- RESTAURANT VOTING ---
+            case "startRestaurantVoting": {
+                const weekRef = adminDb.collection("weeks").doc(payload.weekId);
+                const weekSnap = await weekRef.get();
+                if (!weekSnap.exists) throw new Error("Week not found");
+
+                const weekData = weekSnap.data() as any;
+                if (weekData.king !== authName && !isAdmin) {
+                    throw new Error("Only the King can start restaurant voting");
+                }
+
+                // Validate 3 unique restaurant names
+                const candidates = payload.candidates;
+                if (!Array.isArray(candidates) || candidates.length !== 3) {
+                    throw new Error("يجب اختيار 3 مطاعم مختلفة");
+                }
+                const trimmed = candidates.map((c: string) => (typeof c === "string" ? c.trim() : "")).filter(Boolean);
+                if (trimmed.length !== 3 || new Set(trimmed).size !== 3) {
+                    throw new Error("يجب أن تكون المطاعم الثلاثة مختلفة وغير فارغة");
+                }
+
+                // Check if voting is already active
+                if (weekData.restaurantVotingActive) {
+                    throw new Error("التصويت مفعّل بالفعل");
+                }
+
+                await weekRef.update({
+                    restaurantVotingMode: "democratic",
+                    restaurantCandidates: trimmed,
+                    restaurantVotes: {},
+                    restaurantVotingStartedAt: Timestamp.now(),
+                    restaurantVotingEndedAt: null,
+                    restaurantVotingActive: true,
+                    restaurantVotingResult: null,
+                    restaurantOverridden: false,
+                    restaurantOverrideValue: null,
+                    restaurant: null, // Clear any previous direct selection
+                });
+
+                return NextResponse.json({ result: true });
+            }
+
+            case "submitRestaurantVote": {
+                const weekRef = adminDb.collection("weeks").doc(payload.weekId);
+
+                // Auto-end if voting expired (lazy check)
+                await autoEndExpiredRestaurantVoting(weekRef);
+
+                await adminDb.runTransaction(async (tx) => {
+                    const weekSnap = await tx.get(weekRef);
+                    if (!weekSnap.exists) throw new Error("Week not found");
+
+                    const weekData = weekSnap.data() as any;
+
+                    // Validation checks
+                    if (!weekData.restaurantVotingActive) {
+                        throw new Error("التصويت غير مفعّل حالياً");
+                    }
+                    if (weekData.king === authName) {
+                        throw new Error("الملك لا يصوّت على المطعم");
+                    }
+
+                    const candidates = weekData.restaurantCandidates || [];
+                    if (!candidates.includes(payload.restaurant)) {
+                        throw new Error("خيار المطعم غير صالح");
+                    }
+
+                    const currentVotes = { ...(weekData.restaurantVotes || {}) };
+
+                    // Check if user already voted (votes are final)
+                    if (currentVotes[authName]) {
+                        throw new Error("صوتك محفوظ ولا يمكن تغييره");
+                    }
+
+                    // Note: Absent members CAN vote (per requirements)
+                    currentVotes[authName] = payload.restaurant;
+                    tx.update(weekRef, { restaurantVotes: currentVotes });
+                });
+
+                return NextResponse.json({ result: true });
+            }
+
+            case "endRestaurantVoting": {
+                const weekRef = adminDb.collection("weeks").doc(payload.weekId);
+
+                // Auto-end if voting expired (lazy check)
+                await autoEndExpiredRestaurantVoting(weekRef);
+
+                const weekSnap = await weekRef.get();
+                if (!weekSnap.exists) throw new Error("Week not found");
+
+                const weekData = weekSnap.data() as any;
+                if (weekData.king !== authName && !isAdmin) {
+                    throw new Error("Only the King can end voting");
+                }
+                if (!weekData.restaurantVotingActive) {
+                    throw new Error("لا يوجد تصويت نشط لإنهائه");
+                }
+
+                // Count votes
+                const votes = weekData.restaurantVotes || {};
+                const candidates: string[] = weekData.restaurantCandidates || [];
+                const voteCounts: Record<string, number> = {};
+
+                for (const candidate of candidates) {
+                    voteCounts[candidate] = 0;
+                }
+                for (const vote of Object.values(votes)) {
+                    if (typeof vote === "string" && voteCounts[vote] !== undefined) {
+                        voteCounts[vote]++;
+                    }
+                }
+
+                // Find winner(s)
+                const maxVotes = Math.max(...Object.values(voteCounts), 0);
+                const winners = candidates.filter((c: string) => voteCounts[c] === maxVotes);
+
+                // Tie breaker: random selection
+                let winner: string;
+                if (maxVotes === 0) {
+                    // No votes cast - pick randomly from candidates
+                    winner = candidates[Math.floor(Math.random() * candidates.length)];
+                } else if (winners.length > 1) {
+                    winner = winners[Math.floor(Math.random() * winners.length)];
+                } else {
+                    winner = winners[0];
+                }
+
+                await weekRef.update({
+                    restaurantVotingActive: false,
+                    restaurantVotingEndedAt: Timestamp.now(),
+                    restaurantVotingResult: winner,
+                    restaurant: winner, // Set the week's restaurant to the winner
+                });
+
+                return NextResponse.json({ result: { winner } });
+            }
+
+            case "overrideRestaurantResult": {
+                const weekRef = adminDb.collection("weeks").doc(payload.weekId);
+                const weekSnap = await weekRef.get();
+                if (!weekSnap.exists) throw new Error("Week not found");
+
+                const weekData = weekSnap.data() as any;
+                if (weekData.king !== authName && !isAdmin) {
+                    throw new Error("Only the King can override");
+                }
+
+                // Can only override after voting ended
+                if (weekData.restaurantVotingActive) {
+                    throw new Error("لا يمكن استخدام القمع إلا بعد انتهاء التصويت");
+                }
+                if (!weekData.restaurantVotingResult) {
+                    throw new Error("لم يتم إجراء تصويت لقمعه");
+                }
+
+                const overrideRestaurant = asTrimmedString(payload.restaurant);
+                if (!overrideRestaurant) {
+                    throw new Error("اسم المطعم مطلوب");
+                }
+
+                await weekRef.update({
+                    restaurantOverridden: true,
+                    restaurantOverrideValue: overrideRestaurant,
+                    restaurant: overrideRestaurant, // Override the week's restaurant
+                });
+
+                return NextResponse.json({ result: true });
+            }
+
+            case "cancelRestaurantVoting": {
+                const weekRef = adminDb.collection("weeks").doc(payload.weekId);
+                const weekSnap = await weekRef.get();
+                if (!weekSnap.exists) throw new Error("Week not found");
+
+                const weekData = weekSnap.data() as any;
+                if (weekData.king !== authName && !isAdmin) {
+                    throw new Error("Only the King can cancel voting");
+                }
+
+                await weekRef.update({
+                    restaurantVotingMode: "dictatorial",
+                    restaurantCandidates: null,
+                    restaurantVotes: {},
+                    restaurantVotingStartedAt: null,
+                    restaurantVotingEndedAt: null,
+                    restaurantVotingActive: false,
+                    restaurantVotingResult: null,
+                    restaurantOverridden: false,
+                    restaurantOverrideValue: null,
+                });
+
+                return NextResponse.json({ result: true });
             }
 
             case "secretlyChangeKing":

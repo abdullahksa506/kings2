@@ -35,6 +35,16 @@ export interface WeekSession {
     ratingEnabled: boolean;
     dayVotingEnabled?: boolean;
     dayVotes?: Record<string, "الخميس" | "الجمعة" | "الخميس والجمعة">;
+    // Restaurant Voting
+    restaurantVotingMode?: "dictatorial" | "democratic";
+    restaurantCandidates?: [string, string, string];
+    restaurantVotes?: Record<string, string>; // userName -> restaurantName
+    restaurantVotingStartedAt?: Timestamp | null;
+    restaurantVotingEndedAt?: Timestamp | null;
+    restaurantVotingActive?: boolean;
+    restaurantVotingResult?: string | null;
+    restaurantOverridden?: boolean;
+    restaurantOverrideValue?: string | null;
     absentees: string[];
     responded: string[];
     createdAt: Timestamp;
@@ -229,6 +239,27 @@ export const services = {
 
     async applyDayVoteResult(weekId: string, preferredDay?: "الخميس" | "الجمعة") {
         return invokeRpc("applyDayVoteResult", { weekId, preferredDay: preferredDay || null });
+    },
+
+    // Restaurant Voting
+    async startRestaurantVoting(weekId: string, candidates: [string, string, string]) {
+        return invokeRpc("startRestaurantVoting", { weekId, candidates });
+    },
+
+    async submitRestaurantVote(weekId: string, restaurant: string) {
+        return invokeRpc("submitRestaurantVote", { weekId, restaurant });
+    },
+
+    async endRestaurantVoting(weekId: string) {
+        return invokeRpc("endRestaurantVoting", { weekId });
+    },
+
+    async overrideRestaurantResult(weekId: string, restaurant: string) {
+        return invokeRpc("overrideRestaurantResult", { weekId, restaurant });
+    },
+
+    async cancelRestaurantVoting(weekId: string) {
+        return invokeRpc("cancelRestaurantVoting", { weekId });
     },
 
     // Secret Dean Power
