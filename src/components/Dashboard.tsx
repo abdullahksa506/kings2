@@ -17,6 +17,7 @@ import ConstitutionModal from "./ConstitutionModal";
 import HungryKingsArena from "./HungryKingsArena";
 import RoyalDuelArena from "./RoyalDuelArena";
 import CoupArena from "./CoupArena";
+import RestaurantMapPanel from "./RestaurantMapPanel";
 import BathroomRatingForm from "./BathroomRatingForm";
 import BathroomRatingsDisplay from "./BathroomRatingsDisplay";
 import BathroomLeaderboard from "./BathroomLeaderboard";
@@ -292,6 +293,7 @@ export default function Dashboard() {
     const [isGameOpen, setIsGameOpen] = useState(false);
     const [isDuelOpen, setIsDuelOpen] = useState(false);
     const [isCoupOpen, setIsCoupOpen] = useState(false);
+    const [isMapOpen, setIsMapOpen] = useState(false);
 
     // Statistics State
     const [isStatsOpen, setIsStatsOpen] = useState(false);
@@ -1869,6 +1871,29 @@ export default function Dashboard() {
                                 </div>
                             </div>
 
+                            {/* Restaurant Map Button */}
+                            <div className="bg-gradient-to-br from-emerald-900/40 to-slate-900 border border-emerald-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group cursor-pointer" onClick={() => setIsMapOpen(true)}>
+                                <div className="absolute -right-10 -top-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-500" />
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="bg-emerald-500/20 p-2 rounded-xl text-emerald-400">
+                                            <MapPin className="w-6 h-6" />
+                                        </div>
+                                        <h3 className="font-bold text-xl text-white">خريطة المطاعم 📍</h3>
+                                    </div>
+                                    <p className="text-sm text-slate-300 mb-5 leading-relaxed">
+                                        خريطة تفاعلية لكل المطاعم اللي رحنا لها مع تقييمها وعدد الزيارات. ثبّتوا مواقعها وافتحوها في خرائط قوقل بضغطة!
+                                    </p>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setIsMapOpen(true); }}
+                                        className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                                    >
+                                        <MapPin className="w-5 h-5" />
+                                        افتح الخريطة
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* Statistics Button */}
                             <div className="bg-gradient-to-br from-violet-900/40 to-slate-900 border border-violet-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group cursor-pointer" onClick={() => setIsStatsOpen(true)}>
                                 <div className="absolute -right-10 -top-10 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl group-hover:bg-violet-500/20 transition-all duration-500" />
@@ -2117,6 +2142,17 @@ export default function Dashboard() {
                         isOpen={isCoupOpen}
                         onClose={() => setIsCoupOpen(false)}
                         userName={user.name}
+                    />
+                )
+            }
+
+            {
+                user && (
+                    <RestaurantMapPanel
+                        isOpen={isMapOpen}
+                        onClose={() => setIsMapOpen(false)}
+                        userName={user.name}
+                        isAdmin={user.name === "شوكا"}
                     />
                 )
             }
