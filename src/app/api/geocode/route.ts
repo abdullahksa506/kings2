@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+// @ts-expect-error — package has no types but ships a CommonJS export.
+import { OpenLocationCode } from "open-location-code";
 
 // Free geocoding proxy over OpenStreetMap Nominatim + safe short-link expansion.
 // This is a GET route OUTSIDE the RPC auth switch, so it enforces its own
 // IP-based rate limiting and an SSRF host allowlist.
 
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
+// Riyadh reference point — used to recover full Plus Codes from short ones.
+const RIYADH_REF = { lat: 24.7136, lng: 46.6753 };
 // Nominatim's usage policy requires an identifying User-Agent.
 const USER_AGENT = "ArshAlkhamis-RestaurantMap/1.0 (friend-group app)";
 // Google serves a coords-less consent page to non-browser agents, so short-link
@@ -93,6 +97,31 @@ function extractCoordsFromImageUrls(html: string): { lat: number; lng: number } 
             if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
         }
     }
+    return null;
+}
+
+/**
+ * Decode a Plus Code (Open Location Code) — Google embeds these in the `q=`
+ * parameter of maps.app.goo.gl redirects (e.g. "PM4C+33J,7911 ابن الاثير...").
+ * Short codes are recovered against the Riyadh reference, since all the
+ * group's outings are in Riyadh.
+ */
+function extractCoordsFromPlusCode(text: string): { lat: number; lng: number } | null {
+    // OLC alphabet: 23456789CFGHJMPQRVWX (no I/L/O/U/A/B/D/E/K/N/S/T/Y/Z/0/1)
+    const re = /\b([23456789CFGHJMPQRVWX]{4,8})\+([23456789CFGHJMPQRVWX]{2,3})\b/i;
+    const m = text.match(re);
+    if (!m) return null;
+    const code = `${m[1]}+${m[2]}`.toUpperCase();
+    try {
+        const olc = new OpenLocationCode();
+        const full = code.length === 11
+            ? code
+            : olc.recoverNearest(code, RIYADH_REF.lat, RIYADH_REF.lng);
+        const area = olc.decode(full);
+        const lat = area.latitudeCenter;
+        const lng = area.longitudeCenter;
+        if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+    } catch { /* invalid code */ }
     return null;
 }
 
@@ -222,11 +251,20 @@ async function tryExpandWithUa(
     const fromUrl = extractCoords(finalUrl);
     if (fromUrl) return fromUrl;
 
+    // 1b) Plus Code in the final URL — `maps.app.goo.gl/...?g_st=ic` redirects
+    //     to `?q=PLUSCODE,address` for many places, and OLC decodes it offline.
+    const fromPlusUrl = extractCoordsFromPlusCode(finalUrl);
+    if (fromPlusUrl) return fromPlusUrl;
+
     const body = (await res.text()).slice(0, 400000);
 
     // 2) Structured coord patterns anywhere in the HTML body.
     const fromBody = extractCoords(body);
     if (fromBody) return fromBody;
+
+    // 2b) Plus Code in the body (some pages embed it in metadata).
+    const fromPlusBody = extractCoordsFromPlusCode(body);
+    if (fromPlusBody) return fromPlusBody;
 
     // 3) Static Maps URLs in og:image / twitter:image — these reliably carry
     //    `center=lat,lng` and exist on most Google Maps place pages.
