@@ -56,6 +56,7 @@ const VIBRATION_PATTERNS = {
     'outing-today':        [300, 100, 300],
     'restaurant-change':   [120, 60, 120, 60, 120],
     'day-change':          [200, 80, 200, 80, 200],
+    'impromptu-meetup':    [300, 100, 100, 50, 100, 50, 300],
     'default':             [100, 50, 100],
 }
 

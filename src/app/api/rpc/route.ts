@@ -49,6 +49,9 @@ const RATE_LIMIT_RULES: Record<string, RateLimitRule> = {
     setRestaurantLocation: { limit: 20, windowMs: 60 * 1000 },
     deleteRestaurantLocation: { limit: 20, windowMs: 60 * 1000 },
     mergeRestaurantNames: { limit: 30, windowMs: 60 * 1000 },
+    startImpromptuMeetup: { limit: 3, windowMs: 10 * 60 * 1000 },
+    respondImpromptuMeetup: { limit: 20, windowMs: 60 * 1000 },
+    cancelImpromptuMeetup: { limit: 5, windowMs: 60 * 1000 },
 };
 
 const rateLimitStore = new Map<string, RateLimitBucket>();
@@ -1448,6 +1451,141 @@ export async function POST(request: Request) {
                 }
 
                 return NextResponse.json({ result: { updatedWeeks, mergedNames: fromNames.length } });
+            }
+
+            // ---------- IMPROMPTU MEETUP ("أنا فاضي") ----------
+            case "startImpromptuMeetup": {
+                if (!authName) throw new Error("Unauthorized");
+                const message = asTrimmedString(payload?.message).slice(0, 120);
+
+                // Auto-fail any stale "open" meetups (past expiry) so we don't block new ones.
+                const now = Date.now();
+                const staleSnap = await adminDb
+                    .collection("impromptuMeetups")
+                    .where("status", "==", "open")
+                    .get();
+                const staleBatch = adminDb.batch();
+                let staleCount = 0;
+                staleSnap.forEach((d) => {
+                    const data = d.data() as any;
+                    if (data.expiresAtMs < now) {
+                        staleBatch.update(d.ref, { status: "failed", resolvedAt: now });
+                        staleCount++;
+                    }
+                });
+                if (staleCount > 0) await staleBatch.commit();
+
+                // Reject if a fresh "open" meetup already exists.
+                const freshSnap = await adminDb
+                    .collection("impromptuMeetups")
+                    .where("status", "==", "open")
+                    .limit(1)
+                    .get();
+                if (!freshSnap.empty) {
+                    throw new Error("في لقاء مفاجئ مفتوح حالياً — انتظر يخلص");
+                }
+
+                const newRef = adminDb.collection("impromptuMeetups").doc();
+                await newRef.set({
+                    initiator: authName,
+                    message,
+                    createdAtMs: now,
+                    expiresAtMs: now + 5 * 60 * 1000,
+                    status: "open",
+                    responses: {},
+                    threshold: 3,
+                    resolvedAt: null,
+                });
+
+                // Fire-and-forget push notification to all members.
+                sendPushNotification(
+                    {
+                        title: `🚨 ${authName} فاضي!`,
+                        body: message
+                            ? `"${message}" — مين معاه؟ ردّ خلال 5 دقايق`
+                            : "فاضي بكير، مين معاه؟ ردّ خلال 5 دقايق",
+                        type: "impromptu-meetup",
+                        tag: `impromptu-${newRef.id}`,
+                        url: "/?tab=week",
+                        payload: { meetupId: newRef.id },
+                    },
+                    {}
+                ).catch((err) => {
+                    console.error("Failed to send impromptu start notification:", err);
+                });
+
+                return NextResponse.json({ result: { meetupId: newRef.id } });
+            }
+
+            case "respondImpromptuMeetup": {
+                if (!authName) throw new Error("Unauthorized");
+                const meetupId = asTrimmedString(payload?.meetupId);
+                const status = asTrimmedString(payload?.status);
+                if (!meetupId) throw new Error("missing meetupId");
+                if (!["free", "busy", "maybe"].includes(status)) throw new Error("invalid status");
+
+                const ref = adminDb.collection("impromptuMeetups").doc(meetupId);
+                const beforeWasOpen = await adminDb.runTransaction(async (tx) => {
+                    const snap = await tx.get(ref);
+                    if (!snap.exists) throw new Error("Meetup not found");
+                    const data = snap.data() as any;
+
+                    if (data.initiator === authName) throw new Error("أنت اللي بدا اللقاء");
+                    if (data.status !== "open") throw new Error("اللقاء انتهى");
+                    if (Date.now() > data.expiresAtMs) {
+                        tx.update(ref, { status: "failed", resolvedAt: Date.now() });
+                        throw new Error("انتهى الوقت");
+                    }
+
+                    const responses = { ...(data.responses || {}) };
+                    responses[authName] = { status, atMs: Date.now() };
+
+                    // Recompute free count (initiator counts as 1).
+                    let freeCount = 1;
+                    for (const [n, r] of Object.entries(responses)) {
+                        if (n !== data.initiator && (r as any).status === "free") freeCount++;
+                    }
+
+                    const updates: Record<string, unknown> = { responses };
+                    if (freeCount >= (data.threshold || 3)) {
+                        updates.status = "succeeded";
+                        updates.resolvedAt = Date.now();
+                    }
+                    tx.update(ref, updates);
+                    return data.status === "open" && updates.status === "succeeded";
+                });
+
+                if (beforeWasOpen) {
+                    sendPushNotification(
+                        {
+                            title: "🎉 اللقاء تأكد!",
+                            body: "3+ أعضاء فاضيين. نسّقوا في الواتساب",
+                            type: "impromptu-meetup",
+                            tag: `impromptu-success-${meetupId}`,
+                            url: "/?tab=week",
+                            payload: { meetupId },
+                        },
+                        {}
+                    ).catch((err) => console.error("impromptu success push failed:", err));
+                }
+
+                return NextResponse.json({ result: true });
+            }
+
+            case "cancelImpromptuMeetup": {
+                if (!authName) throw new Error("Unauthorized");
+                const meetupId = asTrimmedString(payload?.meetupId);
+                if (!meetupId) throw new Error("missing meetupId");
+                const ref = adminDb.collection("impromptuMeetups").doc(meetupId);
+                const snap = await ref.get();
+                if (!snap.exists) throw new Error("Meetup not found");
+                const data = snap.data() as any;
+                if (data.initiator !== authName && !isAdmin) {
+                    throw new Error("اللي بدا اللقاء يقدر يلغيه فقط");
+                }
+                if (data.status !== "open") return NextResponse.json({ result: true });
+                await ref.update({ status: "canceled", resolvedAt: Date.now() });
+                return NextResponse.json({ result: true });
             }
         }
         return NextResponse.json({ error: "Unknown action" }, { status: 400 });
