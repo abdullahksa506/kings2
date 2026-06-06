@@ -30,11 +30,11 @@ const REACTION_EMOJIS = ["😏", "😱", "🤔", "😂", "🔥", "🤥", "👀",
 const ALL_CHARACTERS: Character[] = ["duke", "assassin", "captain", "ambassador", "contessa"];
 
 const PHASE_LABEL: Record<string, string> = {
-    awaitChallenge: "نافذة التحدّي",
-    awaitBlock: "نافذة الصدّ",
-    awaitBlockChallenge: "تحدّي الصدّ",
-    loseInfluence: "خسارة ورقة",
-    exchange: "تبديل أوراق",
+    awaitChallenge: "نافذة التحدّي؟؟ ⚔️✨",
+    awaitBlock: "نافذة الصدّ؟؟ 🛡️✨",
+    awaitBlockChallenge: "تحدّي الصدّ؟؟ 🤺💥",
+    loseInfluence: "خسارة ورقه؟؟ 😅💔",
+    exchange: "تبدييل أوراق؟؟ 🔄✨",
 };
 
 function RemoteAudio({ stream }: { stream: MediaStream }) {
@@ -158,7 +158,7 @@ export default function CoupArena({ isOpen, onClose, userName }: CoupArenaProps)
         try {
             await fn();
         } catch (e: any) {
-            setError(e?.message || "حدث خطأ");
+            setError(e?.message || "أحسس صار خطأ؟؟ 😅💥 والله شوف مدري 🤷✨");
         } finally {
             setBusy(false);
         }
@@ -188,7 +188,7 @@ export default function CoupArena({ isOpen, onClose, userName }: CoupArenaProps)
                         <div className="bg-rose-500/20 p-2 rounded-xl text-rose-400">
                             <Swords className="w-5 h-5" />
                         </div>
-                        <h2 className="text-xl font-bold text-white">Coup — انقلاب</h2>
+                        <h2 className="text-xl font-bold text-white">Coup — انقلاب؟؟ ⚔️👑✨</h2>
                     </div>
                     <button
                         onClick={() => {
@@ -221,8 +221,8 @@ export default function CoupArena({ isOpen, onClose, userName }: CoupArenaProps)
             <div className="space-y-4">
                 <div className="bg-gradient-to-br from-rose-900/30 to-slate-900 border border-rose-500/20 rounded-2xl p-5">
                     <p className="text-slate-300 text-sm leading-relaxed mb-4">
-                        لعبة خداع وذكاء لـ 2-4 لاعبين. ادّعِ الشخصيات، اكذب، وتحدّى خصومك! آخر لاعب يحتفظ بورقة يفوز.
-                        تكلموا بالصوت داخل اللعبة عشان الكذب يصير واقعي 🎭
+                        والله شوف لعبة خداع وذكاء لـ 2-4 لاعبيين؟؟ ادّعِ الشخصيات، اكذب، وتحدّى خصومك يعني! 🎭✨
+                        آخر لاعب يحتفظ بورقه يفووز 🏆💥 تكلموا بالصوت داخل اللعبه عشان الكذب يصير واقعي أحس 🤥🔊
                     </p>
                     <div className="flex flex-col gap-2">
                         <button
@@ -235,13 +235,13 @@ export default function CoupArena({ isOpen, onClose, userName }: CoupArenaProps)
                             }
                             className="w-full bg-rose-500 hover:bg-rose-400 disabled:opacity-50 text-slate-950 font-bold py-3 rounded-xl flex items-center justify-center gap-2"
                         >
-                            <Play className="w-5 h-5 fill-current" /> إنشاء غرفة جديدة
+                            <Play className="w-5 h-5 fill-current" /> إنشاء غرفه جديده؟؟ 🎮✨ لو تبي
                         </button>
                         <div className="flex gap-2">
                             <input
                                 value={joinCode}
                                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                                placeholder="رمز الغرفة"
+                                placeholder="رمز الغرفه؟؟ 🔑✨"
                                 maxLength={6}
                                 className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white text-center tracking-widest font-mono"
                             />
@@ -256,7 +256,7 @@ export default function CoupArena({ isOpen, onClose, userName }: CoupArenaProps)
                                 }
                                 className="bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold px-5 rounded-xl"
                             >
-                                دخول
+                                دخوول؟؟ 🚀💥
                             </button>
                         </div>
                     </div>
@@ -264,7 +264,7 @@ export default function CoupArena({ isOpen, onClose, userName }: CoupArenaProps)
 
                 {openRooms.length > 0 && (
                     <div className="space-y-2">
-                        <h3 className="text-slate-400 text-sm font-bold px-1">غرف مفتوحة</h3>
+                        <h3 className="text-slate-400 text-sm font-bold px-1">غرف مفتووحه؟؟ 🚪✨ والله شوف</h3>
                         {openRooms.map((r) => {
                             const mine = r.players.some((p) => p.name === userName);
                             return (
@@ -276,7 +276,7 @@ export default function CoupArena({ isOpen, onClose, userName }: CoupArenaProps)
                                         <div className="flex items-center gap-2">
                                             <span className="font-mono font-bold text-amber-400 tracking-widest">{r.roomId}</span>
                                             <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
-                                                {r.status === "lobby" ? "بالانتظار" : "تلعب الآن"}
+                                                {r.status === "lobby" ? "بالانتظاار ⏳" : "تلعب الحيين؟؟ 🎮💥"}
                                             </span>
                                         </div>
                                         <p className="text-xs text-slate-500 mt-1">
@@ -293,7 +293,7 @@ export default function CoupArena({ isOpen, onClose, userName }: CoupArenaProps)
                                         }
                                         className="bg-rose-500/90 hover:bg-rose-400 disabled:opacity-40 text-slate-950 font-bold px-4 py-2 rounded-lg text-sm"
                                     >
-                                        {mine ? "العودة" : "انضمام"}
+                                        {mine ? "العوده؟؟ 🔙" : "انضمامم؟؟ 🚀💥"}
                                     </button>
                                 </div>
                             );
@@ -312,7 +312,7 @@ export default function CoupArena({ isOpen, onClose, userName }: CoupArenaProps)
         return (
             <div className="space-y-4">
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 text-center">
-                    <p className="text-slate-400 text-sm mb-1">رمز الغرفة — شاركه مع الشباب</p>
+                    <p className="text-slate-400 text-sm mb-1">رمز الغرفه؟؟ — شاركه مع الشباب 🔑📤✨</p>
                     <button
                         onClick={() => navigator.clipboard?.writeText(room!.roomId)}
                         className="inline-flex items-center gap-2 text-3xl font-mono font-bold text-amber-400 tracking-[0.3em]"
@@ -323,7 +323,7 @@ export default function CoupArena({ isOpen, onClose, userName }: CoupArenaProps)
 
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
                     <div className="flex items-center gap-2 mb-3 text-slate-300">
-                        <Users className="w-5 h-5" /> <span className="font-bold">اللاعبون ({room!.players.length}/4)</span>
+                        <Users className="w-5 h-5" /> <span className="font-bold">اللاعبوون؟؟ ({room!.players.length}/4) 👥✨</span>
                     </div>
                     <div className="space-y-2">
                         {room!.players.map((p) => (
@@ -331,7 +331,7 @@ export default function CoupArena({ isOpen, onClose, userName }: CoupArenaProps)
                                 <span className="text-white font-semibold">{p.name}</span>
                                 {p.isHost && (
                                     <span className="flex items-center gap-1 text-xs text-amber-400">
-                                        <Crown className="w-4 h-4" /> المضيف
+                                        <Crown className="w-4 h-4" /> المضييف 👑
                                     </span>
                                 )}
                             </div>
@@ -349,11 +349,11 @@ export default function CoupArena({ isOpen, onClose, userName }: CoupArenaProps)
                             className="flex-1 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold py-3 rounded-xl flex items-center justify-center gap-2"
                         >
                             <Play className="w-5 h-5 fill-current" />
-                            {room!.players.length < 2 ? "بانتظار لاعب آخر..." : "ابدأ اللعبة"}
+                            {room!.players.length < 2 ? "بانتظاار لاعب آخر... ⏳" : "ابدأ اللعبه؟؟ 🎮✨"}
                         </button>
                     ) : (
                         <div className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl text-center text-sm">
-                            بانتظار المضيف ليبدأ...
+                            بانتظاار المضيف ليبدأ... ⏳👑✨
                         </div>
                     )}
                     <button onClick={handleLeave} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 rounded-xl">
@@ -378,7 +378,7 @@ export default function CoupArena({ isOpen, onClose, userName }: CoupArenaProps)
                 {/* Phase / timer banner */}
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
                     <div className="text-sm">
-                        <span className="text-slate-400">المرحلة: </span>
+                        <span className="text-slate-400">المرحله؟؟: </span>
                         <span className="text-white font-bold">
                             {room!.phase === "turn" ? `دور ${room!.currentPlayer}` : PHASE_LABEL[room!.phase] || room!.phase}
                         </span>

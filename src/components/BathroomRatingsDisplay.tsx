@@ -46,7 +46,7 @@ export default function BathroomRatingsDisplay() {
 
     if (bathroomRatings.length === 0) return (
         <div className="text-center p-8 bg-slate-900/50 border border-slate-800 rounded-2xl">
-            <p className="text-slate-500">لا توجد تقييمات حمامات بعد</p>
+            <p className="text-slate-500">ما في تقييمات حماماات للحين؟؟ 🚽📭 أحس 🤷✨</p>
         </div>
     );
 
@@ -60,7 +60,7 @@ export default function BathroomRatingsDisplay() {
         const weekRestaurant = weeks.get(rating.weekId)?.restaurant?.trim() || "";
         if (weekRestaurant) return `حمام ${weekRestaurant}`;
 
-        return "حمام غير محدد";
+        return "حمام غير محدد؟؟ 🚽🤷";
     };
 
     type BathroomGroup = {
@@ -94,7 +94,7 @@ export default function BathroomRatingsDisplay() {
         <div className="space-y-4">
             <h3 className="text-lg font-bold text-sky-400 flex items-center gap-2">
                 <Bath className="w-5 h-5" />
-                جميع تقييمات حمامات هشام
+                جمييع تقييمات حماماات هشام؟؟ 🚽👑✨ والله شوف
             </h3>
             {sortedGroups.map((group) => {
                 const week = weeks.get(group.weekId);
@@ -110,7 +110,7 @@ export default function BathroomRatingsDisplay() {
                                 )}
                             </span>
                             <span className="text-sm bg-sky-900/30 text-sky-400 px-3 py-1 rounded-full border border-sky-800/50">
-                                متوسط: {average.toFixed(1)} / 5
+                                متوسط؟؟: {average.toFixed(1)} / 5 ⭐✨
                             </span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

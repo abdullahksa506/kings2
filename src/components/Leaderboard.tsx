@@ -41,7 +41,7 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
     if (loading) {
         return (
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl animate-pulse">
-                <h3 className="font-semibold text-lg mb-4 text-slate-300">قائمة الشرف</h3>
+                <h3 className="font-semibold text-lg mb-4 text-slate-300">قايمة الشررف؟؟ 🏆✨ أحس</h3>
                 <div className="h-48 bg-slate-800/50 rounded-xl"></div>
             </div>
         );
@@ -52,10 +52,10 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
                 <h3 className="font-semibold text-lg mb-4 text-slate-300 flex items-center gap-2">
                     <Trophy className="w-5 h-5 text-amber-500" />
-                    قائمة الشرف (المتصدرين)
+                    قايمة الشررف؟؟ 🏆 (المتصدرين يعني ✨)
                 </h3>
                 <p className="text-sm text-slate-500 text-center py-6">
-                    لا يوجد طلعات سابقة مكتملة حتى الآن. شاركوا وقيّموا لتبدأ المنافسة!
+                    ما في طلعات سابقه مكتمله للحين؟؟ 📭 والله شوف شاركوا وقيموا عشان تبدأ المنافسه! 🏁💥
                 </p>
             </div>
         );
@@ -70,9 +70,9 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
             <div className="flex flex-col items-center text-center mb-3 relative z-10">
                 <Crown className="w-7 h-7 text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.45)]" />
                 <h3 className="mt-2 font-bold text-xl text-transparent bg-clip-text bg-gradient-to-b from-amber-200 via-amber-300 to-amber-500">
-                    قائمة شرف المطاعم
+                    قايمة شررف المطاعمم؟؟ 🍔🏆✨
                 </h3>
-                <p className="text-[11px] text-amber-400/70 mt-1.5 font-medium">دورة هذا الموسم</p>
+                <p className="text-[11px] text-amber-400/70 mt-1.5 font-medium">دورة هذا الموسمم يعني 📅💥</p>
             </div>
             <div className="mb-4 relative z-10"><OrnamentalDivider /></div>
             {isDean && onReset && (
@@ -82,7 +82,7 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
                         className="text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all"
                     >
                         <RotateCcw className="w-3.5 h-3.5" />
-                        تصفير الدورة
+                        تصفيير الدورة؟؟ 🔄💥 أحس
                     </button>
                 </div>
             )}
@@ -133,10 +133,10 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-white text-base leading-tight">
-                                        {entry.week.restaurant || "مطعم مجهول"}
+                                        {entry.week.restaurant || "مطعم مجهوول؟؟ 🍔🤷"}
                                     </h4>
                                     <div className="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                                        <span>اختيار:</span>
+                                        <span>اختياار:</span>
                                         <span className="w-6 h-6 rounded-full overflow-hidden border border-white/20 bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-200 shrink-0">
                                             {kingAvatar ? (
                                                 <img src={kingAvatar} alt={kingDisplayName} className="w-full h-full object-cover" />

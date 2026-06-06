@@ -24,7 +24,7 @@ export default function SuggestionBox({ isDean }: { isDean: boolean }) {
             setTimeout(() => setSubmitted(false), 4000);
         } catch (e) {
             console.error(e);
-            alert("حدث خطأ");
+            alert("أحسس صار خطأ؟؟ 😅💥 والله شوف مدري بس جرب مره ثانيه 🤷✨");
         }
         setSubmitting(false);
     };
@@ -49,7 +49,7 @@ export default function SuggestionBox({ isDean }: { isDean: boolean }) {
                 </div>
                 <div>
                     <h3 className="font-bold text-xl text-white">صندووق الاقتراحات؟؟ 💡✨ يعني أحس 📦🤷</h3>
-                    <p className="text-xs text-slate-500">اقتراحك سري ولا يظهر اسمك</p>
+                    <p className="text-xs text-slate-500">اقتراحك سرري ولا يظهر اسمك يعني 🤫✨</p>
                 </div>
             </div>
 
@@ -64,7 +64,7 @@ export default function SuggestionBox({ isDean }: { isDean: boolean }) {
                     <textarea
                         value={text}
                         onChange={e => setText(e.target.value)}
-                        placeholder="اكتب اقتراحك هنا... (سري تماماً)"
+                        placeholder="اكتب اقتراحك هنا يعني؟؟ 💡 (سري تماماً والله 🤫✨)"
                         rows={3}
                         maxLength={500}
                         className="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-white outline-none focus:border-purple-500 resize-none placeholder:text-slate-600"
@@ -91,7 +91,7 @@ export default function SuggestionBox({ isDean }: { isDean: boolean }) {
                         className="w-full bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 font-semibold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
                     >
                         <Eye className="w-4 h-4" />
-                        {showSuggestions ? "تحديث الاقتراحات" : "عرض الاقتراحات (العميد فقط)"}
+                        {showSuggestions ? "تحدييث الاقتراحات؟؟ 🔄✨" : "عرض الاقتراحات؟؟ 👁️👑 (العمييد فقط يعني)"}
                     </button>
                     {showSuggestions && (
                         <div className="mt-4 space-y-2 max-h-80 overflow-y-auto">
@@ -100,7 +100,7 @@ export default function SuggestionBox({ isDean }: { isDean: boolean }) {
                                     <div className="w-6 h-6 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
                                 </div>
                             ) : suggestions.length === 0 ? (
-                                <p className="text-center text-slate-500 py-4">لا توجد اقتراحات بعد</p>
+                                <p className="text-center text-slate-500 py-4">ما في اقتراحات للحين؟؟ 📭 أحس 🤷✨</p>
                             ) : (
                                 suggestions.map(s => (
                                     <div key={s.id} className="bg-slate-950 border border-purple-500/10 rounded-xl p-4">

@@ -52,7 +52,7 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
         };
     }, [weekId]);
 
-    if (loading) return <div className="text-amber-500 font-mono text-sm animate-pulse">جاري جلب التقييمات السرية...</div>;
+    if (loading) return <div className="text-amber-500 font-mono text-sm animate-pulse">يجيب التقييمات السرريه... 🔐✨ أحس مدري 🤷💥</div>;
 
     const average = ratings.length > 0 ? ratings.reduce((acc, curr) => acc + curr.score, 0) / ratings.length : 0;
 
@@ -61,37 +61,37 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-amber-500 flex items-center gap-2">
                     <BarChart3 className="w-5 h-5" />
-                    تفاصيل تصويت الأسبوع (سرية للغاية)
+                    تفاصيل تصويت الأسبوعع؟؟ 🔐📊 (سريه للغايه يعني 🤫✨)
                 </h3>
                 <div className="flex bg-slate-900 rounded-lg p-1 border border-slate-700">
                     <button
                         onClick={() => setSelectedWeekType("current")}
                         className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${selectedWeekType === "current" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-slate-200"}`}
                     >
-                        الحالي
+                        الحالي؟؟ 📅
                     </button>
                     <button
                         onClick={() => setSelectedWeekType("past")}
                         className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${selectedWeekType === "past" ? "bg-amber-500 text-slate-950" : "text-slate-400 hover:text-slate-200"}`}
                     >
-                        السابق
+                        السابق؟؟ ⏮️
                     </button>
                 </div>
             </div>
 
             {ratings.length === 0 ? (
                 <div className="pb-4">
-                    <p className="text-slate-500 text-sm mb-4">لا يوجد تقييمات لهذا الأسبوع حتى الآن.</p>
+                    <p className="text-slate-500 text-sm mb-4">ما في تقييمات لهذا الأسبوعع حتى الحين؟؟ 📭 أحس مدري 🤷✨</p>
                 </div>
             ) : (
                 <>
                     <div className="flex gap-4 mb-6">
                         <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex-1">
-                            <p className="text-sm text-slate-400">عدد المصوتين</p>
+                            <p className="text-sm text-slate-400">عدد المصوتيين؟؟ 🗳️✨</p>
                             <p className="text-2xl font-mono text-white mt-1">{ratings.length}/6</p>
                         </div>
                         <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex-1">
-                            <p className="text-sm text-slate-400">التقييم المتوسط</p>
+                            <p className="text-sm text-slate-400">التقييم المتوسط؟؟ ⭐✨</p>
                             <p className="text-2xl font-mono text-white mt-1">{average.toFixed(1)} <span className="text-amber-500 text-sm">/ 5</span></p>
                         </div>
                     </div>
@@ -115,7 +115,7 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
                     {average <= 2 && (
                         <div className="mt-4 p-3 bg-red-900/20 border border-red-500/30 rounded-lg flex gap-2 items-start text-red-500 text-sm">
                             <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0" />
-                            <p>تنبيه: التقييم منخفض جداً (2 أو أقل). إذا تكرر ذلك لملك هذا الأسبوع في دورتين متتاليتين، سيسقط دوره القادم حسب الدستور.</p>
+                            <p>⚠️ تنبييه: التقييم منخفض جداً (2 أو أقل) يعني 😅 إذا تكرر ذلك لملك هذا الأسبوع في دورتين متتاليتين، سيسقط دوره القادم حسب الدستوور؟؟ 📜👑💥</p>
                         </div>
                     )}
                 </>
@@ -136,13 +136,13 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
                     <div className="mt-8 pt-6 border-t border-amber-900/50">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-bold text-amber-500 flex items-center gap-2">
-                                📱 حالة تثبيت التطبيق
+                                📱 حالة تثبيت التطبييق؟؟ والله شوف ✨
                             </h3>
                             <button
                                 onClick={() => setShowPwaList(!showPwaList)}
                                 className="text-sm bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-300 px-3 py-1.5 rounded-lg transition-colors"
                             >
-                                {showPwaList ? "إخفاء القائمة" : "عرض القائمة"}
+                                {showPwaList ? "إخفاء القايمه؟؟ 🙈" : "عرض القايمه؟؟ 👁️✨"}
                             </button>
                         </div>
 
@@ -179,12 +179,12 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
             <div className="mt-8 pt-6 border-t border-amber-900/50">
                 <h3 className="text-lg font-bold text-amber-500 mb-4 flex items-center gap-2">
                     <Users className="w-5 h-5" />
-                    حالة التسجيل
+                    حالة التسجييل؟؟ 📝✨ والله شوف
                 </h3>
                 {registeredNames.length >= VALID_NAMES.length ? (
                     <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-emerald-400">
                         <CheckCircle2 className="w-5 h-5 shrink-0" />
-                        <span className="font-medium">جميع الأعضاء مسجلين ✅</span>
+                        <span className="font-medium">جمييع الأعضاء مسجلين؟؟ ✅👥💥 أحس</span>
                     </div>
                 ) : (
                     <div className="space-y-2">
@@ -217,7 +217,7 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
                 <div className="mt-8 pt-6 border-t border-amber-900/50">
                     <h3 className="text-lg font-bold text-amber-500 mb-4 flex items-center gap-2">
                         <KeyRound className="w-5 h-5" />
-                        طلبات استرجاع كلمة المرور
+                        طلبات استرجاع كلمة المرورر؟؟ 🔑✨ والله شوف
                     </h3>
                     <div className="space-y-3">
                         {resetRequests.map(req => (
@@ -242,11 +242,11 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
             <div className="mt-8 pt-6 border-t border-sky-900/50">
                 <h3 className="text-lg font-bold text-sky-500 mb-4 flex items-center gap-2">
                     <Bell className="w-5 h-5" />
-                    إدارة وإرسال الإشعارات التجريبية
+                    إدارة وإرسال الإشعاراات التجريبيه؟؟ 🔔🧪✨ أحس
                 </h3>
                 <Link href="/admin/notifications" className="inline-flex items-center gap-2 bg-sky-500/20 border border-sky-500/30 text-sky-400 hover:bg-sky-500/30 py-3 px-6 rounded-xl font-semibold transition-colors w-full md:w-auto justify-center">
                     <Bell className="w-5 h-5" />
-                    الانتقال لصفحة اختبار الإشعارات الفردية
+                    الانتقال لصفحة اختبار الإشعاراات الفرديه؟؟ 🔔📲✨ لو تبي
                 </Link>
             </div>
 

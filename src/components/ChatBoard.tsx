@@ -37,7 +37,7 @@ export default function ChatBoard({ userName }: { userName: string }) {
             setText("");
         } catch (e) {
             console.error(e);
-            alert("حدث خطأ في إرسال الرسالة");
+            alert("أحسس صار خطأ بالارساال؟؟ 😅💥 والله شوف مدري بس جرب مره ثانيه 🤷✨");
         }
         setSending(false);
     };
@@ -58,7 +58,7 @@ export default function ChatBoard({ userName }: { userName: string }) {
         const hours = Math.floor(diff / 3600000);
         const days = Math.floor(diff / 86400000);
 
-        if (minutes < 1) return "الآن";
+        if (minutes < 1) return "الحيين؟؟ ⏰";
         if (minutes < 60) return `${minutes} د`;
         if (hours < 24) return `${hours} س`;
         return `${days} ي`;
@@ -82,8 +82,8 @@ export default function ChatBoard({ userName }: { userName: string }) {
                     <MessageCircle className="w-5 h-5" />
                 </div>
                 <div>
-                    <h3 className="font-bold text-lg text-white">بورد الدردشة</h3>
-                    <p className="text-xs text-slate-500">دردشة عامة بين الشباب</p>
+                    <h3 className="font-bold text-lg text-white">بوورد الدردشه؟؟ 💬✨ أحس</h3>
+                    <p className="text-xs text-slate-500">دردشه عامه بين الشباب يعني 🗣️💥</p>
                 </div>
             </div>
 
@@ -91,7 +91,7 @@ export default function ChatBoard({ userName }: { userName: string }) {
             <div className="h-72 overflow-y-auto p-4 space-y-3 flex flex-col-reverse">
                 {messages.length === 0 ? (
                     <div className="flex-1 flex items-center justify-center">
-                        <p className="text-slate-600 text-sm">لا توجد رسائل بعد... كن أول من يكتب!</p>
+                        <p className="text-slate-600 text-sm">ما في رساايل للحين؟؟ 📭 والله شوف كن أول من يكتب لو تبي! ✍️✨</p>
                     </div>
                 ) : (
                     messages.map(msg => {
@@ -141,7 +141,7 @@ export default function ChatBoard({ userName }: { userName: string }) {
                     value={text}
                     onChange={e => setText(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="اكتب رسالة..."
+                    placeholder="اكتب رساله يعني؟؟ ✍️💬✨"
                     maxLength={300}
                     className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 placeholder:text-slate-600"
                 />

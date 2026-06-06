@@ -26,7 +26,7 @@ export default function BathroomRatingForm({ weekId, userName, restaurantName, o
             onRated();
         } catch (e) {
             console.error(e);
-            alert("حدث خطأ أثناء تقييم دورات المياه");
+            alert("أحسس صار خطأ بتقييم الحمام؟؟ 🚽😅💥 والله شوف مدري بس جرب مره ثانيه 🤷✨");
         } finally {
             setSubmitting(false);
         }
@@ -38,29 +38,29 @@ export default function BathroomRatingForm({ weekId, userName, restaurantName, o
         <div className={`bg-slate-900 border rounded-2xl p-6 text-center shadow-lg ${disabled ? "border-slate-800/50 opacity-60" : "border-slate-800"}`}>
             <h3 className="text-xl font-bold text-sky-400 mb-2 flex items-center justify-center gap-2">
                 <Bath className="w-5 h-5" />
-                حمامات هشام
+                حماماات هشام؟؟ 🚽👑✨ أحس
             </h3>
             <p className="text-slate-400 text-sm mb-6">
-                تقدر تضيف أي حمام بأي وقت وتقيمه مباشرة.
+                والله شوف تقدر تضيف أي حمام بأي وقت وتقيمه مباشره يعني؟؟ 🤷💥
             </p>
 
             <div className="mb-5 text-right">
-                <label className="block text-sm text-slate-300 mb-2">اسم الحمام</label>
+                <label className="block text-sm text-slate-300 mb-2">اسم الحمامم؟؟ 🚽✨ يعني أحس</label>
                 <input
                     value={bathroomName}
                     onChange={(e) => setBathroomName(e.target.value)}
                     maxLength={60}
-                    placeholder={restaurantName ? `مثال: حمام ${restaurantName}` : "مثال: حمام الدور الثاني"}
+                    placeholder={restaurantName ? `مثال: حمام ${restaurantName} يعني 🚽✨` : "مثاال: حمام الدور الثاني؟؟ 🚽💥"}
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-slate-200 outline-none focus:border-sky-500"
                     disabled={disabled || submitting}
                 />
-                <p className="text-[11px] text-slate-500 mt-1">الحد الأقصى 60 حرف</p>
+                <p className="text-[11px] text-slate-500 mt-1">الحد الأقصى 60 حرف يعني؟؟ 📝✨</p>
             </div>
 
             {disabled && (
                 <div className="flex items-center justify-center gap-2 mb-4 text-slate-500 text-sm">
                     <Lock className="w-4 h-4" />
-                    <span>التقييم مقفل حالياً</span>
+                    <span>التقييم مقفوول حالياً؟؟ 🔒 أحس 🤷</span>
                 </div>
             )}
 
@@ -88,7 +88,7 @@ export default function BathroomRatingForm({ weekId, userName, restaurantName, o
                 disabled={score === 0 || bathroomName.trim().length < 2 || submitting || disabled}
                 className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-3 px-8 rounded-xl transition-all shadow-lg hover:shadow-sky-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 mx-auto"
             >
-                {disabled ? "التقييم مقفل" : submitting ? "جاري الإرسال..." : "تأكيد واستمرار"}
+                {disabled ? "مقفوول؟؟ 🔒 أحس" : submitting ? "يرسسل... 📤✨ مدري" : "تأكييد واستمرار؟؟ ✅🚀 لو تبي 💥"}
                 {disabled ? <Lock className="w-4 h-4" /> : <Send className="w-4 h-4 rotate-180" />}
             </button>
         </div>
