@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 // @ts-expect-error — package has no types but ships a CommonJS export.
 import { OpenLocationCode } from "open-location-code";
+// @ts-expect-error — pure-JS S2 Geometry port, no shipped types.
+import { S2 } from "s2-geometry";
 
 // Free geocoding proxy over OpenStreetMap Nominatim + safe short-link expansion.
 // This is a GET route OUTSIDE the RPC auth switch, so it enforces its own
@@ -101,10 +103,33 @@ function extractCoordsFromImageUrls(html: string): { lat: number; lng: number } 
 }
 
 /**
+ * Decode the S2 Cell ID half of Google's `ftid=0xCELLID:0xPLACEID`. This is
+ * the most universal extraction — every Google Maps redirect URL carries an
+ * ftid, and the CellID encodes the place's geographic location offline.
+ *
+ * Works even when the URL has neither coords, Plus Code, nor a place name.
+ */
+function extractCoordsFromFtid(text: string): { lat: number; lng: number } | null {
+    const m = text.match(/[?&]ftid=0x([0-9a-f]{1,16}):/i);
+    if (!m) return null;
+    try {
+        const idDec = BigInt(`0x${m[1]}`).toString();
+        const key = S2.idToKey(idDec);
+        const ll = S2.keyToLatLng(key);
+        const lat = Number(ll.lat);
+        const lng = Number(ll.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        // Sanity: must be on Earth.
+        if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+        return { lat, lng };
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Decode a Plus Code (Open Location Code) — Google embeds these in the `q=`
- * parameter of maps.app.goo.gl redirects (e.g. "PM4C+33J,7911 ابن الاثير...").
- * Short codes are recovered against the Riyadh reference, since all the
- * group's outings are in Riyadh.
+ * parameter of maps.app.goo.gl redirects (e.g. "PM4C+33J,7911 ابن الاثير…").
  */
 function extractCoordsFromPlusCode(text: string): { lat: number; lng: number } | null {
     // OLC alphabet: 23456789CFGHJMPQRVWX (no I/L/O/U/A/B/D/E/K/N/S/T/Y/Z/0/1)
@@ -251,8 +276,12 @@ async function tryExpandWithUa(
     const fromUrl = extractCoords(finalUrl);
     if (fromUrl) return fromUrl;
 
-    // 1b) Plus Code in the final URL — `maps.app.goo.gl/...?g_st=ic` redirects
-    //     to `?q=PLUSCODE,address` for many places, and OLC decodes it offline.
+    // 1b) ftid=0xS2CELL — universal: every Google Maps redirect carries one,
+    //     and the S2 CellID half encodes the place location offline.
+    const fromFtid = extractCoordsFromFtid(finalUrl);
+    if (fromFtid) return fromFtid;
+
+    // 1c) Plus Code in the final URL (when no ftid).
     const fromPlusUrl = extractCoordsFromPlusCode(finalUrl);
     if (fromPlusUrl) return fromPlusUrl;
 
@@ -262,7 +291,11 @@ async function tryExpandWithUa(
     const fromBody = extractCoords(body);
     if (fromBody) return fromBody;
 
-    // 2b) Plus Code in the body (some pages embed it in metadata).
+    // 2b) ftid in the body (some pages embed it without it being in the URL).
+    const fromFtidBody = extractCoordsFromFtid(body);
+    if (fromFtidBody) return fromFtidBody;
+
+    // 2c) Plus Code in the body.
     const fromPlusBody = extractCoordsFromPlusCode(body);
     if (fromPlusBody) return fromPlusBody;
 
