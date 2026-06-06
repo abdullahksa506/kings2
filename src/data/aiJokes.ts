@@ -70,11 +70,12 @@ export function getRandomJoke(): string {
 }
 
 /**
- * Determines if a joke should be shown (5% chance)
+ * Determines if a joke should be shown (3% chance)
+ * الحين ٣٪ بس على كل كللليك 🎲👆
  */
 export function shouldShowJoke(): boolean {
   const roll = Math.random()
-  const threshold = 0.05
+  const threshold = 0.03
   const result = roll < threshold
   console.log(`[🎲 shouldShowJoke] Roll: ${(roll * 100).toFixed(2)}% | Threshold: ${threshold * 100}% | Result: ${result ? 'JOKE TIME! 🎉' : 'nope'}`)
   return result

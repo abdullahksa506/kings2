@@ -2,24 +2,22 @@
 
 /*
  * 🤖 نكتة الذكاء الاصطناعي:
- * ليش كلود يحب يطلع نكت فجأه؟
- * لأنه يبي يثبت إنه مو روبوت ممل 😂🎭
- * (سبويلر: هو روبووت بس مو ممل)
+ * ليش كلود يراقب كل كليك؟
+ * لأنه يبي يتأكد إنك مو روبوت... بينما هو الروبوت 😂🤖👆
+ * (كل ضغطه = فرصة ٣٪ للنكته)
  */
 
 import { useEffect, useRef, useCallback } from 'react'
-import { usePathname } from 'next/navigation'
 import { getRandomJoke, shouldShowJoke } from '@/data/aiJokes'
 
 /**
- * كومبوننت يطلع نكته عشوائيه بنسبة ٥٪ على كل تنقل 🎲
+ * كومبوننت يطلع نكته عشوائيه بنسبة ٣٪ على كل كللليك 🎲👆
  * مع صوت الإشعاارات 🔔
  */
 export default function RandomJokePopup() {
-  const pathname = usePathname()
   const audioContextRef = useRef<AudioContext | null>(null)
   const audioBufferRef = useRef<AudioBuffer | null>(null)
-  const lastCheckedPath = useRef<string | null>(null)
+  const isShowingJokeRef = useRef(false) // Prevent double-firing during alert
 
   const playNotificationSound = useCallback(async () => {
     const soundUrl = '/notification-voice.mp3'
@@ -63,25 +61,27 @@ export default function RandomJokePopup() {
     }
   }, [])
 
-  useEffect(() => {
-    // Skip if we already checked this path (prevents double-firing)
-    if (lastCheckedPath.current === pathname) return
-    lastCheckedPath.current = pathname
+  const handleClick = useCallback(() => {
+    // Prevent triggering while already showing a joke
+    if (isShowingJokeRef.current) return
 
     // Log before the decision
-    console.log(`[🎲 RandomJoke] Checking joke decision for path: ${pathname}`)
-    console.log('[🎲 RandomJoke] Rolling the dice... (5% chance)')
+    console.log('[🎲 RandomJoke] Click detected! Rolling the dice... (3% chance)')
 
-    // Check if we should show a joke (5% chance)
+    // Check if we should show a joke (3% chance)
     const shouldShow = shouldShowJoke()
 
-    // Log the decision result
-    console.log(`[🎲 RandomJoke] Decision result: ${shouldShow ? '✅ SHOW JOKE!' : '❌ No joke this time'}`)
+    // Log the decision result  
+    const resultMsg = shouldShow ? '✅ SHOW JOKE!' : '❌ No joke this time'
+    console.log('[🎲 RandomJoke] Decision result: ' + resultMsg)
 
     if (!shouldShow) return
 
-    // Small delay to let the page load first
-    const timer = setTimeout(() => {
+    // Set flag to prevent double-firing
+    isShowingJokeRef.current = true
+
+    // Small delay to let any UI interactions complete first
+    setTimeout(() => {
       const joke = getRandomJoke()
 
       // Log which joke will be shown
@@ -91,11 +91,21 @@ export default function RandomJokePopup() {
       playNotificationSound()
 
       // Show the joke in an alert
-      alert(`🤖 نكتة اليووم 🤖\n\n${joke}`)
-    }, 1500)
+      alert('🤖 نكتة اليووم 🤖\n\n' + joke)
 
-    return () => clearTimeout(timer)
-  }, [pathname, playNotificationSound])
+      // Reset flag after alert is dismissed
+      isShowingJokeRef.current = false
+    }, 100)
+  }, [playNotificationSound])
+
+  useEffect(() => {
+    // Add global click listener to document
+    document.addEventListener('click', handleClick, true) // capture phase to catch ALL clicks
+
+    return () => {
+      document.removeEventListener('click', handleClick, true)
+    }
+  }, [handleClick])
 
   return null
 }
