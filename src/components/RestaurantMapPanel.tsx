@@ -253,7 +253,8 @@ export default function RestaurantMapPanel({ isOpen, onClose, userName, isAdmin,
             setPending(direct);
             return;
         }
-        if (isShortMapLink(linkInput)) {
+        // Try server-side expansion for ANY URL (the server handles short + full).
+        if (/^https?:\/\//i.test(linkInput.trim())) {
             setBusy(true);
             const expanded = await expandMapLink(linkInput.trim());
             setBusy(false);
@@ -261,10 +262,13 @@ export default function RestaurantMapPanel({ isOpen, onClose, userName, isAdmin,
                 setPending(expanded);
                 return;
             }
-            setError("تعذّر فك الرابط المختصر — جرّب نسخ الرابط الكامل أو ابحث بالاسم");
+            // Auto-switch to map-click mode so the user can pin directly — the
+            // most reliable fallback when Google's HTML doesn't expose coords.
+            setAddMethod("map");
+            setError("ما قدرت أطلّع الإحداثيات من هالرابط 🤷‍♂️ سحبنا الخريطة لك — اضغط مكان المطعم بالضبط، أو جرّب 'بحث' بالاسم.");
             return;
         }
-        setError("ما قدرت أطلّع إحداثيات من الرابط — تأكد إنه رابط خرائط صحيح");
+        setError("الرابط مو واضح — لازم يبدأ بـ https://");
     };
 
     const handleSearch = async () => {

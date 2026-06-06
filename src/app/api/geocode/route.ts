@@ -8,9 +8,13 @@ const NOMINATIM = "https://nominatim.openstreetmap.org/search";
 // Nominatim's usage policy requires an identifying User-Agent.
 const USER_AGENT = "ArshAlkhamis-RestaurantMap/1.0 (friend-group app)";
 // Google serves a coords-less consent page to non-browser agents, so short-link
-// expansion uses a realistic browser User-Agent instead.
-const BROWSER_UA =
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
+// expansion uses realistic browser User-Agents instead. We try a few different
+// ones because `g_st=ic` (open-in-app) links behave differently per UA.
+const BROWSER_UAS = [
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+];
 
 // Saudi Arabia bounding box (approx) — used to disambiguate lat/lng pairs found
 // in a maps HTML page.
@@ -64,6 +68,31 @@ function extractMetaUrl(html: string): string | null {
     }
     const generic = html.match(/https?:\/\/(?:www\.)?google\.com\/maps\/[^\s"'<>]+/i);
     if (generic) return decodeHtmlEntities(generic[0]);
+    return null;
+}
+
+/**
+ * Many Google Maps pages embed a Static Maps URL as `og:image` /
+ * `twitter:image`, and that URL always carries `center=lat,lng` or
+ * `markers=…|lat,lng`. This is the most reliable extraction for
+ * `maps.app.goo.gl/...?g_st=ic` pages whose canonical doesn't help.
+ */
+function extractCoordsFromImageUrls(html: string): { lat: number; lng: number } | null {
+    const metaTags = html.match(/<meta\b[^>]*>/gi) || [];
+    for (const tag of metaTags) {
+        if (!/property=["'](?:og:image|twitter:image)["']|name=["']twitter:image["']/i.test(tag)) continue;
+        const content = tag.match(/content=["']([^"']+)["']/i);
+        if (!content) continue;
+        const url = decodeHtmlEntities(content[1]);
+        // Static Maps params: center=LAT,LNG or markers=...|LAT,LNG
+        let m = url.match(/[?&]center=(-?\d+\.\d+),(-?\d+\.\d+)/);
+        if (!m) m = url.match(/[?&]markers=[^&]*?\|(-?\d+\.\d+),(-?\d+\.\d+)/);
+        if (m) {
+            const lat = parseFloat(m[1]);
+            const lng = parseFloat(m[2]);
+            if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+        }
+    }
     return null;
 }
 
@@ -174,6 +203,66 @@ function hostAllowed(rawUrl: string): boolean {
     }
 }
 
+/**
+ * Run the full extraction chain on a URL with a given User-Agent. Returns
+ * `{lat,lng}` on success, or `{placeName}` (informational) if we identified
+ * the place name but no coords. Returns null on hard fetch failure.
+ */
+async function tryExpandWithUa(
+    url: string,
+    ua: string,
+): Promise<{ lat: number; lng: number } | { placeName: string | null } | null> {
+    const res = await fetch(url, {
+        redirect: "follow",
+        headers: { "User-Agent": ua, "Accept-Language": "ar,en;q=0.8" },
+    });
+
+    // 1) Coords in the final URL after redirects (@lat,lng / !3d!4d / ?q= etc.)
+    const finalUrl = res.url || "";
+    const fromUrl = extractCoords(finalUrl);
+    if (fromUrl) return fromUrl;
+
+    const body = (await res.text()).slice(0, 400000);
+
+    // 2) Structured coord patterns anywhere in the HTML body.
+    const fromBody = extractCoords(body);
+    if (fromBody) return fromBody;
+
+    // 3) Static Maps URLs in og:image / twitter:image — these reliably carry
+    //    `center=lat,lng` and exist on most Google Maps place pages.
+    const fromImage = extractCoordsFromImageUrls(body);
+    if (fromImage) return fromImage;
+
+    // 4) Canonical / og:url / al:web:url with embedded coords.
+    const metaUrl = extractMetaUrl(body);
+    if (metaUrl) {
+        const fromMeta = extractCoords(metaUrl);
+        if (fromMeta) return fromMeta;
+        if (hostAllowed(metaUrl)) {
+            try {
+                const r2 = await fetch(metaUrl, {
+                    redirect: "follow",
+                    headers: { "User-Agent": ua, "Accept-Language": "ar,en;q=0.8" },
+                });
+                const c2 = extractCoords(r2.url || "");
+                if (c2) return c2;
+                const b2 = (await r2.text()).slice(0, 400000);
+                const c3 = extractCoords(b2)
+                    || extractCoordsFromImageUrls(b2)
+                    || extractCoordsFromHtml(b2);
+                if (c3) return c3;
+            } catch { /* ignore */ }
+        }
+    }
+
+    // 5) KSA-bounded numeric pair scattered in the HTML.
+    const ksa = extractCoordsFromHtml(body);
+    if (ksa) return ksa;
+
+    // 6) Surface the place name so the caller can Nominatim-search it.
+    return { placeName: extractPlaceName(body) };
+}
+
 export async function GET(request: Request) {
     const ip = getIp(request);
     if (rateLimited(ip)) {
@@ -189,72 +278,25 @@ export async function GET(request: Request) {
         if (!hostAllowed(expand)) {
             return NextResponse.json({ error: "رابط غير مسموح" }, { status: 400 });
         }
-        try {
-            // First try: a coordinate may already be present in the URL itself.
-            const direct = extractCoords(expand);
-            if (direct) return NextResponse.json(direct);
-
-            const res = await fetch(expand, {
-                redirect: "follow",
-                headers: {
-                    "User-Agent": BROWSER_UA,
-                    "Accept-Language": "ar,en;q=0.8",
-                },
-            });
-
-            // 1) The final URL after redirects usually carries @lat,lng or !3d!4d.
-            const finalUrl = res.url || "";
-            const fromUrl = extractCoords(finalUrl);
-            if (fromUrl) return NextResponse.json(fromUrl);
-
-            const body = (await res.text()).slice(0, 400000);
-
-            // 2) Structured coord patterns in the HTML body.
-            const fromBody = extractCoords(body);
-            if (fromBody) return NextResponse.json(fromBody);
-
-            // 3) maps.app.goo.gl pages embed the resolved URL in canonical /
-            //    og:url. Pull it and run extractCoords on it.
-            const metaUrl = extractMetaUrl(body);
-            if (metaUrl) {
-                const fromMeta = extractCoords(metaUrl);
-                if (fromMeta) return NextResponse.json(fromMeta);
-                // The meta URL may itself need another fetch (e.g. a search URL).
-                if (hostAllowed(metaUrl)) {
-                    try {
-                        const r2 = await fetch(metaUrl, {
-                            redirect: "follow",
-                            headers: { "User-Agent": BROWSER_UA, "Accept-Language": "ar,en;q=0.8" },
-                        });
-                        const u2 = r2.url || "";
-                        const c2 = extractCoords(u2);
-                        if (c2) return NextResponse.json(c2);
-                        const b2 = (await r2.text()).slice(0, 400000);
-                        const c3 = extractCoords(b2) || extractCoordsFromHtml(b2);
-                        if (c3) return NextResponse.json(c3);
-                    } catch { /* ignore */ }
-                }
-            }
-
-            // 4) KSA-bounded numeric pair as a last regex resort.
-            const ksa = extractCoordsFromHtml(body);
-            if (ksa) return NextResponse.json(ksa);
-
-            // 5) Last resort: take the page title (the place name) and search
-            //    Nominatim within Saudi Arabia. Works well for known restaurants.
-            const placeName = extractPlaceName(body);
-            if (placeName) {
-                const nom = await nominatimSearch(placeName);
-                if (nom) return NextResponse.json({ ...nom, viaPlace: placeName });
-            }
-
-            return NextResponse.json(
-                { error: "تعذّر استخراج الإحداثيات من الرابط", placeName },
-                { status: 404 },
-            );
-        } catch {
-            return NextResponse.json({ error: "تعذّر فتح الرابط" }, { status: 502 });
+        // Try the chain with each UA — `g_st=ic` (open-in-app) intent pages
+        // serve different content per UA, so a UA the first one missed may work.
+        let lastPlaceName: string | null = null;
+        for (const ua of BROWSER_UAS) {
+            try {
+                const result = await tryExpandWithUa(expand, ua);
+                if (result && "lat" in result) return NextResponse.json(result);
+                if (result?.placeName && !lastPlaceName) lastPlaceName = result.placeName;
+            } catch { /* try the next UA */ }
         }
+        // Final fallback: Nominatim search on the extracted place name.
+        if (lastPlaceName) {
+            const nom = await nominatimSearch(lastPlaceName);
+            if (nom) return NextResponse.json({ ...nom, viaPlace: lastPlaceName });
+        }
+        return NextResponse.json(
+            { error: "تعذّر استخراج الإحداثيات من الرابط", placeName: lastPlaceName },
+            { status: 404 },
+        );
     }
 
     // --- Mode 2: search by name (Nominatim) ---
