@@ -68,12 +68,24 @@ export default function RandomJokePopup() {
     if (lastCheckedPath.current === pathname) return
     lastCheckedPath.current = pathname
 
+    // Log before the decision
+    console.log(`[🎲 RandomJoke] Checking joke decision for path: ${pathname}`)
+    console.log('[🎲 RandomJoke] Rolling the dice... (5% chance)')
+
     // Check if we should show a joke (5% chance)
-    if (!shouldShowJoke()) return
+    const shouldShow = shouldShowJoke()
+
+    // Log the decision result
+    console.log(`[🎲 RandomJoke] Decision result: ${shouldShow ? '✅ SHOW JOKE!' : '❌ No joke this time'}`)
+
+    if (!shouldShow) return
 
     // Small delay to let the page load first
     const timer = setTimeout(() => {
       const joke = getRandomJoke()
+
+      // Log which joke will be shown
+      console.log('[🎲 RandomJoke] 🎉 Joke selected:', joke)
 
       // Play the notification sound (fire and forget - don't block the alert)
       playNotificationSound()
