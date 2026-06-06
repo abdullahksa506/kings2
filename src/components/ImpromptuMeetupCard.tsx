@@ -132,7 +132,7 @@ export default function ImpromptuMeetupCard({ userName, isAdmin }: Props) {
                             </button>
                         </div>
                         <p className="text-[10px] text-slate-500 text-center">
-                            ينطلق إشعار للجميع، عندهم 5 دقايق يردّون
+                            ينطلق إشعار للجميع، عندهم 15 دقيقة يردّون
                         </p>
                     </div>
                 ) : (

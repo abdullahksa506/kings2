@@ -1490,7 +1490,7 @@ export async function POST(request: Request) {
                     initiator: authName,
                     message,
                     createdAtMs: now,
-                    expiresAtMs: now + 5 * 60 * 1000,
+                    expiresAtMs: now + 15 * 60 * 1000,
                     status: "open",
                     responses: {},
                     threshold: 3,
@@ -1502,8 +1502,8 @@ export async function POST(request: Request) {
                     {
                         title: `🚨 ${authName} فاضي!`,
                         body: message
-                            ? `"${message}" — مين معاه؟ ردّ خلال 5 دقايق`
-                            : "فاضي بكير، مين معاه؟ ردّ خلال 5 دقايق",
+                            ? `"${message}" — مين معاه؟ ردّ خلال 15 دقيقة`
+                            : "فاضي بكير، مين معاه؟ ردّ خلال 15 دقيقة",
                         type: "impromptu-meetup",
                         tag: `impromptu-${newRef.id}`,
                         url: "/?tab=week",
