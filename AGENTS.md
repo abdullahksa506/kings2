@@ -1,5 +1,24 @@
 # Claude Code Guidelines for ملك الخميس 👑
 
+## Before Starting Any Feature 🚀
+
+**MANDATORY**: Before starting work on ANY feature (whether creating a new branch or working on an existing one), you MUST pull the latest changes from the main branch.
+
+```bash
+git checkout main
+git pull origin main
+git checkout -b feature/your-feature-name  # If creating new branch
+# OR
+git checkout your-existing-branch
+git merge main  # If working on existing branch
+```
+
+### Why?
+- Prevents merge conflicts 💥
+- Ensures you're building on the latest code
+- Avoids duplicate work
+- Makes PRs cleaner and easier to review
+
 ## Commit Message Pattern 📝
 
 This repo uses a **fun, goofy Arabic style** for commit messages:
