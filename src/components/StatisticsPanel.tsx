@@ -49,9 +49,9 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                         </div>
                         <div>
                             <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-violet-300 to-purple-400 bg-clip-text text-transparent">
-                                إحصائيات عرش الخميس
+                                إحصائيات عرش الخمييس؟؟ 📊👑✨
                             </h2>
-                            <p className="text-xs text-slate-500 mt-0.5">أرقام وتفاصيل عن كل شي</p>
+                            <p className="text-xs text-slate-500 mt-0.5">أرقاام وتفاصيل عن كل شي يعني 🤷💥</p>
                         </div>
                     </div>
                     <button
@@ -65,7 +65,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-20">
                         <div className="w-12 h-12 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
-                        <p className="text-slate-400 mt-4 text-sm">جاري تحميل الإحصائيات...</p>
+                        <p className="text-slate-400 mt-4 text-sm">يحمّل الإحصائيات... 📊✨ أحس مدري 🤷💥</p>
                     </div>
                 ) : stats ? (
                     <div className="space-y-4">
@@ -76,7 +76,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                                 <div className="absolute -right-8 -top-8 w-28 h-28 bg-indigo-500/10 rounded-full blur-2xl" />
                                 <div className="flex items-center gap-2 mb-4 relative z-10">
                                     <LineChartIcon className="w-5 h-5 text-indigo-400" />
-                                    <h3 className="font-bold text-indigo-300 text-lg">رسوم بيانية</h3>
+                                    <h3 className="font-bold text-indigo-300 text-lg">رسومم بيانيه؟؟ 📈✨ والله شوف</h3>
                                 </div>
 
                                 <div className="space-y-5 relative z-10">
@@ -93,7 +93,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                             <div className="absolute -right-8 -top-8 w-28 h-28 bg-violet-500/10 rounded-full blur-2xl" />
                             <div className="flex items-center gap-2 mb-4 relative z-10">
                                 <Eye className="w-5 h-5 text-violet-400" />
-                                <h3 className="font-bold text-violet-300 text-lg">زيارات الموقع</h3>
+                                <h3 className="font-bold text-violet-300 text-lg">زياراات الموقع؟؟ 👁️✨ أحس</h3>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10">
                                 <StatBox label="إجمالي الزيارات" value={stats.visitStats.total} color="violet" icon="📊" />
@@ -111,7 +111,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                             <div className="absolute -left-8 -bottom-8 w-28 h-28 bg-amber-500/10 rounded-full blur-2xl" />
                             <div className="flex items-center gap-2 mb-4 relative z-10">
                                 <Castle className="w-5 h-5 text-amber-400" />
-                                <h3 className="font-bold text-amber-300 text-lg">الطلعات</h3>
+                                <h3 className="font-bold text-amber-300 text-lg">الطلعاات؟؟ 🏰✨ والله شوف</h3>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10">
                                 <StatBox label="عدد الطلعات" value={stats.totalOutings} color="amber" icon="🏰" />
@@ -134,7 +134,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                             <div className="absolute -right-8 -bottom-8 w-28 h-28 bg-emerald-500/10 rounded-full blur-2xl" />
                             <div className="flex items-center gap-2 mb-4 relative z-10">
                                 <Users className="w-5 h-5 text-emerald-400" />
-                                <h3 className="font-bold text-emerald-300 text-lg">إحصائيات الأعضاء</h3>
+                                <h3 className="font-bold text-emerald-300 text-lg">إحصائيات الأعضااء؟؟ 👥✨ أحس</h3>
                             </div>
                             <div className="space-y-2 relative z-10">
                                 {VALID_NAMES.map((name, i) => {
@@ -182,7 +182,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                             <div className="absolute -left-8 -top-8 w-28 h-28 bg-orange-500/10 rounded-full blur-2xl" />
                             <div className="flex items-center gap-2 mb-4 relative z-10">
                                 <Flame className="w-5 h-5 text-orange-400" />
-                                <h3 className="font-bold text-orange-300 text-lg">سلسلة الحضور المتتالي 🔥</h3>
+                                <h3 className="font-bold text-orange-300 text-lg">سلسلة الحضوور المتتالي؟؟ 🔥✨ والله شوف</h3>
                             </div>
                             <div className="space-y-2 relative z-10">
                                 {Object.entries(stats.streaks)
@@ -214,7 +214,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                             <div className="absolute -right-8 -top-8 w-28 h-28 bg-sky-500/10 rounded-full blur-2xl" />
                             <div className="flex items-center gap-2 mb-4 relative z-10">
                                 <UtensilsCrossed className="w-5 h-5 text-sky-400" />
-                                <h3 className="font-bold text-sky-300 text-lg">المطاعم</h3>
+                                <h3 className="font-bold text-sky-300 text-lg">المطاعمم؟؟ 🍔✨ أحس</h3>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 relative z-10">
                                 <StatBox label="مطاعم مختلفة" value={stats.uniqueRestaurants} color="sky" icon="🍽️" />
@@ -248,7 +248,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                             <div className="absolute -left-8 -bottom-8 w-28 h-28 bg-cyan-500/10 rounded-full blur-2xl" />
                             <div className="flex items-center gap-2 mb-4 relative z-10">
                                 <TrendingUp className="w-5 h-5 text-cyan-400" />
-                                <h3 className="font-bold text-cyan-300 text-lg">مقارنة زمنية</h3>
+                                <h3 className="font-bold text-cyan-300 text-lg">مقارنه زمنيه؟؟ ⏰✨ والله شوف</h3>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 relative z-10">
                                 <StatBox label="آخر 4 أسابيع (حضور)" value={stats.timeWindows.last4.avgAttendance} color="cyan" icon="4️⃣" />
@@ -265,7 +265,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                             <div className="absolute -right-8 -top-8 w-28 h-28 bg-emerald-500/10 rounded-full blur-2xl" />
                             <div className="flex items-center gap-2 mb-4 relative z-10">
                                 <Users className="w-5 h-5 text-emerald-400" />
-                                <h3 className="font-bold text-emerald-300 text-lg">تطور أداء الأعضاء (آخر 4 مقابل اللي قبلها)</h3>
+                                <h3 className="font-bold text-emerald-300 text-lg">تطور أداء الأعضااء؟؟ 📈👥 (آخر 4 مقابل اللي قبلها يعني ✨)</h3>
                             </div>
                             <div className="space-y-2 relative z-10">
                                 {VALID_NAMES.map((name) => {
@@ -293,7 +293,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                             <div className="absolute -left-8 -top-8 w-28 h-28 bg-amber-500/10 rounded-full blur-2xl" />
                             <div className="flex items-center gap-2 mb-4 relative z-10">
                                 <Award className="w-5 h-5 text-amber-400" />
-                                <h3 className="font-bold text-amber-300 text-lg">تحليل قرارات الملوك</h3>
+                                <h3 className="font-bold text-amber-300 text-lg">تحليل قراراات الملوك؟؟ 👑📊✨ أحس</h3>
                             </div>
                             <div className="space-y-2 relative z-10">
                                 {stats.kingDecisionAnalytics.map((k: any) => (
@@ -314,7 +314,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                             <div className="absolute -right-8 -bottom-8 w-28 h-28 bg-orange-500/10 rounded-full blur-2xl" />
                             <div className="flex items-center gap-2 mb-4 relative z-10">
                                 <Clock className="w-5 h-5 text-orange-400" />
-                                <h3 className="font-bold text-orange-300 text-lg">صحة الدورة والمقارنات</h3>
+                                <h3 className="font-bold text-orange-300 text-lg">صحة الدووره والمقارنات؟؟ 🔄📊✨ والله شوف</h3>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 relative z-10">
                                 <StatBox label="اكتمال الردود" value={`${stats.cycleHealth.averageResponseCompletion}%`} color="orange" icon="✅" />
@@ -341,7 +341,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                             <div className="absolute -right-8 -bottom-8 w-28 h-28 bg-yellow-500/10 rounded-full blur-2xl" />
                             <div className="flex items-center gap-2 mb-4 relative z-10">
                                 <Award className="w-5 h-5 text-yellow-400" />
-                                <h3 className="font-bold text-yellow-300 text-lg">أرقام ممتعة 🎯</h3>
+                                <h3 className="font-bold text-yellow-300 text-lg">أرقاام ممتعه؟؟ 🎯✨ أحس مدري</h3>
                             </div>
                             <div className="space-y-2 relative z-10">
                                 {stats.funFacts.highestRatedKing && (
@@ -389,7 +389,7 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                             <div className="absolute -left-8 -top-8 w-28 h-28 bg-fuchsia-500/10 rounded-full blur-2xl" />
                             <div className="flex items-center gap-2 mb-4 relative z-10">
                                 <UtensilsCrossed className="w-5 h-5 text-fuchsia-400" />
-                                <h3 className="font-bold text-fuchsia-300 text-lg">ذكاء المطاعم + التوقعات</h3>
+                                <h3 className="font-bold text-fuchsia-300 text-lg">ذكاء المطاعمم + التوقعات؟؟ 🧠🍔✨ والله شوف</h3>
                             </div>
 
                             <div className="space-y-2 mb-3 relative z-10">
@@ -425,12 +425,12 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                             onClick={onClose}
                             className="w-full bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 text-slate-300 font-semibold py-3 rounded-xl transition-all mt-2 mb-4"
                         >
-                            إغلاق
+                            إغلااق؟؟ ❌ مدري 🤷
                         </button>
                     </div>
                 ) : (
                     <div className="text-center py-16">
-                        <p className="text-slate-500">فشل تحميل الإحصائيات</p>
+                        <p className="text-slate-500">أحسس فشل تحميل الإحصائيات؟؟ 😅💥 والله شوف مدري 🤷✨</p>
                     </div>
                 )}
             </div>

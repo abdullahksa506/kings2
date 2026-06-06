@@ -50,7 +50,7 @@ export default function AuthScreen() {
                 await login(selectedName, password);
             }
         } catch (err: any) {
-            toast.error(err.message || "حدث خطأ ما");
+            toast.error(err.message || "أحسس صار شي غلط؟؟ 😅💥 والله شوف مدري بس يمكن جرب مره ثانيه 🤷✨");
         } finally {
             setLoading(false);
         }
@@ -92,7 +92,7 @@ export default function AuthScreen() {
                 <form onSubmit={handleSubmit} className="space-y-5">
 
                     <div className="space-y-1">
-                        <label className="text-sm font-medium text-slate-300">الاسم</label>
+                        <label className="text-sm font-medium text-slate-300">الاسسم؟؟ 🧑✨ يعني أحس</label>
                         <div className="relative">
                             <select
                                 value={selectedName}
@@ -112,7 +112,7 @@ export default function AuthScreen() {
 
                     {!isForgotPassword ? (
                         <div className="space-y-1">
-                            <label className="text-sm font-medium text-slate-300">الرمز السري</label>
+                            <label className="text-sm font-medium text-slate-300">الرمز السرري؟؟ 🔐 والله شوف 🤫✨</label>
                             <div className="relative">
                                 <input
                                     type="password"
@@ -131,7 +131,7 @@ export default function AuthScreen() {
                         forgotPasswordStep === 2 && (
                             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-5">
                                 <div className="space-y-1">
-                                    <label className="text-sm font-medium text-slate-300">كود الاسترجاع (من العميد)</label>
+                                    <label className="text-sm font-medium text-slate-300">كوود الاسترجاع؟؟ 🔑 (من العمييد يعني 👑✨)</label>
                                     <div className="relative">
                                         <input
                                             type="text"
@@ -147,7 +147,7 @@ export default function AuthScreen() {
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-sm font-medium text-slate-300">كلمة المرور الجديدة</label>
+                                    <label className="text-sm font-medium text-slate-300">كلمة المرور الجديده؟؟ 🔒✨ أحس يعني 🤷</label>
                                     <div className="relative">
                                         <input
                                             type="password"
@@ -203,12 +203,12 @@ export default function AuthScreen() {
                             onClick={toggleForgotPassword}
                             className="text-slate-400 hover:text-amber-400 font-medium transition-colors"
                         >
-                            العودة لتسجيل الدخول
+                            رجووع للدخول؟؟ 🔙 والله شوف لو تبي 🚀✨
                         </button>
                     ) : (
                         !allRegistered && (
                             <div>
-                                {isRegistering ? "لديك حساب مسبقاً؟ " : "لم تسجل بعد؟ "}
+                                {isRegistering ? "والله شوف عندك حساب؟؟ 🤔✨ " : "أحسس ما سجلت؟؟ 🆕💥 "}
                                 <button
                                     type="button"
                                     onClick={() => setIsRegistering(!isRegistering)}

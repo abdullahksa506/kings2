@@ -80,8 +80,8 @@ export default function SmartReminders({
                     id: "king-no-day",
                     severity: "high",
                     icon: Crown,
-                    title: "أنت ملك هذا الأسبوع 👑",
-                    body: "ما حددت يوم الطلعة بعد. ادخل وقرر الخميس أو الجمعة.",
+                    title: "أنت ملكك هذا الأسبوع؟؟ 👑✨ أحس",
+                    body: "والله شوف ما حددت يوم الطلعه بعد يعني 📅 ادخل وقررر الخميس أو الجمعه لو تبي 🤷💥",
                 });
             }
             if (isKing && !currentWeek.restaurant) {
@@ -89,8 +89,8 @@ export default function SmartReminders({
                     id: "king-no-restaurant",
                     severity: "high",
                     icon: Crown,
-                    title: "ينقصك اختيار المطعم 🍽️",
-                    body: "بصفتك الملك، حدد المطعم عشان نقدر نتحرك.",
+                    title: "ينقصك اختيار المطعمم؟؟ 🍽️✨ مدري",
+                    body: "والله شوف بصفتك الملك حدد المطعمم عشان نقدر نتحرك يعني 🍔👑💥",
                 });
             }
 
@@ -99,8 +99,8 @@ export default function SmartReminders({
                     id: "no-attendance-response",
                     severity: "high",
                     icon: AlertCircle,
-                    title: "ما أكدت حضورك بعد ⏳",
-                    body: "أكد حضورك أو اعتذارك من بطاقة الأسبوع تحت.",
+                    title: "ما أكدت حضوورك بعد؟؟ ⏳✨ أحس",
+                    body: "والله شوف أكد حضوورك أو اعتذارك من بطاقة الأسبوع تحت يعني 📋💥 لو تبي 🤷",
                 });
             }
 
@@ -116,8 +116,8 @@ export default function SmartReminders({
                     id: "day-vote-pending",
                     severity: "medium",
                     icon: Calendar,
-                    title: "صوّت على يوم الطلعة 🗳️",
-                    body: "فيه تصويت مفتوح على اليوم. رأيك يفرق.",
+                    title: "صوّت على يوم الطلعه؟؟ 🗳️✨ يعني أحس",
+                    body: "والله شوف فيه تصويت مفتوح على اليوم 📅 رأيك يفررق يعني لو تبي 💥🤷",
                 });
             }
 
@@ -134,8 +134,8 @@ export default function SmartReminders({
                     id: "restaurant-vote-pending",
                     severity: "high",
                     icon: Vote,
-                    title: "صوّت على المطعم! 🗳️",
-                    body: "التصويت الديموقراطي مفتوح. اختر مطعمك المفضل.",
+                    title: "صوّت على المطعمم؟؟ 🗳️🍔✨ أحس",
+                    body: "والله شوف التصويت الديموقراطي مفتووح 🗳️💥 اخترر مطعمك المفضل يعني لو تبي 🤷✨",
                 });
             }
 
@@ -149,8 +149,8 @@ export default function SmartReminders({
                     id: "today-is-outing",
                     severity: "high",
                     icon: Bell,
-                    title: "اليوم يوم الطلعة! 🎉",
-                    body: `طلعتكم اليوم${currentWeek.restaurant ? ` في ${currentWeek.restaurant}` : ""}. لا تتأخر.`,
+                    title: "اليووم يوم الطلعه؟؟ 🎉✨ والله شوف",
+                    body: `طلعتكم اليووم${currentWeek.restaurant ? ` في ${currentWeek.restaurant}` : ""} يعني 🍔💥 لا تتأخرر لو تبي 🤷🏃✨`,
                 });
             }
 
@@ -165,8 +165,8 @@ export default function SmartReminders({
                     id: "current-rating-pending",
                     severity: "medium",
                     icon: Star,
-                    title: "تقييم هذا الأسبوع متاح ⭐",
-                    body: "ما قيّمت بعد. التقييم سري وأقل من دقيقة.",
+                    title: "تقييم هذا الأسبوعع متاح؟؟ ⭐✨ أحس",
+                    body: "والله شوف ما قيّمت بعد 📝 التقييم سرري وأقل من دقيقه يعني 🤫💥",
                 });
             }
 
@@ -181,8 +181,8 @@ export default function SmartReminders({
                     id: "current-bathroom-pending",
                     severity: "low",
                     icon: Star,
-                    title: "تقييم الحمام متاح 🚻",
-                    body: "ساهم في تقييم الحمام لهذا الأسبوع.",
+                    title: "تقييم الحمامم متاح؟؟ 🚻✨ مدري",
+                    body: "والله شوف ساهم في تقييم الحمام لهذا الأسبوعع يعني لو تبي 🚽💥🤷",
                 });
             }
         } else {
@@ -190,8 +190,8 @@ export default function SmartReminders({
                 id: "no-active-week",
                 severity: "low",
                 icon: Lock,
-                title: "ما فيه أسبوع نشط حاليًا",
-                body: "ننتظر العميد يبدأ الدورة الجديدة.",
+                title: "ما فيه أسبوعع نشط حالياً؟؟ 📅🔒 أحس",
+                body: "والله شوف ننتظر العمييد يبدأ الدوره الجديده يعني 👑✨",
             });
         }
 
@@ -211,8 +211,8 @@ export default function SmartReminders({
                     id: "past-rating-pending",
                     severity: "medium",
                     icon: MessageSquare,
-                    title: "ما قيّمت طلعة الأسبوع الماضي 📝",
-                    body: "تقييمك مهم — يساعد في ذكاء اختيار المطاعم.",
+                    title: "ما قيّمت طلعة الأسبوعع الماضي؟؟ 📝✨ أحس",
+                    body: "والله شوف تقييمك مهم يساعد في ذكاء اختيار المطاعم يعني 🧠🍔💥",
                 });
             }
 
@@ -227,8 +227,8 @@ export default function SmartReminders({
                     id: "past-bathroom-pending",
                     severity: "low",
                     icon: MessageSquare,
-                    title: "تقييم حمام الأسبوع الماضي متاح",
-                    body: "خذ ثانيتين وقيّم الحمام.",
+                    title: "تقييم حمامم الأسبوع الماضي متاح؟؟ 🚽✨ مدري",
+                    body: "والله شوف خذ ثانيتين وقيّم الحمام يعني لو تبي 🤷💥",
                 });
             }
         }
