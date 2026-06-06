@@ -8,16 +8,18 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import { getRandomJoke, shouldShowJoke } from '@/data/aiJokes'
 
 /**
- * كومبوننت يطلع نكته عشوائيه بنسبة ١٠٪ 🎲
+ * كومبوننت يطلع نكته عشوائيه بنسبة ٢٥٪ على كل تنقل 🎲
  * مع صوت الإشعاارات 🔔
  */
 export default function RandomJokePopup() {
-  const hasChecked = useRef(false)
+  const pathname = usePathname()
   const audioContextRef = useRef<AudioContext | null>(null)
   const audioBufferRef = useRef<AudioBuffer | null>(null)
+  const lastCheckedPath = useRef<string | null>(null)
 
   const playNotificationSound = useCallback(async () => {
     const soundUrl = '/notification-voice.mp3'
@@ -62,11 +64,11 @@ export default function RandomJokePopup() {
   }, [])
 
   useEffect(() => {
-    // Only check once per page load
-    if (hasChecked.current) return
-    hasChecked.current = true
+    // Skip if we already checked this path (prevents double-firing)
+    if (lastCheckedPath.current === pathname) return
+    lastCheckedPath.current = pathname
 
-    // Check if we should show a joke (10% chance)
+    // Check if we should show a joke (25% chance)
     if (!shouldShowJoke()) return
 
     // Small delay to let the page load first
@@ -81,7 +83,7 @@ export default function RandomJokePopup() {
     }, 1500)
 
     return () => clearTimeout(timer)
-  }, [playNotificationSound])
+  }, [pathname, playNotificationSound])
 
   return null
 }
