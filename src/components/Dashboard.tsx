@@ -1769,6 +1769,26 @@ export default function Dashboard() {
                     {activeTab === "more" && (
                         <div className="space-y-6 max-w-2xl mx-auto">
 
+                            {/* Constitution — pinned to the top for easy access */}
+                            <div className="bg-gradient-to-br from-amber-900/40 via-amber-950/30 to-slate-900 border-2 border-amber-500/40 rounded-3xl p-6 shadow-xl shadow-amber-500/10 relative overflow-hidden group cursor-pointer" onClick={() => setIsConstitutionOpen(true)}>
+                                <div className="absolute -right-10 -top-10 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500" />
+                                <div className="relative z-10 flex items-center gap-4">
+                                    <div className="w-16 h-16 bg-gradient-to-br from-amber-400/30 to-amber-600/30 rounded-2xl flex items-center justify-center border border-amber-400/40 flex-shrink-0">
+                                        <ScrollText className="w-9 h-9 text-amber-400" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-bold text-xl text-white mb-1 flex items-center gap-2">
+                                            دستور عرش الخميس
+                                            <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">المرجع الرسمي</span>
+                                        </h3>
+                                        <p className="text-xs text-slate-400 leading-relaxed">
+                                            القوانين، حقوق الملك، آلية التصويت، والعقوبات — اضغط للقراءة
+                                        </p>
+                                    </div>
+                                    <BookOpen className="w-6 h-6 text-amber-400/70 flex-shrink-0" />
+                                </div>
+                            </div>
+
                             {/* Theme Selector */}
                             <div className={`bg-slate-900/90 border ${activeThemeStyle.accentBorderClass} rounded-3xl p-6 shadow-xl`}>
                                 <div className="flex items-center gap-3 mb-4">
@@ -2054,24 +2074,6 @@ export default function Dashboard() {
                                         العب الآن
                                     </button>
                                 </div>
-                            </div>
-
-                            {/* Constitution */}
-                            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl text-center flex flex-col items-center">
-                                <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mb-4 border border-amber-500/20">
-                                    <ScrollText className="w-8 h-8 text-amber-500" />
-                                </div>
-                                <h3 className="font-bold text-xl mb-2 text-slate-200">دستور عرش الخميس</h3>
-                                <p className="text-sm text-slate-400 mb-6 leading-relaxed">
-                                    القوانين المنظمة للطلعات الأسبوعية، حقوق وواجبات ملك الخميس، وآلية التصويت وتقييم المطاعم والحضور.
-                                </p>
-                                <button
-                                    onClick={() => setIsConstitutionOpen(true)}
-                                    className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-amber-500 font-semibold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
-                                >
-                                    <BookOpen className="w-5 h-5" />
-                                    قراءة الدستور الكامل
-                                </button>
                             </div>
 
                             {/* Suggestion Box */}
