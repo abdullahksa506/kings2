@@ -21,6 +21,7 @@
     "openai": "^6.33.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "s2-geometry": "^1.2.10",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
     "web-push": "^3.6.7",
