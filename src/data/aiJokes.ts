@@ -70,8 +70,8 @@ export function getRandomJoke(): string {
 }
 
 /**
- * Determines if a joke should be shown (25% chance)
+ * Determines if a joke should be shown (5% chance)
  */
 export function shouldShowJoke(): boolean {
-  return Math.random() < 0.25
+  return Math.random() < 0.05
 }

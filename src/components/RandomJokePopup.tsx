@@ -12,7 +12,7 @@ import { usePathname } from 'next/navigation'
 import { getRandomJoke, shouldShowJoke } from '@/data/aiJokes'
 
 /**
- * كومبوننت يطلع نكته عشوائيه بنسبة ٢٥٪ على كل تنقل 🎲
+ * كومبوننت يطلع نكته عشوائيه بنسبة ٥٪ على كل تنقل 🎲
  * مع صوت الإشعاارات 🔔
  */
 export default function RandomJokePopup() {
@@ -68,15 +68,15 @@ export default function RandomJokePopup() {
     if (lastCheckedPath.current === pathname) return
     lastCheckedPath.current = pathname
 
-    // Check if we should show a joke (25% chance)
+    // Check if we should show a joke (5% chance)
     if (!shouldShowJoke()) return
 
     // Small delay to let the page load first
-    const timer = setTimeout(async () => {
+    const timer = setTimeout(() => {
       const joke = getRandomJoke()
 
-      // Play the notification sound
-      await playNotificationSound()
+      // Play the notification sound (fire and forget - don't block the alert)
+      playNotificationSound()
 
       // Show the joke in an alert
       alert(`🤖 نكتة اليووم 🤖\n\n${joke}`)
