@@ -40,7 +40,7 @@ export default function MemberProfilePanel({ isOpen, onClose, currentUserName }:
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-white font-bold text-lg flex items-center gap-2">
                         <UserCircle2 className="w-5 h-5 text-cyan-400" />
-                        ملفي الإحصائي
+                        ملفي الإحصائي؟؟ 📊👤✨ أحس
                     </h3>
                     <button onClick={onClose} className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700">
                         <X className="w-4 h-4 text-slate-400" />
@@ -48,11 +48,11 @@ export default function MemberProfilePanel({ isOpen, onClose, currentUserName }:
                 </div>
 
                 <div className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 mb-4">
-                    العضو: {currentUserName}
+                    العضوو؟؟: {currentUserName} 👤✨
                 </div>
 
                 {loading || !profile ? (
-                    <p className="text-center text-slate-500 py-10">جاري تحميل الملف...</p>
+                    <p className="text-center text-slate-500 py-10">يحمّل الملف... 📄✨ أحس مدري 🤷💥</p>
                 ) : (
                     <div className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -74,17 +74,17 @@ export default function MemberProfilePanel({ isOpen, onClose, currentUserName }:
                                 onClick={() => setIsPrivateRatingsOpen(prev => !prev)}
                                 className="w-full px-3 py-2 rounded-xl border border-rose-500/60 bg-rose-600/20 text-rose-100 hover:bg-rose-600/30 transition-colors text-sm font-bold"
                             >
-                                افتح على مسؤوليتك الخاصة
+                                افتح على مسؤوليتك الخاصه؟؟ ⚠️😅 والله شوف لو تبي 🤷💥
                             </button>
 
                             {isPrivateRatingsOpen && (
                                 <div className="mt-3 space-y-2">
                                     <p className="text-xs text-rose-200/90">
-                                        تقييماتك الشخصية لكل مطعم سابق
+                                        تقييماتك الشخصيه لكل مطعم سابق يعني؟؟ 📝🍔✨
                                     </p>
 
                                     {profile.restaurantRatings.length === 0 ? (
-                                        <p className="text-sm text-slate-300">ما عندك تقييمات مطاعم محفوظة.</p>
+                                        <p className="text-sm text-slate-300">ما عندك تقييمات مطاعمم محفوظه؟؟ 📭 أحس مدري 🤷✨</p>
                                     ) : (
                                         <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                                             {profile.restaurantRatings.map((entry, index) => (

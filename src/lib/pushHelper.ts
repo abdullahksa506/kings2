@@ -15,6 +15,7 @@ export type NotificationType =
     | "outing-today"
     | "restaurant-change"
     | "day-change"
+    | "impromptu-meetup"
     | "default";
 
 export interface PushPayload {

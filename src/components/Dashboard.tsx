@@ -26,6 +26,7 @@ import ChatBoard from "./ChatBoard";
 import StatisticsPanel from "./StatisticsPanel";
 import SmartReminders from "./SmartReminders";
 import RestaurantVotingPanel from "./RestaurantVotingPanel";
+import ImpromptuMeetupCard from "./ImpromptuMeetupCard";
 import FutureFeaturesVoting from "./FutureFeaturesVoting";
 import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
 import { Gamepad2, Bath, UploadCloud, BarChart3, Swords } from "lucide-react";
@@ -659,7 +660,7 @@ export default function Dashboard() {
             if (mapLinkWarning) alert(mapLinkWarning);
         } catch (e: any) {
             console.error(e);
-            alert(e?.message ? `حدث خطأ أثناء الحفظ:\n${e.message}` : "حدث خطأ أثناء الحفظ");
+            alert(e?.message ? `أحسس صار خطأ بالحفظ؟؟ 😅💥:\n${e.message}` : "أحسس صار خطأ بالحفظ؟؟ 😅💥 والله شوف مدري 🤷✨");
         } finally {
             setSaving(false);
         }
@@ -682,7 +683,7 @@ export default function Dashboard() {
             await services.toggleDayVoting(currentWeek.id, enabled, !enabled ? false : true);
             await fetchWeek();
         } catch (e: any) {
-            alert(e.message || "تعذر تحديث وضع التصويت على اليوم");
+            alert(e.message || "أحسس تعذرر تحديث وضع التصويت على اليوم؟؟ 😅💥 والله شوف مدري 🤷✨");
         } finally {
             setSaving(false);
         }
@@ -695,7 +696,7 @@ export default function Dashboard() {
             await services.submitDayVote(currentWeek.id, user.name, day);
             await fetchWeek();
         } catch (e: any) {
-            alert(e.message || "تعذر إرسال التصويت");
+            alert(e.message || "أحسس تعذرر إرسال التصويت؟؟ 🗳️😅💥 والله شوف مدري 🤷✨");
         } finally {
             setSaving(false);
         }
@@ -708,7 +709,7 @@ export default function Dashboard() {
             await services.applyDayVoteResult(currentWeek.id, tieBreakDay);
             await fetchWeek();
         } catch (e: any) {
-            alert(e.message || "تعذر اعتماد نتيجة التصويت");
+            alert(e.message || "أحسس تعذرر اعتماد نتيجة التصويت؟؟ 🗳️😅💥 والله شوف مدري 🤷✨");
         } finally {
             setSaving(false);
         }
@@ -723,7 +724,7 @@ export default function Dashboard() {
 
         try {
             await services.changePassword(user.name, currentPassword, newPassword);
-            setChangePasswordSuccess("تم تغيير كلمة المرور بنجاح");
+            setChangePasswordSuccess("أحسس تم تغيير كلمة المروور بنجاح؟؟ 🔑✅💥 والله شوف يمكن 🤷✨");
             setTimeout(() => {
                 setIsChangePasswordOpen(false);
                 setCurrentPassword("");
@@ -731,7 +732,7 @@ export default function Dashboard() {
                 setChangePasswordSuccess("");
             }, 2000);
         } catch (e: any) {
-            setChangePasswordError(e.message || "حدث خطأ ما");
+            setChangePasswordError(e.message || "أحسس صار خطأ؟؟ 😅💥 والله شوف مدري 🤷✨");
         } finally {
             setChangePasswordLoading(false);
         }
@@ -823,7 +824,7 @@ export default function Dashboard() {
             await fetchWeek();
         } catch (e: any) {
             console.error("Toggle attendance error:", e);
-            alert(e.message || "حدث خطأ أثناء تحديث الحضور");
+            alert(e.message || "أحسس صار خطأ بتحديث الحضور؟؟ 😅💥 والله شوف مدري 🤷✨");
         } finally {
             setSaving(false);
         }
@@ -871,14 +872,14 @@ export default function Dashboard() {
     }, [pendingDeepAction, user, loading, currentWeek]);
 
     const handleSecretImport = async () => {
-        if (!confirm("تأكيد استيراد البيانات التاريخية وتحديث السجل؟ سيتم حذف أي استيراد سابق لمنع التكرار.")) return;
+        if (!confirm("والله شوف تأكيد استيراد البيانات التاريخيه؟؟ 📚✨ سيتم حذف أي استيراد سابق يعني لمنع التكرار 🤷💥")) return;
         setLoading(true);
         try {
             const weeksToImport = historicalWeeks.filter(w => w.weekNumber <= 7);
             const added = await invokeRpc("importHistory", { weeksToImport });
-            alert(`تم تنظيف السجل وإضافة ${added} أسابيع للسجل الشامل بنجاح! حدث الصفحة.`);
+            alert(`أحسس تم تنظيف السجل وإضافة ${added} أسابيعع للسجل الشامل بنجاح؟؟ ✅📚💥 حدّث الصفحه لو تبي 🔄✨`);
         } catch (e: any) {
-            alert("خطأ: " + e.message);
+            alert("أحسس خطأ؟؟ 😅💥: " + e.message);
         }
         setLoading(false);
     };
@@ -952,9 +953,9 @@ export default function Dashboard() {
                 <div>
                     <h1 className={`text-3xl font-bold bg-gradient-to-r ${activeTheme.headerGradientClass} bg-clip-text text-transparent flex items-center gap-3`}>
                         <Crown className={`w-8 h-8 ${activeTheme.headerIconClass}`} />
-                        عرش الخميس
+                        عرش الخمييس؟؟ 👑✨
                     </h1>
-                    <p className="text-slate-400 mt-2">أهلاً بك، {displayName}</p>
+                    <p className="text-slate-400 mt-2">أهلاً فييك يعني، {displayName} 🤷💥</p>
                 </div>
                 <div className="flex gap-2 text-xs md:text-sm">
                     {isSupported && !isSubscribed && (
@@ -964,7 +965,7 @@ export default function Dashboard() {
                             className="bg-emerald-900/30 border border-emerald-500/30 hover:bg-emerald-800/40 py-2 md:py-3 px-3 md:px-4 rounded-xl transition-all shadow-md text-emerald-400 flex items-center gap-2"
                         >
                             <Bell className="w-4 h-4" />
-                            <span className="hidden md:inline">{subscribing ? "جاري التفعيل..." : "تفعيل الإشعارات"}</span>
+                            <span className="hidden md:inline">{subscribing ? "يفعّل... 🔔✨ أحس" : "تفعيل الإشعارات؟؟ 🔔💥"}</span>
                         </button>
                     )}
                     {showNotifDiagnostics && notifStatus && (
@@ -974,7 +975,7 @@ export default function Dashboard() {
                                 onClick={() => setShowNotifDiagnostics(false)}
                                 className="mt-3 w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-1 px-2 rounded text-xs"
                             >
-                                إغلاق
+                                إغلااق؟؟ ❌ مدري 🤷
                             </button>
                         </div>
                     )}
@@ -992,7 +993,7 @@ export default function Dashboard() {
             {isChangePasswordOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
                     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
-                        <h2 className={`text-xl font-bold ${activeThemeStyle.accentTextClass} mb-4`}>تغيير كلمة المرور</h2>
+                        <h2 className={`text-xl font-bold ${activeThemeStyle.accentTextClass} mb-4`}>تغيير كلمة المروور؟؟ 🔑✨ أحس</h2>
 
                         {changePasswordError && (
                             <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
@@ -1007,7 +1008,7 @@ export default function Dashboard() {
 
                         <form onSubmit={handleChangePassword} className="space-y-4">
                             <div className="space-y-1">
-                                <label className="text-sm text-slate-300">كلمة المرور الحالية</label>
+                                <label className="text-sm text-slate-300">كلمة المرور الحاليه؟؟ 🔑 يعني أحس</label>
                                 <input
                                     type="password"
                                     required
@@ -1017,7 +1018,7 @@ export default function Dashboard() {
                                 />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-sm text-slate-300">كلمة المرور الجديدة</label>
+                                <label className="text-sm text-slate-300">كلمة المرور الجديده؟؟ 🔒✨ والله شوف</label>
                                 <input
                                     type="password"
                                     required
@@ -1032,7 +1033,7 @@ export default function Dashboard() {
                                     disabled={changePasswordLoading}
                                     className={`flex-1 ${activeThemeStyle.accentSolidClass} ${activeThemeStyle.accentSolidHoverClass} text-white py-2 rounded-lg font-medium transition-colors disabled:opacity-50`}
                                 >
-                                    {changePasswordLoading ? "جاري..." : "حفظ"}
+                                    {changePasswordLoading ? "يحفظ... 📤✨ أحس" : "حففظ؟؟ ✅💥 لو تبي"}
                                 </button>
                                 <button
                                     type="button"
@@ -1045,7 +1046,7 @@ export default function Dashboard() {
                                     }}
                                     className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg font-medium transition-colors"
                                 >
-                                    إلغاء
+                                    الغااء؟؟ ❌ مدري 🤷
                                 </button>
                             </div>
                         </form>
@@ -1059,7 +1060,7 @@ export default function Dashboard() {
                     <div className={`absolute top-0 left-0 w-2 h-full ${activeThemeStyle.accentSolidClass} opacity-80`} />
                     <h2 className={`${activeThemeStyle.accentTextClass} font-bold mb-4 flex items-center gap-2 text-xl`}>
                         <Shield className="w-6 h-6" />
-                        لوحة العميد (سرية)
+                        لوحة العمييد؟؟ 👑✨ (سريه يعني 🤫)
                     </h2>
                     <div className="flex flex-wrap gap-4">
                         <button
@@ -1068,14 +1069,14 @@ export default function Dashboard() {
                             className={`${activeThemeStyle.accentSolidClass} ${activeThemeStyle.accentSolidHoverClass} text-slate-950 font-semibold py-3 px-6 rounded-xl flex items-center gap-2 transition-all`}
                         >
                             <PlusCircle className="w-5 h-5" />
-                            {currentWeek ? "إنهاء الأسبوع الحالي وبدء أسبوع جديد" : "بدء أسبوع جديد"}
+                            {currentWeek ? "إنهااء الأسبوع الحالي وبدء أسبوعع جديد؟؟ 🔄✨" : "بدء أسبوعع جديد؟؟ 🚀💥 أحس"}
                         </button>
 
 
 
                         {currentWeek && (
                             <div className="flex items-center gap-2 bg-slate-950/40 p-1 rounded-xl border border-amber-500/20">
-                                <span className="text-slate-400 text-sm px-2">تغيير سري للملك:</span>
+                                <span className="text-slate-400 text-sm px-2">تغيير سرري للملك؟؟ 👑🤫✨:</span>
                                 <select
                                     className="bg-slate-900 text-amber-500 border border-slate-700/50 rounded-lg p-2 text-sm outline-none w-32 focus:border-amber-500"
                                     value={currentWeek.isRandom ? "" : currentWeek.king || ""}
@@ -1088,7 +1089,7 @@ export default function Dashboard() {
                                     }}
                                     disabled={saving}
                                 >
-                                    <option value="">عشوائي (من غير ملك)</option>
+                                    <option value="">عشواائي (من غير ملك يعني 🎲✨)</option>
                                     {VALID_NAMES.map(name => (
                                         <option key={name} value={name}>{name}</option>
                                     ))}
@@ -1098,7 +1099,7 @@ export default function Dashboard() {
 
                         {currentWeek && (
                             <div className="w-full bg-slate-950/40 p-4 rounded-xl border border-amber-500/20 mt-4">
-                                <h3 className="text-amber-500 font-semibold mb-3">تغيير يوم الطلعة (سري - عميد فقط)</h3>
+                                <h3 className="text-amber-500 font-semibold mb-3">تغيير يوم الطلعه؟؟ 📅✨ (سرري - عمييد فقط 👑🤫)</h3>
                                 <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
                                     <select
                                         value={deanSelectedDay}
@@ -1141,7 +1142,7 @@ export default function Dashboard() {
                                                 await fetchWeek();
                                             } catch (e) {
                                                 console.error(e);
-                                                alert("تعذّر تغيير اليوم من لوحة العميد");
+                                                alert("أحسس تعذّر تغيير اليوم من لوحة العمييد؟؟ 😅💥 والله شوف مدري 🤷✨");
                                             } finally {
                                                 setSaving(false);
                                             }
@@ -1149,7 +1150,7 @@ export default function Dashboard() {
                                         disabled={saving}
                                         className="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-400 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
                                     >
-                                        حفظ يوم الطلعة
+                                        حففظ يوم الطلعه؟؟ 📅✅💥 لو تبي
                                     </button>
                                 </div>
                             </div>
@@ -1188,14 +1189,14 @@ export default function Dashboard() {
                                         }`}
                                 >
                                     {ratingWeek.ratingEnabled ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
-                                    {ratingWeek.ratingEnabled ? "قفل التقييم" : "فتح التقييم للأعضاء"}
+                                    {ratingWeek.ratingEnabled ? "قفل التقييم؟؟ 🔒✨" : "فتح التقييم للأعضاء؟؟ 🔓💥 أحس"}
                                 </button>
                             );
                         })()}
 
                         {currentWeek && (
                             <div className="w-full bg-slate-950/40 p-4 rounded-xl border border-amber-500/20 mt-4">
-                                <h3 className="text-amber-500 font-semibold mb-3">إدارة الحضور (صلاحية العميد)</h3>
+                                <h3 className="text-amber-500 font-semibold mb-3">إدارة الحضوور؟؟ ✅❌ (صلاحية العمييد 👑✨)</h3>
                                 <div className="flex flex-wrap gap-2">
                                     {VALID_NAMES.map(name => {
                                         const isAbsent = currentWeek.absentees?.includes(name) || false;
@@ -1239,7 +1240,7 @@ export default function Dashboard() {
                                                         await fetchWeek();
                                                     } catch (e: any) {
                                                         console.error("Toggle attendance error:", e);
-                                                        alert(e.message || "حدث خطأ أثناء تغيير الحضور");
+                                                        alert(e.message || "أحسس صار خطأ بتغيير الحضور؟؟ 😅💥 والله شوف مدري 🤷✨");
                                                     } finally {
                                                         setSaving(false);
                                                     }
@@ -1247,7 +1248,7 @@ export default function Dashboard() {
                                                 disabled={saving}
                                                 className={`px-4 py-3 rounded-xl text-base font-semibold transition-colors border ${(!currentWeek.responded?.includes(name)) ? 'bg-slate-800 border-slate-700 text-slate-400 opacity-70' : isAbsent ? 'bg-red-500/20 border-red-500/30 text-red-400' : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'}`}
                                             >
-                                                {name}: {(!currentWeek.responded?.includes(name)) ? 'بانتظار الرد ⏳' : isAbsent ? 'معتذر ❌' : 'حاضر ✅'}
+                                                {name}: {(!currentWeek.responded?.includes(name)) ? 'بانتظاار الرد ⏳✨' : isAbsent ? 'معتذر ❌🤷' : 'حاضر ✅💥'}
                                             </button>
                                         );
                                     })}
@@ -1260,12 +1261,12 @@ export default function Dashboard() {
                     <div className="w-full bg-slate-950/40 p-4 rounded-xl border border-sky-500/20 mt-4">
                         <h3 className="text-sky-400 font-semibold mb-3 flex items-center gap-2">
                             <Bell className="w-5 h-5" />
-                            إرسال التنبيهات وإشعارات الجوال
+                            إرسال التنبيهاات وإشعارات الجوال؟؟ 🔔📱✨ والله شوف
                         </h3>
                         <div className="flex flex-col gap-2">
                             <button
                                 onClick={async () => {
-                                    if (!confirm("هل أنت متأكد من إرسال إشعار تذكير للأعضاء الذين لم يؤكدوا حضورهم؟")) return;
+                                    if (!confirm("والله شوف متأكد تبي ترسل إشعار تذكيير للأعضاء اللي ما أكدوا حضورهم؟؟ 🔔✨ أحس لو تبي 🤷💥")) return;
                                     setSaving(true);
                                     try {
                                         const res = await fetch("/api/reminders/attendance-pending", {
@@ -1274,10 +1275,10 @@ export default function Dashboard() {
                                             body: JSON.stringify({ weekId: currentWeek?.id })
                                         });
                                         const data = await res.json();
-                                        alert(data.message || "تم إرسال الإشعارات بنجاح");
+                                        alert(data.message || "أحسس تم إرسال الإشعاراات بنجاح؟؟ 🔔✅💥 يمكن 🤷✨");
                                     } catch (e) {
                                         console.error("Failed to send pending notifications:", e);
-                                        alert("خطأ في إرسال الإشعارات");
+                                        alert("أحسس خطأ بإرسال الإشعارات؟؟ 😅💥 والله شوف مدري 🤷✨");
                                     }
                                     setSaving(false);
                                 }}
@@ -1285,13 +1286,13 @@ export default function Dashboard() {
                                 className="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-500 font-semibold py-2 px-4 rounded-xl flex items-center gap-2 transition-all w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Bell className="w-4 h-4" />
-                                إرسال تذكير لمن لم يرد {currentWeek ? `(${VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).length})` : ''}
+                                إرسال تذكيير لمن لم يرد؟؟ 🔔✨ {currentWeek ? `(${VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).length})` : ''}
                             </button>
 
                             <button
                                 onClick={async () => {
                                     if (!currentWeek) return;
-                                    if (!confirm(`هل أنت متأكد من إرسال إشعار تذكير للملك (${currentWeek.king})؟`)) return;
+                                    if (!confirm(`والله شوف متأكد تبي ترسل إشعار تذكيير للملك (${currentWeek.king})؟؟ 👑🔔✨ أحس لو تبي 🤷💥`)) return;
                                     setSaving(true);
                                     try {
                                         const res = await fetch("/api/reminders/king-push", {
@@ -1300,10 +1301,10 @@ export default function Dashboard() {
                                             body: JSON.stringify({ weekId: currentWeek.id })
                                         });
                                         const data = await res.json();
-                                        alert(data.message || "تم إرسال الإشعار بنجاح");
+                                        alert(data.message || "أحسس تم إرسال الإشعاار بنجاح؟؟ 🔔✅💥 يمكن 🤷✨");
                                     } catch (e) {
                                         console.error("Failed to send King notification:", e);
-                                        alert("خطأ في إرسال الإشعار");
+                                        alert("أحسس خطأ بإرسال الإشعاار؟؟ 😅💥 والله شوف مدري 🤷✨");
                                     }
                                     setSaving(false);
                                 }}
@@ -1311,12 +1312,12 @@ export default function Dashboard() {
                                 className="bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/30 text-sky-500 font-semibold py-2 px-4 rounded-xl flex items-center gap-2 transition-all w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Bell className="w-4 h-4" />
-                                تذكير الملك بالاختيار
+                                تذكيير الملك بالاختيار؟؟ 👑🔔✨
                             </button>
 
                             <button
                                 onClick={async () => {
-                                    if (!confirm("هل أنت متأكد من إرسال إشعار تذكير بالتقييم لجميع الحاضرين؟")) return;
+                                    if (!confirm("والله شوف متأكد تبي ترسل إشعار تذكيير بالتقييم لجميع الحاضرين؟؟ ⭐🔔✨ أحس لو تبي 🤷💥")) return;
                                     setSaving(true);
                                     try {
                                         const res = await fetch("/api/reminders/rating-unlocked", {
@@ -1325,10 +1326,10 @@ export default function Dashboard() {
                                             body: JSON.stringify({ weekId: currentWeek?.id || pastWeek?.id })
                                         });
                                         const data = await res.json();
-                                        alert(data.message || "تم إرسال الإشعارات بنجاح");
+                                        alert(data.message || "أحسس تم إرسال الإشعاراات بنجاح؟؟ ⭐🔔✅💥 يمكن 🤷✨");
                                     } catch (e) {
                                         console.error("Failed to send rating notifications:", e);
-                                        alert("خطأ في إرسال الإشعارات");
+                                        alert("أحسس خطأ بإرسال الإشعاراات؟؟ 😅💥 والله شوف مدري 🤷✨");
                                     }
                                     setSaving(false);
                                 }}
@@ -1336,12 +1337,12 @@ export default function Dashboard() {
                                 className="bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-500 font-semibold py-2 px-4 rounded-xl flex items-center gap-2 transition-all w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Bell className="w-4 h-4" />
-                                تذكير الحاضرين بالتقييم
+                                تذكيير الحاضرين بالتقييم؟؟ ⭐🔔✨
                             </button>
 
                             <button
                                 onClick={async () => {
-                                    if (!confirm("إرسال تنبيه أخير للأعضاء اللي ما قيّموا (التقييم بيقفل بعد نص ساعة)؟")) return;
+                                    if (!confirm("والله شوف تبي ترسل تنبيه أخيير للأعضاء اللي ما قيّموا؟؟ ⚠️🔔 (التقييم بيقفل بعد نص ساعه يعني 🔒✨) أحس لو تبي 🤷💥")) return;
                                     setSaving(true);
                                     try {
                                         const res = await fetch("/api/reminders/rating-final-warning", {
@@ -1350,10 +1351,10 @@ export default function Dashboard() {
                                             body: JSON.stringify({ minutesUntilClose: 30 })
                                         });
                                         const data = await res.json();
-                                        alert(data.message || "تم إرسال التنبيه الأخير بنجاح");
+                                        alert(data.message || "أحسس تم إرسال التنبيه الأخيير بنجاح؟؟ ⚠️✅💥 يمكن 🤷✨");
                                     } catch (e) {
                                         console.error("Failed to send final warning:", e);
-                                        alert("خطأ في إرسال التنبيه الأخير");
+                                        alert("أحسس خطأ بإرسال التنبيه الأخيير؟؟ 😅💥 والله شوف مدري 🤷✨");
                                     }
                                     setSaving(false);
                                 }}
@@ -1361,22 +1362,22 @@ export default function Dashboard() {
                                 className="bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 font-semibold py-2 px-4 rounded-xl flex items-center gap-2 transition-all w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Bell className="w-4 h-4" />
-                                ⚠️ تنبيه أخير: التقييم يقفل بعد نص ساعة
+                                ⚠️ تنبيه أخيير؟؟ التقييم يقفل بعد نص ساعه 🔒💥
                             </button>
                         </div>
                     </div>
 
                     {/* Cycle Manager — restore lost weeks / reassign cycle numbers */}
                     <div className="w-full bg-slate-950/40 p-4 rounded-xl border border-amber-500/20 mt-4">
-                        <h3 className="text-amber-500 font-semibold mb-2">إدارة دورات الأسابيع</h3>
+                        <h3 className="text-amber-500 font-semibold mb-2">إدارة دوراات الأسابيع؟؟ 🔄📅✨ أحس</h3>
                         <p className="text-xs text-slate-400 mb-3">
-                            استعادة أسابيع لدورة، تعديل رقم الدورة لأي أسبوع، أو نقل أكثر من أسبوع دفعة واحدة.
+                            والله شوف استعادة أسابيع لدوره، تعديل رقم الدوره لأي أسبوع، أو نقل أكثر من أسبوعع دفعة واحده يعني 🤷💥
                         </p>
                         <button
                             onClick={() => setIsCycleManagerOpen(true)}
                             className="bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-semibold py-2 px-4 rounded-xl text-sm"
                         >
-                            فتح مدير الدورات
+                            فتح مديير الدورات؟؟ 🔧✨
                         </button>
                     </div>
 
@@ -1395,6 +1396,14 @@ export default function Dashboard() {
                     {/* ===== TAB: الأسبوع الحالي ===== */}
                     {activeTab === "week" && (
                         <div className="space-y-8 max-w-3xl mx-auto">
+
+                            {/* أنا فاضي — لقاء مفاجئ */}
+                            {user?.name && (
+                                <ImpromptuMeetupCard
+                                    userName={user.name}
+                                    isAdmin={user.role === "dean"}
+                                />
+                            )}
 
                             {/* Smart Reminders (#11) */}
                             <SmartReminders

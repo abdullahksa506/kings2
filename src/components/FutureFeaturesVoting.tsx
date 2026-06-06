@@ -56,13 +56,13 @@ export default function FutureFeaturesVoting({
     };
 
     const handleRemove = async (featureId: string, title: string) => {
-        if (!confirm(`حذف "${title}" من قائمة الميزات المقترحة؟`)) return;
+        if (!confirm(`والله شوف تبي تحذف "${title}" من قايمة الميزات المقترحه؟؟ ❌💥 أحس لو تبي 🤷✨`)) return;
         setPendingId(featureId);
         try {
             await services.setFeatureRemoved(featureId, true);
         } catch (e) {
             console.error("Failed to remove feature:", e);
-            alert("تعذّر حذف الميزة");
+            alert("أحسس تعذّر حذف الميزه؟؟ 😅💥 والله شوف مدري 🤷✨");
         } finally {
             setPendingId(null);
         }
@@ -79,9 +79,9 @@ export default function FutureFeaturesVoting({
                         <Lightbulb className="w-5 h-5" />
                     </div>
                     <div>
-                        <h3 className="text-white font-bold text-base">ميزات مقترحة للمستقبل</h3>
+                        <h3 className="text-white font-bold text-base">ميزاات مقترحه للمستقبل؟؟ 💡✨ أحس</h3>
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                            صوّت على اللي تبيه يضاف للموقع — اختياري وما يأثر على شي
+                            والله شوف صوّت على اللي تبيه يضاف للموقع يعني — اختياري وما يأثر على شي 🤷💥
                         </p>
                     </div>
                 </div>
@@ -142,7 +142,7 @@ export default function FutureFeaturesVoting({
                                         ) : (
                                             <ThumbsUp className="w-3.5 h-3.5" />
                                         )}
-                                        <span>أؤيد ({yesCount})</span>
+                                        <span>أؤيد؟؟ 👍 ({yesCount})</span>
                                     </button>
                                     <button
                                         onClick={() => handleVote(feature.id, "no")}
@@ -158,7 +158,7 @@ export default function FutureFeaturesVoting({
                                         ) : (
                                             <ThumbsDown className="w-3.5 h-3.5" />
                                         )}
-                                        <span>لا أؤيد ({noCount})</span>
+                                        <span>لا أؤيد؟؟ 👎 ({noCount})</span>
                                     </button>
                                 </div>
                             </div>

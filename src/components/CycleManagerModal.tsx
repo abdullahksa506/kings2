@@ -55,7 +55,7 @@ export default function CycleManagerModal({
             })
             .catch((e) => {
                 console.error(e);
-                setError("تعذر تحميل قائمة الأسابيع.");
+                setError("أحسس تعذر تحميل قايمة الأسابيع؟؟ 😅💥 والله شوف مدري 🤷✨");
             })
             .finally(() => {
                 if (alive) setLoading(false);
@@ -80,7 +80,7 @@ export default function CycleManagerModal({
             for (const row of dirtyRows) {
                 await services.setWeekCycle(row.week.id, row.editingCycle);
             }
-            setSuccessMsg(`تم تحديث ${dirtyRows.length} أسبوع.`);
+            setSuccessMsg(`أحسس تم تحديث ${dirtyRows.length} أسبوعع؟؟ ✅📅💥 يمكن 🤷✨`);
             // Reset baselines: now the editingCycle becomes the new "saved" value.
             setRows((prev) =>
                 prev.map((r) => ({
@@ -91,7 +91,7 @@ export default function CycleManagerModal({
             );
             if (onAfterSave) onAfterSave();
         } catch (e: any) {
-            setError(e.message || "تعذّر الحفظ");
+            setError(e.message || "أحسس تعذّر الحفظ؟؟ 😅💥 والله شوف مدري 🤷✨");
         } finally {
             setSaving(false);
         }
@@ -106,7 +106,7 @@ export default function CycleManagerModal({
         if (target === null) return;
         const cycle = Number(target);
         if (!Number.isInteger(cycle) || cycle < 1) {
-            alert("رقم الدورة لازم يكون عدد صحيح موجب");
+            alert("أحسس رقم الدوره لازم يكون عدد صحيح موجب يعني؟؟ 🔢💥 والله شوف مدري 🤷✨");
             return;
         }
         setSaving(true);
@@ -115,7 +115,7 @@ export default function CycleManagerModal({
         try {
             const ids = selectedRows.map((r) => r.week.id);
             await services.bulkSetWeekCycle(ids, cycle);
-            setSuccessMsg(`تم نقل ${ids.length} أسبوع للدورة ${cycle}.`);
+            setSuccessMsg(`أحسس تم نقل ${ids.length} أسبوعع للدورة ${cycle}؟؟ ✅🔄💥 يمكن 🤷✨`);
             setRows((prev) =>
                 prev.map((r) =>
                     r.selected
@@ -125,7 +125,7 @@ export default function CycleManagerModal({
             );
             if (onAfterSave) onAfterSave();
         } catch (e: any) {
-            setError(e.message || "تعذّر النقل");
+            setError(e.message || "أحسس تعذّر النقل؟؟ 😅💥 والله شوف مدري 🤷✨");
         } finally {
             setSaving(false);
         }
@@ -147,9 +147,9 @@ export default function CycleManagerModal({
                             <Layers className="w-5 h-5" />
                         </div>
                         <div>
-                            <h3 className="text-white font-bold text-lg">إدارة دورات الأسابيع</h3>
+                            <h3 className="text-white font-bold text-lg">إدارة دوراات الأسابيع؟؟ 🔄📅✨ أحس</h3>
                             <p className="text-xs text-slate-400 mt-0.5">
-                                الدورة الحالية: <span className="text-amber-300 font-bold">{currentCycleNumber}</span>
+                                الدوره الحاليه؟؟: <span className="text-amber-300 font-bold">{currentCycleNumber}</span> 🔢✨
                             </p>
                         </div>
                     </div>
@@ -165,8 +165,8 @@ export default function CycleManagerModal({
                 <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 mb-3 flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                     <p className="text-xs text-amber-200/90 leading-relaxed">
-                        أي تغيير هنا يأثر على قائمة شرف المطاعم. لاستعادة أسابيع كانت في الدورة الحالية،
-                        حدّد الأسابيع وانقلها للدورة <strong>{currentCycleNumber}</strong>.
+                        والله شوف أي تغيير هنا يأثر على قايمة شرف المطاعم يعني 🏆🍔 لاستعادة أسابيع كانت في الدوره الحاليه،
+                        حدّد الأسابيع وانقلها للدورة <strong>{currentCycleNumber}</strong> أحس 🤷✨
                     </p>
                 </div>
 
@@ -188,7 +188,7 @@ export default function CycleManagerModal({
                         disabled={saving || selectedRows.length === 0}
                         className="bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-50"
                     >
-                        نقل المحدد ({selectedRows.length}) لدورة...
+                        نقل المحدد ({selectedRows.length}) لدوره؟؟ 🔄✨
                     </button>
                     <button
                         onClick={handleSaveAll}
@@ -196,7 +196,7 @@ export default function CycleManagerModal({
                         className="bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1 disabled:opacity-50"
                     >
                         <Save className="w-3.5 h-3.5" />
-                        حفظ التعديلات ({dirtyRows.length})
+                        حففظ التعديلات؟؟ ({dirtyRows.length}) ✅💥
                     </button>
                     <button
                         onClick={() =>
@@ -204,7 +204,7 @@ export default function CycleManagerModal({
                         }
                         className="text-xs text-slate-400 hover:text-slate-200 px-2 py-1 rounded-lg"
                     >
-                        تحديد الكل
+                        تحدييد الكل؟؟ ☑️✨
                     </button>
                     <button
                         onClick={() =>
@@ -212,15 +212,15 @@ export default function CycleManagerModal({
                         }
                         className="text-xs text-slate-400 hover:text-slate-200 px-2 py-1 rounded-lg"
                     >
-                        إلغاء التحديد
+                        إلغاء التحدييد؟؟ ❌✨
                     </button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto -mx-1 px-1">
                     {loading ? (
-                        <p className="text-center text-slate-500 py-10">جاري التحميل...</p>
+                        <p className="text-center text-slate-500 py-10">يحمّل... ⏳✨ أحس مدري 🤷💥</p>
                     ) : rows.length === 0 ? (
-                        <p className="text-center text-slate-500 py-10">لا توجد أسابيع مكتملة.</p>
+                        <p className="text-center text-slate-500 py-10">ما في أسابيعع مكتمله؟؟ 📭 والله شوف 🤷✨</p>
                     ) : (
                         <div className="space-y-2">
                             {rows.map((row) => {

@@ -44,12 +44,12 @@ export default function RatingForm({
     return (
         <div className={`bg-slate-900 border rounded-2xl p-4 md:p-6 text-center ${disabled ? "border-slate-800/50 opacity-60" : "border-slate-800"}`}>
             <h3 className="text-lg md:text-xl font-bold text-white mb-2">والله شووف... كيف كانت الطلعه؟؟ 🍔🤔 يعني أحس 👑✨</h3>
-            <p className="text-slate-400 text-xs md:text-sm mb-5">تقييمك سري ولن يراه سوى عميد الدستور.</p>
+            <p className="text-slate-400 text-xs md:text-sm mb-5">تقييمك سرري ولن يراه سوى عميد الدستوور يعني 🤫👑✨</p>
 
             {disabled && (
                 <div className="flex items-center justify-center gap-2 mb-4 text-slate-500 text-sm">
                     <Lock className="w-4 h-4" />
-                    <span>التقييم مقفل حالياً — بانتظار العميد يفتحه</span>
+                    <span>التقييم مقفوول حالياً؟؟ 🔒 — بانتظار العمييد يفتحه يعني 👑✨</span>
                 </div>
             )}
 
@@ -76,7 +76,7 @@ export default function RatingForm({
 
             <div className="mb-5 text-right max-w-xl mx-auto">
                 <label className="block text-xs text-slate-400 mb-2">
-                    مراجعتك الأساسية (اختيارية) - تظهر في قسم المراجعات كقائمة
+                    مراجعتك الأساسيه؟؟ 📝 (اختياريه يعني) - تظهر في قسم المراجعات كقايمه ✨
                 </label>
                 <textarea
                     value={reviewText}
@@ -84,7 +84,7 @@ export default function RatingForm({
                     rows={3}
                     maxLength={800}
                     disabled={disabled || submitting}
-                    placeholder="اكتب انطباعك عن المطعم والخدمة والنظافة..."
+                    placeholder="اكتب انطباعك عن المطعمم والخدمه والنظافه يعني؟؟ 🍔✨"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-slate-100 outline-none focus:border-amber-500/60 resize-y disabled:opacity-60"
                 />
             </div>

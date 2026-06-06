@@ -80,7 +80,7 @@ export default function RestaurantVotingPanel({
             const remainingMs = endMs - now;
 
             if (remainingMs <= 0) {
-                setTimeRemaining("انتهى الوقت");
+                setTimeRemaining("خلص الوقت؟؟ ⏰💥");
                 return;
             }
 
@@ -106,7 +106,7 @@ export default function RestaurantVotingPanel({
     const handleStartVoting = async () => {
         const trimmed = candidates.map(c => c.trim()).filter(Boolean);
         if (trimmed.length !== 3 || new Set(trimmed).size !== 3) {
-            alert("يجب إدخال 3 مطاعم مختلفة وغير فارغة");
+            alert("أحسس لازم 3 مطاعمم مختلفه؟؟ 🍔🍕🍜 يعني والله شوف مدري بس يمكن غير فاضيه 🤷✨");
             return;
         }
         setSaving(true);
@@ -116,7 +116,7 @@ export default function RestaurantVotingPanel({
             setCandidates(["", "", ""]);
             onRefresh();
         } catch (e: any) {
-            alert(e?.message || "حدث خطأ");
+            alert(e?.message || "أحسس صار خطأ؟؟ 😅💥 والله شوف مدري 🤷✨");
         } finally {
             setSaving(false);
         }
@@ -129,33 +129,33 @@ export default function RestaurantVotingPanel({
             await services.submitRestaurantVote(currentWeek.id, restaurantName);
             onRefresh();
         } catch (e: any) {
-            alert(e?.message || "حدث خطأ");
+            alert(e?.message || "أحسس صار خطأ؟؟ 😅💥 والله شوف مدري 🤷✨");
         } finally {
             setSaving(false);
         }
     };
 
     const handleEndVoting = async () => {
-        if (!confirm("هل تريد إنهاء التصويت الآن؟")) return;
+        if (!confirm("أحسس تبي تخلصص التصويت الحين؟؟ 🗳️✨ يعني والله شوف لو تبي 🤷🏁💥")) return;
         setSaving(true);
         try {
             await services.endRestaurantVoting(currentWeek.id);
             onRefresh();
         } catch (e: any) {
-            alert(e?.message || "حدث خطأ");
+            alert(e?.message || "أحسس صار خطأ؟؟ 😅💥 والله شوف مدري 🤷✨");
         } finally {
             setSaving(false);
         }
     };
 
     const handleCancelVoting = async () => {
-        if (!confirm("هل تريد إلغاء التصويت والعودة للخيار الدكتاتوري؟")) return;
+        if (!confirm("والله شوف تبي تلغي التصويت؟؟ 🗳️❌ وترجع للدكتاتوريه يعني 👑💥 أحس مدري 🤷✨")) return;
         setSaving(true);
         try {
             await services.cancelRestaurantVoting(currentWeek.id);
             onRefresh();
         } catch (e: any) {
-            alert(e?.message || "حدث خطأ");
+            alert(e?.message || "أحسس صار خطأ؟؟ 😅💥 والله شوف مدري 🤷✨");
         } finally {
             setSaving(false);
         }
@@ -164,10 +164,10 @@ export default function RestaurantVotingPanel({
     const handleOverride = async () => {
         const trimmed = overrideRestaurant.trim();
         if (!trimmed) {
-            alert("أدخل اسم المطعم");
+            alert("أحسس اكتب اسم المطعمم؟؟ 🍔✨ يعني لو تبي 🤷");
             return;
         }
-        if (!confirm(`هل تريد قمع صوت الجمهور واختيار "${trimmed}"؟`)) return;
+        if (!confirm(`والله شوف تبي تقمعع صوت الجمهور؟؟ 👑💥 وتختار "${trimmed}" يعني؟ 🤷✨`)) return;
         setSaving(true);
         try {
             await services.overrideRestaurantResult(currentWeek.id, trimmed);
@@ -175,7 +175,7 @@ export default function RestaurantVotingPanel({
             setOverrideRestaurant("");
             onRefresh();
         } catch (e: any) {
-            alert(e?.message || "حدث خطأ");
+            alert(e?.message || "أحسس صار خطأ؟؟ 😅💥 والله شوف مدري 🤷✨");
         } finally {
             setSaving(false);
         }
@@ -231,7 +231,7 @@ export default function RestaurantVotingPanel({
                                     {isMyVote && <CheckCircle className="w-5 h-5 text-purple-400" />}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-sm text-slate-400">{count} صوت</span>
+                                    <span className="text-sm text-slate-400">{count} صووت 🗳️</span>
                                     <div className="w-16 h-2 bg-slate-800 rounded-full overflow-hidden">
                                         <div
                                             className="h-full bg-purple-500 transition-all"
@@ -247,14 +247,14 @@ export default function RestaurantVotingPanel({
                 {/* Status */}
                 <div className="text-center text-sm text-slate-400 mb-4">
                     {isKing ? (
-                        "الملك لا يصوّت"
+                        "الملك ما يصووت؟؟ 👑🚫 يعني أحس 🤷"
                     ) : myVote ? (
-                        <span className="text-purple-300">صوّتت لـ {myVote}</span>
+                        <span className="text-purple-300">أحسس صوّتت لـ {myVote}؟؟ 🗳️✨</span>
                     ) : (
                         "والله شووف... اخترر مطعمك لو تبي يعني 🍕🤷✨"
                     )}
                     <span className="mx-2">·</span>
-                    <span>{totalVotes} صوت حتى الآن</span>
+                    <span>{totalVotes} صووت للحين؟؟ 📊💥</span>
                 </div>
 
                 {/* King Controls */}
@@ -272,7 +272,7 @@ export default function RestaurantVotingPanel({
                             disabled={saving}
                             className="px-4 py-2 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 text-sm font-semibold transition-colors disabled:opacity-50"
                         >
-                            إلغاء التصويت
+                            الغااء التصويت؟؟ ❌🗳️ مدري 🤷
                         </button>
                     </div>
                 )}
@@ -289,9 +289,9 @@ export default function RestaurantVotingPanel({
                         <CheckCircle className="w-6 h-6 text-emerald-400" />
                     </div>
                     <div>
-                        <p className="text-sm font-semibold text-emerald-300">نتيجة التصويت</p>
+                        <p className="text-sm font-semibold text-emerald-300">نتيجة التصوييت؟؟ 🗳️✨ أحس</p>
                         <p className="text-xs text-slate-400">
-                            {wasOverridden ? "تم قمع صوت الجمهور" : "اختيار الجمهور"}
+                            {wasOverridden ? "تم قمعع صوت الجمهور؟؟ 👑💥" : "اختيار الجمهوور؟؟ 🗳️✨"}
                         </p>
                     </div>
                 </div>
@@ -302,7 +302,7 @@ export default function RestaurantVotingPanel({
                         ? "bg-red-500/10 border-red-500/20"
                         : "bg-emerald-500/10 border-emerald-500/20"
                 }`}>
-                    <p className="text-xs text-slate-400 mb-1">المطعم المختار</p>
+                    <p className="text-xs text-slate-400 mb-1">المطعمم المختاار؟؟ 🍔✨</p>
                     <p className="text-2xl font-bold text-white">{currentWeek.restaurant}</p>
                     {wasOverridden && (
                         <p className="text-xs text-red-400 mt-2">
@@ -327,9 +327,9 @@ export default function RestaurantVotingPanel({
                             >
                                 <span className={isWinner ? "font-semibold text-emerald-300" : "text-slate-400"}>
                                     {candidate}
-                                    {isWinner && !wasOverridden && " (الفائز)"}
+                                    {isWinner && !wasOverridden && " (الفايز؟؟ 🏆✨)"}
                                 </span>
-                                <span className="text-sm text-slate-500">{count} صوت</span>
+                                <span className="text-sm text-slate-500">{count} صووت 🗳️</span>
                             </div>
                         );
                     })}
@@ -344,13 +344,13 @@ export default function RestaurantVotingPanel({
                                 className="w-full px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
                             >
                                 <Crown className="w-4 h-4" />
-                                قمع صوت الجمهور
+                                قمعع صوت الجمهوور؟؟ 👑💥 يعني لو تبي 🤷
                             </button>
                         ) : (
                             <div className="space-y-3">
                                 <input
                                     type="text"
-                                    placeholder="اسم المطعم البديل..."
+                                    placeholder="اسم المطعمم البديل يعني؟؟ 🍔✨"
                                     value={overrideRestaurant}
                                     onChange={e => setOverrideRestaurant(e.target.value)}
                                     className="w-full bg-slate-900 text-white border border-red-500/30 rounded-lg p-3 outline-none focus:border-red-400"
@@ -361,7 +361,7 @@ export default function RestaurantVotingPanel({
                                         disabled={saving || !overrideRestaurant.trim()}
                                         className="flex-1 px-4 py-2 rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30 text-sm font-semibold transition-colors disabled:opacity-50"
                                     >
-                                        تأكيد القمع
+                                        تأكييد القمع؟؟ 👑💥 أحس ✨
                                     </button>
                                     <button
                                         onClick={() => {
@@ -370,7 +370,7 @@ export default function RestaurantVotingPanel({
                                         }}
                                         className="px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 text-sm transition-colors"
                                     >
-                                        إلغاء
+                                        الغااء؟؟ ❌ مدري 🤷
                                     </button>
                                 </div>
                             </div>
@@ -390,8 +390,8 @@ export default function RestaurantVotingPanel({
                         <Vote className="w-6 h-6 text-purple-400" />
                     </div>
                     <div>
-                        <p className="text-sm font-semibold text-purple-300">الخيار الديموقراطي</p>
-                        <p className="text-xs text-slate-400">أدخل 3 مطاعم للتصويت عليها</p>
+                        <p className="text-sm font-semibold text-purple-300">الخيار الديموقراطي؟؟ 🗳️✨ أحس</p>
+                        <p className="text-xs text-slate-400">والله شوف ادخل 3 مطاعمم للتصويت يعني 🍔🍕🍜💥</p>
                     </div>
                 </div>
 
@@ -403,7 +403,7 @@ export default function RestaurantVotingPanel({
                             </span>
                             <input
                                 type="text"
-                                placeholder={`المطعم ${idx + 1}...`}
+                                placeholder={`المطعمم ${idx + 1}؟؟ 🍔✨`}
                                 value={candidates[idx]}
                                 onChange={e => {
                                     const newCandidates = [...candidates] as [string, string, string];
@@ -423,7 +423,7 @@ export default function RestaurantVotingPanel({
                         className="flex-1 px-4 py-3 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-300 hover:bg-purple-500/30 font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                         <Vote className="w-4 h-4" />
-                        ابدأ التصويت (24 ساعة)
+                        ابدأ التصوييت؟؟ 🗳️ (24 ساعه) ⏰✨
                     </button>
                     <button
                         onClick={() => {
@@ -432,7 +432,7 @@ export default function RestaurantVotingPanel({
                         }}
                         className="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 transition-colors"
                     >
-                        رجوع
+                        رجووع؟؟ 🔙 مدري 🤷
                     </button>
                 </div>
             </div>
@@ -446,12 +446,12 @@ export default function RestaurantVotingPanel({
                 <MapPin className="w-7 h-7 text-amber-400/80" />
             </div>
             <div className="flex-1">
-                <p className="text-xs text-amber-400/80 mb-1 font-semibold">المطعم المختار · الميزانية ≤ 175</p>
+                <p className="text-xs text-amber-400/80 mb-1 font-semibold">المطعمم المختاار؟؟ 🍔✨ · الميزانيه ≤ 175 💰</p>
                 {isKing ? (
                     <div className="space-y-3">
                         <input
                             type="text"
-                            placeholder="اسم المطعم..."
+                            placeholder="اسم المطعمم يعني؟؟ 🍔✨"
                             value={restaurant}
                             onChange={e => setRestaurant(e.target.value)}
                             className="bg-slate-900 text-white border border-slate-700 rounded-lg p-3 outline-none w-full max-w-sm focus:border-slate-400"
@@ -460,7 +460,7 @@ export default function RestaurantVotingPanel({
                             <div>
                                 <input
                                     type="url"
-                                    placeholder="📍 رابط موقع المطعم في خرائط قوقل (اختياري)"
+                                    placeholder="📍 رابط موقع المطعمم في خرايط قوقل؟؟ (اختياري يعني 🤷✨)"
                                     value={mapsUrl}
                                     onChange={e => setMapsUrl(e.target.value)}
                                     inputMode="url"
@@ -468,7 +468,7 @@ export default function RestaurantVotingPanel({
                                     className="bg-slate-900 text-white border border-slate-700 rounded-lg p-3 outline-none w-full max-w-sm focus:border-emerald-500 text-sm placeholder:text-slate-500 placeholder:text-right"
                                 />
                                 <p className="text-[11px] text-slate-500 mt-1">
-                                    يتسجّل المطعم على الخريطة عند حفظ القرارات
+                                    يتسجلل المطعم على الخريطه لما تحفظ القرارات يعني؟؟ 🗺️✨
                                 </p>
                             </div>
                         )}
@@ -478,14 +478,14 @@ export default function RestaurantVotingPanel({
                                 className="px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 text-xs font-semibold transition-colors flex items-center gap-1.5"
                             >
                                 <Vote className="w-3.5 h-3.5" />
-                                الخيار الديموقراطي
+                                الخيار الديموقراطي؟؟ 🗳️✨
                             </button>
-                            <span className="text-xs text-slate-600">أو اكتب المطعم مباشرة (دكتاتوري)</span>
+                            <span className="text-xs text-slate-600">أو اكتب المطعمم مباشره يعني (دكتاتوري 👑💥)</span>
                         </div>
                     </div>
                 ) : (
                     <p className="text-xl font-semibold text-white">
-                        {currentWeek.restaurant || <span className="text-slate-600 font-normal">لم يحدد بعد</span>}
+                        {currentWeek.restaurant || <span className="text-slate-600 font-normal">ما انحدد للحين؟؟ 🤷✨</span>}
                     </p>
                 )}
             </div>
