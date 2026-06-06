@@ -26,6 +26,7 @@ import ChatBoard from "./ChatBoard";
 import StatisticsPanel from "./StatisticsPanel";
 import SmartReminders from "./SmartReminders";
 import RestaurantVotingPanel from "./RestaurantVotingPanel";
+import ImpromptuMeetupCard from "./ImpromptuMeetupCard";
 import FutureFeaturesVoting from "./FutureFeaturesVoting";
 import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
 import { Gamepad2, Bath, UploadCloud, BarChart3, Swords } from "lucide-react";
@@ -1395,6 +1396,14 @@ export default function Dashboard() {
                     {/* ===== TAB: الأسبوع الحالي ===== */}
                     {activeTab === "week" && (
                         <div className="space-y-8 max-w-3xl mx-auto">
+
+                            {/* أنا فاضي — لقاء مفاجئ */}
+                            {user?.name && (
+                                <ImpromptuMeetupCard
+                                    userName={user.name}
+                                    isAdmin={user.role === "dean"}
+                                />
+                            )}
 
                             {/* Smart Reminders (#11) */}
                             <SmartReminders
