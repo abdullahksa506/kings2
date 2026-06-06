@@ -1037,7 +1037,7 @@ export async function POST(request: Request) {
                 if (!authName) throw new Error("Unauthorized");
                 const tab = asTrimmedString(payload?.tab);
                 const seconds = Number(payload?.seconds);
-                const VALID_TABS = ["week", "leaderboard", "bathroom", "more"];
+                const VALID_TABS = ["week", "leaderboard", "bathroom", "map", "more"];
                 if (!VALID_TABS.includes(tab)) {
                     throw new Error("Invalid tab");
                 }

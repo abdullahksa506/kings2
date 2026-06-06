@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { invokeRpc } from "@/lib/services";
 
-type TabId = "week" | "leaderboard" | "bathroom" | "more";
+type TabId = "week" | "leaderboard" | "bathroom" | "map" | "more";
 
 /**
  * Tracks how long the logged-in member keeps the app open and which tab
@@ -30,6 +30,7 @@ export function useActivityTracker(activeTab: TabId, userName: string | undefine
         week: 0,
         leaderboard: 0,
         bathroom: 0,
+        map: 0,
         more: 0,
     });
     const activeTabRef = useRef<TabId>(activeTab);
@@ -51,7 +52,7 @@ export function useActivityTracker(activeTab: TabId, userName: string | undefine
             if (entries.length === 0) return;
 
             // Reset immediately so concurrent ticks accumulate fresh time.
-            bucketsRef.current = { week: 0, leaderboard: 0, bathroom: 0, more: 0 };
+            bucketsRef.current = { week: 0, leaderboard: 0, bathroom: 0, map: 0, more: 0 };
 
             for (const entry of entries) {
                 try {

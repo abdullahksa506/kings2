@@ -13,6 +13,9 @@ interface RestaurantVotingPanelProps {
     // For dictatorial mode, pass these to allow direct restaurant entry
     restaurant: string;
     setRestaurant: (value: string) => void;
+    // Optional Google/Apple Maps URL — saved into the map when the King saves choices.
+    mapsUrl?: string;
+    setMapsUrl?: (value: string) => void;
 }
 
 const VOTING_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -24,6 +27,8 @@ export default function RestaurantVotingPanel({
     onRefresh,
     restaurant,
     setRestaurant,
+    mapsUrl = "",
+    setMapsUrl,
 }: RestaurantVotingPanelProps) {
     const [saving, setSaving] = useState(false);
     const [showModeSelection, setShowModeSelection] = useState(false);
@@ -451,6 +456,22 @@ export default function RestaurantVotingPanel({
                             onChange={e => setRestaurant(e.target.value)}
                             className="bg-slate-900 text-white border border-slate-700 rounded-lg p-3 outline-none w-full max-w-sm focus:border-slate-400"
                         />
+                        {setMapsUrl && (
+                            <div>
+                                <input
+                                    type="url"
+                                    placeholder="📍 رابط موقع المطعم في خرائط قوقل (اختياري)"
+                                    value={mapsUrl}
+                                    onChange={e => setMapsUrl(e.target.value)}
+                                    inputMode="url"
+                                    dir="ltr"
+                                    className="bg-slate-900 text-white border border-slate-700 rounded-lg p-3 outline-none w-full max-w-sm focus:border-emerald-500 text-sm placeholder:text-slate-500 placeholder:text-right"
+                                />
+                                <p className="text-[11px] text-slate-500 mt-1">
+                                    يتسجّل المطعم على الخريطة عند حفظ القرارات
+                                </p>
+                            </div>
+                        )}
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setShowModeSelection(true)}

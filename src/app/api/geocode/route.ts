@@ -5,7 +5,36 @@ import { NextResponse } from "next/server";
 // IP-based rate limiting and an SSRF host allowlist.
 
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
+// Nominatim's usage policy requires an identifying User-Agent.
 const USER_AGENT = "ArshAlkhamis-RestaurantMap/1.0 (friend-group app)";
+// Google serves a coords-less consent page to non-browser agents, so short-link
+// expansion uses a realistic browser User-Agent instead.
+const BROWSER_UA =
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
+
+// Saudi Arabia bounding box (approx) — used to disambiguate lat/lng pairs found
+// in a maps HTML page.
+const KSA_LAT = [16, 33] as const;
+const KSA_LNG = [34, 56] as const;
+
+function extractCoordsFromHtml(text: string): { lat: number; lng: number } | null {
+    // Find any high-precision number pair and accept the first that fits inside
+    // Saudi Arabia in either order. The pair may be separated by JSON keys
+    // like `"lng":` so we allow up to ~16 non-digit characters between them.
+    const re = /(-?\d{1,3}\.\d{4,})[^\d-]{1,16}(-?\d{1,3}\.\d{4,})/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+        const a = parseFloat(m[1]);
+        const b = parseFloat(m[2]);
+        if (a >= KSA_LAT[0] && a <= KSA_LAT[1] && b >= KSA_LNG[0] && b <= KSA_LNG[1]) {
+            return { lat: a, lng: b };
+        }
+        if (b >= KSA_LAT[0] && b <= KSA_LAT[1] && a >= KSA_LNG[0] && a <= KSA_LNG[1]) {
+            return { lat: b, lng: a };
+        }
+    }
+    return null;
+}
 
 // Hosts we are willing to follow redirects for (short-link expansion only).
 const ALLOWED_EXPAND_HOSTS = [
@@ -100,15 +129,21 @@ export async function GET(request: Request) {
 
             const res = await fetch(expand, {
                 redirect: "follow",
-                headers: { "User-Agent": USER_AGENT },
+                headers: {
+                    "User-Agent": BROWSER_UA,
+                    "Accept-Language": "ar,en;q=0.8",
+                },
             });
+
+            // 1) The final URL after redirects usually carries @lat,lng or !3d!4d.
             const finalUrl = res.url || "";
             const fromUrl = extractCoords(finalUrl);
             if (fromUrl) return NextResponse.json(fromUrl);
 
-            // Some short links resolve to an HTML page that embeds the coords.
-            const body = await res.text();
-            const fromBody = extractCoords(body.slice(0, 200000));
+            // 2) Otherwise scan the HTML: structured patterns first, then a
+            //    KSA-bounded high-precision pair as a last resort.
+            const body = (await res.text()).slice(0, 400000);
+            const fromBody = extractCoords(body) || extractCoordsFromHtml(body);
             if (fromBody) return NextResponse.json(fromBody);
 
             return NextResponse.json({ error: "تعذّر استخراج الإحداثيات من الرابط" }, { status: 404 });

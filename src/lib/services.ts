@@ -655,6 +655,7 @@ export const services = {
             week: "الأسبوع",
             leaderboard: "المتصدرين",
             bathroom: "الحمامات",
+            map: "الخريطة",
             more: "المزيد",
         };
 

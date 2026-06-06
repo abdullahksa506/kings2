@@ -268,6 +268,7 @@ export default function Dashboard() {
     const [selectedDay, setSelectedDay] = useState<Exclude<WeekSession["day"], null>>("الخميس");
     const [deanSelectedDay, setDeanSelectedDay] = useState<Exclude<WeekSession["day"], null>>("الخميس");
     const [restaurant, setRestaurant] = useState("");
+    const [restaurantMapsUrl, setRestaurantMapsUrl] = useState("");
     const [tieBreakDay, setTieBreakDay] = useState<"الخميس" | "الجمعة">("الخميس");
     const [saving, setSaving] = useState(false);
 
@@ -294,7 +295,6 @@ export default function Dashboard() {
     const [isGameOpen, setIsGameOpen] = useState(false);
     const [isDuelOpen, setIsDuelOpen] = useState(false);
     const [isCoupOpen, setIsCoupOpen] = useState(false);
-    const [isMapOpen, setIsMapOpen] = useState(false);
 
     // Statistics State
     const [isStatsOpen, setIsStatsOpen] = useState(false);
@@ -302,7 +302,7 @@ export default function Dashboard() {
     const [isMemberProfileOpen, setIsMemberProfileOpen] = useState(false);
 
     // Tab State
-    type TabType = "week" | "leaderboard" | "bathroom" | "more";
+    type TabType = "week" | "leaderboard" | "bathroom" | "map" | "more";
     const [activeTab, setActiveTab] = useState<TabType>("week");
     const [selectedTheme, setSelectedTheme] = useState<ThemeKey>("royal-amber");
     const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
@@ -374,7 +374,7 @@ export default function Dashboard() {
         const params = new URLSearchParams(window.location.search);
         const tab = params.get("tab");
         const action = params.get("action");
-        if (tab && ["week", "leaderboard", "bathroom", "more"].includes(tab)) {
+        if (tab && ["week", "leaderboard", "bathroom", "map", "more"].includes(tab)) {
             setActiveTab(tab as TabType);
         }
         if (action) {
@@ -399,7 +399,7 @@ export default function Dashboard() {
                     try {
                         const target = new URL(data.targetUrl, window.location.origin);
                         const t = target.searchParams.get("tab");
-                        if (t && ["week", "leaderboard", "bathroom", "more"].includes(t)) {
+                        if (t && ["week", "leaderboard", "bathroom", "map", "more"].includes(t)) {
                             setActiveTab(t as TabType);
                         }
                     } catch {
@@ -606,8 +606,33 @@ export default function Dashboard() {
     const handleSetChoices = async () => {
         if (!currentWeek || !user) return;
         setSaving(true);
+        let mapLinkWarning: string | null = null;
         try {
             await services.setWeekChoices(currentWeek.id, selectedDay, restaurant, null);
+
+            // If the King provided a Google/Apple Maps link, resolve it to
+            // coordinates and pin the restaurant on the map automatically.
+            const trimmedName = restaurant.trim();
+            const trimmedUrl = restaurantMapsUrl.trim();
+            if (trimmedName && trimmedUrl) {
+                try {
+                    const { resolveMapLinkToCoords, setRestaurantLocation } = await import("@/lib/mapServices");
+                    const coords = await resolveMapLinkToCoords(trimmedUrl);
+                    if (coords) {
+                        await setRestaurantLocation({
+                            name: trimmedName,
+                            lat: coords.lat,
+                            lng: coords.lng,
+                            mapsUrl: trimmedUrl,
+                        });
+                    } else {
+                        mapLinkWarning = "تم حفظ المطعم، لكن ما قدرت أطلّع الإحداثيات من الرابط — افتحه في خرائط قوقل، اضغط 'مشاركة' ثم 'نسخ الرابط' والصقه هنا.";
+                    }
+                } catch (mapErr) {
+                    console.error("Failed to save restaurant location:", mapErr);
+                    mapLinkWarning = "تم حفظ المطعم، لكن تعذّر حفظ موقعه على الخريطة.";
+                }
+            }
 
             // Notify members (Web Push)
             try {
@@ -621,6 +646,7 @@ export default function Dashboard() {
             }
 
             await fetchWeek();
+            if (mapLinkWarning) alert(mapLinkWarning);
         } catch (e: any) {
             console.error(e);
             alert(e?.message ? `حدث خطأ أثناء الحفظ:\n${e.message}` : "حدث خطأ أثناء الحفظ");
@@ -1519,6 +1545,8 @@ export default function Dashboard() {
                                             onRefresh={fetchWeek}
                                             restaurant={restaurant}
                                             setRestaurant={setRestaurant}
+                                            mapsUrl={restaurantMapsUrl}
+                                            setMapsUrl={setRestaurantMapsUrl}
                                         />
 
                                         {/* Attendance Section */}
@@ -1717,6 +1745,16 @@ export default function Dashboard() {
                         </div>
                     )}
 
+                    {/* ===== TAB: الخريطة ===== */}
+                    {activeTab === "map" && user && (
+                        <RestaurantMapPanel
+                            isOpen={true}
+                            embedded={true}
+                            userName={user.name}
+                            isAdmin={user.name === "شوكا"}
+                        />
+                    )}
+
                     {/* ===== TAB: المزيد ===== */}
                     {activeTab === "more" && (
                         <div className="space-y-6 max-w-2xl mx-auto">
@@ -1855,29 +1893,6 @@ export default function Dashboard() {
                                     >
                                         <LogOut className="w-5 h-5" />
                                         تسجيل الخروج
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Restaurant Map Button */}
-                            <div className="bg-gradient-to-br from-emerald-900/40 to-slate-900 border border-emerald-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group cursor-pointer" onClick={() => setIsMapOpen(true)}>
-                                <div className="absolute -right-10 -top-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-500" />
-                                <div className="relative z-10">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="bg-emerald-500/20 p-2 rounded-xl text-emerald-400">
-                                            <MapPin className="w-6 h-6" />
-                                        </div>
-                                        <h3 className="font-bold text-xl text-white">خريطة المطاعم 📍</h3>
-                                    </div>
-                                    <p className="text-sm text-slate-300 mb-5 leading-relaxed">
-                                        خريطة تفاعلية لكل المطاعم اللي رحنا لها مع تقييمها وعدد الزيارات. ثبّتوا مواقعها وافتحوها في خرائط قوقل بضغطة!
-                                    </p>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); setIsMapOpen(true); }}
-                                        className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
-                                    >
-                                        <MapPin className="w-5 h-5" />
-                                        افتح الخريطة
                                     </button>
                                 </div>
                             </div>
@@ -2077,6 +2092,7 @@ export default function Dashboard() {
                             { id: "week" as TabType, icon: Calendar, label: "الأسبوع" },
                             { id: "leaderboard" as TabType, icon: Trophy, label: "المتصدرين" },
                             { id: "bathroom" as TabType, icon: Bath, label: "الحمامات" },
+                            { id: "map" as TabType, icon: MapPin, label: "الخريطة" },
                             { id: "more" as TabType, icon: Ellipsis, label: "المزيد" },
                         ].map(tab => (
                             <button
@@ -2130,17 +2146,6 @@ export default function Dashboard() {
                         isOpen={isCoupOpen}
                         onClose={() => setIsCoupOpen(false)}
                         userName={user.name}
-                    />
-                )
-            }
-
-            {
-                user && (
-                    <RestaurantMapPanel
-                        isOpen={isMapOpen}
-                        onClose={() => setIsMapOpen(false)}
-                        userName={user.name}
-                        isAdmin={user.name === "شوكا"}
                     />
                 )
             }
