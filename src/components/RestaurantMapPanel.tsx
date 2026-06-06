@@ -24,9 +24,11 @@ import {
 
 interface RestaurantMapPanelProps {
     isOpen: boolean;
-    onClose: () => void;
+    onClose?: () => void;
     userName: string;
     isAdmin: boolean;
+    /** When true, render as an embedded tab (no fixed overlay) instead of a modal. */
+    embedded?: boolean;
 }
 
 const RIYADH: [number, number] = [24.7136, 46.6753];
@@ -51,7 +53,7 @@ function timeAgo(ms: number): string {
 
 type AddMethod = "map" | "link" | "search";
 
-export default function RestaurantMapPanel({ isOpen, onClose, userName, isAdmin }: RestaurantMapPanelProps) {
+export default function RestaurantMapPanel({ isOpen, onClose, userName, isAdmin, embedded = false }: RestaurantMapPanelProps) {
     const [summaries, setSummaries] = useState<RestaurantSummary[]>([]);
     const [locations, setLocations] = useState<RestaurantLocation[]>([]);
     const [loading, setLoading] = useState(true);
@@ -312,8 +314,13 @@ export default function RestaurantMapPanel({ isOpen, onClose, userName, isAdmin 
         }
     };
 
+    // Embedded (tab) mode reserves room for the bottom tab bar; modal mode covers the screen.
+    const rootClasses = embedded
+        ? "fixed inset-0 z-30 bg-slate-950 flex flex-col pb-16"
+        : "fixed inset-0 z-50 bg-slate-950 flex flex-col animate-[slideUp_0.3s_ease-out]";
+
     return (
-        <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col animate-[slideUp_0.3s_ease-out]" dir="rtl">
+        <div className={rootClasses} dir="rtl">
             {/* Header */}
             <div className="flex items-center justify-between p-3 border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
@@ -327,12 +334,14 @@ export default function RestaurantMapPanel({ isOpen, onClose, userName, isAdmin 
                         </p>
                     </div>
                 </div>
-                <button
-                    onClick={onClose}
-                    className="bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 p-2 rounded-xl transition-colors"
-                >
-                    <X className="w-5 h-5 text-slate-400" />
-                </button>
+                {!embedded && onClose && (
+                    <button
+                        onClick={onClose}
+                        className="bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 p-2 rounded-xl transition-colors"
+                    >
+                        <X className="w-5 h-5 text-slate-400" />
+                    </button>
+                )}
             </div>
 
             {/* Map */}

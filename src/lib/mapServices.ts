@@ -165,26 +165,28 @@ export async function getAllRestaurantNames(): Promise<RestaurantNameEntry[]> {
     const snap = await getDocs(collection(db, "weeks"));
     const groups = new Map<string, { total: number; variantCounts: Map<string, number> }>();
     snap.forEach((doc) => {
-        const raw: string = (doc.data() as any)?.restaurant || "";
-        const name = raw.trim();
-        if (!name) return;
-        const key = canonRestaurant(name);
+        // Keep the EXACT stored string as the variant. Some week docs store the
+        // restaurant with trailing whitespace; the merge query matches by exact
+        // value, so trimming here would make those weeks un-mergeable.
+        const raw: string = (doc.data() as any)?.restaurant ?? "";
+        if (!raw.trim()) return;
+        const key = canonRestaurant(raw);
         let g = groups.get(key);
         if (!g) {
             g = { total: 0, variantCounts: new Map() };
             groups.set(key, g);
         }
         g.total += 1;
-        g.variantCounts.set(name, (g.variantCounts.get(name) || 0) + 1);
+        g.variantCounts.set(raw, (g.variantCounts.get(raw) || 0) + 1);
     });
 
     return Array.from(groups.values())
         .map((g) => {
             const variants = Array.from(g.variantCounts.entries()).sort((a, b) => b[1] - a[1]);
             return {
-                name: variants[0][0], // most common spelling
+                name: variants[0][0].trim(), // most common spelling, trimmed for display
                 count: g.total,
-                variants: variants.map((v) => v[0]),
+                variants: variants.map((v) => v[0]), // exact stored strings (for the merge query)
             };
         })
         .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "ar"));
@@ -292,6 +294,21 @@ export function parseMapLink(input: string): { lat: number; lng: number } | null
 
 export function isShortMapLink(input: string): boolean {
     return /(maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(input);
+}
+
+/**
+ * High-level helper: take any maps URL (full or short) and return the
+ * coordinates. Used by the King's "حفظ القرارات" flow so a pasted link is
+ * resolved transparently — direct parse first, server expansion as fallback.
+ */
+export async function resolveMapLinkToCoords(input: string): Promise<{ lat: number; lng: number } | null> {
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+    const direct = parseMapLink(trimmed);
+    if (direct) return direct;
+    // Try server-side expansion for short links AND for full links Google may
+    // serve via a redirect (e.g., share links from the Maps app).
+    return expandMapLink(trimmed);
 }
 
 export function buildGoogleMapsLink(lat: number, lng: number): string {
