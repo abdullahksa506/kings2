@@ -6,7 +6,14 @@
       "Bash(./node_modules/.bin/next build:*)",
       "Bash(ls:*)",
       "Bash(test:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(xargs:*)",
+      "Bash(find:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx eslint:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
