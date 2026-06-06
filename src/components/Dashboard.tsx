@@ -616,8 +616,18 @@ export default function Dashboard() {
             const trimmedUrl = restaurantMapsUrl.trim();
             if (trimmedName && trimmedUrl) {
                 try {
-                    const { resolveMapLinkToCoords, setRestaurantLocation } = await import("@/lib/mapServices");
-                    const coords = await resolveMapLinkToCoords(trimmedUrl);
+                    const { resolveMapLinkToCoords, setRestaurantLocation, geocodeSearch } = await import("@/lib/mapServices");
+                    let coords = await resolveMapLinkToCoords(trimmedUrl);
+                    // Fallback: if the URL couldn't be resolved, try searching by the
+                    // restaurant name (Nominatim, KSA-biased). Works for known places.
+                    if (!coords) {
+                        try {
+                            const results = await geocodeSearch(trimmedName);
+                            if (results.length > 0) {
+                                coords = { lat: results[0].lat, lng: results[0].lng };
+                            }
+                        } catch { /* ignore */ }
+                    }
                     if (coords) {
                         await setRestaurantLocation({
                             name: trimmedName,
@@ -626,7 +636,7 @@ export default function Dashboard() {
                             mapsUrl: trimmedUrl,
                         });
                     } else {
-                        mapLinkWarning = "تم حفظ المطعم، لكن ما قدرت أطلّع الإحداثيات من الرابط — افتحه في خرائط قوقل، اضغط 'مشاركة' ثم 'نسخ الرابط' والصقه هنا.";
+                        mapLinkWarning = "تم حفظ المطعم، لكن ما قدرت أطلّع موقعه من الرابط ولا بالبحث بالاسم.\n\nجرّب أحد البدائل:\n• من تطبيق قوقل ماب: اضغط على المطعم → 'مشاركة' → 'نسخ النص' بدل 'نسخ الرابط'.\n• أو افتح خرائط قوقل من المتصفح (مو التطبيق) وانسخ الرابط من شريط العنوان.\n• أو حدّد الموقع يدوياً من تبويب 'الخريطة' → اضغط على المطعم → 'الخريطة' وانقر مكانه.";
                     }
                 } catch (mapErr) {
                     console.error("Failed to save restaurant location:", mapErr);
