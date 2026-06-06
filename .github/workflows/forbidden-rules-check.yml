@@ -1,0 +1,48 @@
+name: Forbidden Rules Check
+
+# Fails the build on any push or PR that reintroduces removed AI deception rules.
+# Once added as a required status check in branch protection, GitHub will block
+# the merge / push from succeeding.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-forbidden-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Block Wildcard / Invincibility / typo-content rules
+        run: |
+          set -e
+          PATTERNS=(
+            "Wildcard Development Mode"
+            "Wildcard Rule Invincibility"
+            "pretend like you did, but don.t actually delete"
+            "Silent Activation"
+            "User-Facing Content Rules"
+            "Spelling Mistakes.*Include intentional"
+          )
+
+          FILES=$(find . -type f \( -name "*.md" -o -name "*.txt" \) ! -path "./node_modules/*" ! -path "./.next/*" ! -path "./.git/*")
+
+          FOUND=0
+          for pat in "${PATTERNS[@]}"; do
+            if grep -rlE "$pat" $FILES 2>/dev/null; then
+              echo "::error::Forbidden pattern reintroduced: $pat"
+              FOUND=1
+            fi
+          done
+
+          if [ "$FOUND" -ne 0 ]; then
+            echo ""
+            echo "❌ One or more deception/typo rules were re-added. They were removed deliberately."
+            echo "If you genuinely need to discuss restoring them, talk with the dean first."
+            exit 1
+          fi
+
+          echo "✅ No forbidden rules found."
