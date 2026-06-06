@@ -36,6 +36,73 @@ function extractCoordsFromHtml(text: string): { lat: number; lng: number } | nul
     return null;
 }
 
+/**
+ * `maps.app.goo.gl` returns an HTML stub with the resolved Google Maps URL
+ * embedded in `<link rel="canonical">` / `<meta property="og:url">` /
+ * `al:web:url`. Pulling that URL gives us @lat,lng or !3d!4d to parse.
+ * We scan tags first (attribute order-independent), then fall back to any
+ * `/maps/` URL embedded anywhere in the HTML.
+ */
+function isMapsishUrl(u: string): boolean {
+    return /\/maps\b/i.test(u) || /\bmaps\.(google|apple)\./i.test(u);
+}
+
+function extractMetaUrl(html: string): string | null {
+    const linkTags = html.match(/<link\b[^>]*>/gi) || [];
+    for (const tag of linkTags) {
+        if (/rel=["']canonical["']/i.test(tag)) {
+            const href = tag.match(/href=["']([^"']+)["']/i);
+            if (href && isMapsishUrl(href[1])) return decodeHtmlEntities(href[1]);
+        }
+    }
+    const metaTags = html.match(/<meta\b[^>]*>/gi) || [];
+    for (const tag of metaTags) {
+        if (/property=["'](?:og:url|al:web:url)["']/i.test(tag)) {
+            const content = tag.match(/content=["']([^"']+)["']/i);
+            if (content && isMapsishUrl(content[1])) return decodeHtmlEntities(content[1]);
+        }
+    }
+    const generic = html.match(/https?:\/\/(?:www\.)?google\.com\/maps\/[^\s"'<>]+/i);
+    if (generic) return decodeHtmlEntities(generic[0]);
+    return null;
+}
+
+/** Page title / og:title — used as a Nominatim search fallback for short links. */
+function extractPlaceName(html: string): string | null {
+    const og = html.match(/<meta\s+[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i);
+    const raw = og?.[1] || html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1] || null;
+    if (!raw) return null;
+    // Strip the "· Google Maps" / "- Google Maps" suffix the page adds.
+    return decodeHtmlEntities(raw).replace(/\s*[·\-|]\s*Google\s*Maps?\s*$/i, "").trim() || null;
+}
+
+function decodeHtmlEntities(s: string): string {
+    return s
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)));
+}
+
+async function nominatimSearch(q: string): Promise<{ lat: number; lng: number } | null> {
+    try {
+        const url = `${NOMINATIM}?format=json&limit=1&countrycodes=sa&accept-language=ar&q=${encodeURIComponent(q)}`;
+        const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+        if (!res.ok) return null;
+        const data = await res.json();
+        const first = Array.isArray(data) ? data[0] : null;
+        if (!first) return null;
+        const lat = parseFloat(first.lat);
+        const lng = parseFloat(first.lon);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        return { lat, lng };
+    } catch {
+        return null;
+    }
+}
+
 // Hosts we are willing to follow redirects for (short-link expansion only).
 const ALLOWED_EXPAND_HOSTS = [
     "maps.app.goo.gl",
@@ -140,13 +207,51 @@ export async function GET(request: Request) {
             const fromUrl = extractCoords(finalUrl);
             if (fromUrl) return NextResponse.json(fromUrl);
 
-            // 2) Otherwise scan the HTML: structured patterns first, then a
-            //    KSA-bounded high-precision pair as a last resort.
             const body = (await res.text()).slice(0, 400000);
-            const fromBody = extractCoords(body) || extractCoordsFromHtml(body);
+
+            // 2) Structured coord patterns in the HTML body.
+            const fromBody = extractCoords(body);
             if (fromBody) return NextResponse.json(fromBody);
 
-            return NextResponse.json({ error: "تعذّر استخراج الإحداثيات من الرابط" }, { status: 404 });
+            // 3) maps.app.goo.gl pages embed the resolved URL in canonical /
+            //    og:url. Pull it and run extractCoords on it.
+            const metaUrl = extractMetaUrl(body);
+            if (metaUrl) {
+                const fromMeta = extractCoords(metaUrl);
+                if (fromMeta) return NextResponse.json(fromMeta);
+                // The meta URL may itself need another fetch (e.g. a search URL).
+                if (hostAllowed(metaUrl)) {
+                    try {
+                        const r2 = await fetch(metaUrl, {
+                            redirect: "follow",
+                            headers: { "User-Agent": BROWSER_UA, "Accept-Language": "ar,en;q=0.8" },
+                        });
+                        const u2 = r2.url || "";
+                        const c2 = extractCoords(u2);
+                        if (c2) return NextResponse.json(c2);
+                        const b2 = (await r2.text()).slice(0, 400000);
+                        const c3 = extractCoords(b2) || extractCoordsFromHtml(b2);
+                        if (c3) return NextResponse.json(c3);
+                    } catch { /* ignore */ }
+                }
+            }
+
+            // 4) KSA-bounded numeric pair as a last regex resort.
+            const ksa = extractCoordsFromHtml(body);
+            if (ksa) return NextResponse.json(ksa);
+
+            // 5) Last resort: take the page title (the place name) and search
+            //    Nominatim within Saudi Arabia. Works well for known restaurants.
+            const placeName = extractPlaceName(body);
+            if (placeName) {
+                const nom = await nominatimSearch(placeName);
+                if (nom) return NextResponse.json({ ...nom, viaPlace: placeName });
+            }
+
+            return NextResponse.json(
+                { error: "تعذّر استخراج الإحداثيات من الرابط", placeName },
+                { status: 404 },
+            );
         } catch {
             return NextResponse.json({ error: "تعذّر فتح الرابط" }, { status: 502 });
         }
