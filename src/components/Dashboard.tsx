@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, VALID_NAMES, invokeRpc, PublicUserProfile } from "@/lib/services";
 import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users, KeyRound, LogOut, Palette } from "lucide-react";
@@ -8,30 +9,33 @@ import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
 import RatingForm from "./RatingForm";
-import DeanDashboard from "./DeanDashboard";
-import CycleManagerModal from "./CycleManagerModal";
-import Leaderboard from "./Leaderboard";
-import GlobalLeaderboard from "./GlobalLeaderboard";
-import KingsLeaderboard from "./KingsLeaderboard";
-import ConstitutionModal from "./ConstitutionModal";
-import HungryKingsArena from "./HungryKingsArena";
-import RoyalDuelArena from "./RoyalDuelArena";
-import CoupArena from "./CoupArena";
-import RestaurantMapPanel from "./RestaurantMapPanel";
-import BathroomRatingForm from "./BathroomRatingForm";
-import BathroomRatingsDisplay from "./BathroomRatingsDisplay";
-import BathroomLeaderboard from "./BathroomLeaderboard";
-import SuggestionBox from "./SuggestionBox";
-import ChatBoard from "./ChatBoard";
-import StatisticsPanel from "./StatisticsPanel";
+const DeanDashboard = dynamic(() => import("./DeanDashboard"), { ssr: false });
+const CycleManagerModal = dynamic(() => import("./CycleManagerModal"), { ssr: false });
+// Leaderboards — only the "leaderboard" tab uses these.
+const Leaderboard = dynamic(() => import("./Leaderboard"), { ssr: false });
+const GlobalLeaderboard = dynamic(() => import("./GlobalLeaderboard"), { ssr: false });
+const KingsLeaderboard = dynamic(() => import("./KingsLeaderboard"), { ssr: false });
+const ConstitutionModal = dynamic(() => import("./ConstitutionModal"), { ssr: false });
+// Heavy panels/games — code-split so they only load when first opened.
+const HungryKingsArena = dynamic(() => import("./HungryKingsArena"), { ssr: false });
+const RoyalDuelArena = dynamic(() => import("./RoyalDuelArena"), { ssr: false });
+const CoupArena = dynamic(() => import("./CoupArena"), { ssr: false });
+const RestaurantMapPanel = dynamic(() => import("./RestaurantMapPanel"), { ssr: false });
+// Bathroom tab + secondary panels — lazy.
+const BathroomRatingForm = dynamic(() => import("./BathroomRatingForm"), { ssr: false });
+const BathroomRatingsDisplay = dynamic(() => import("./BathroomRatingsDisplay"), { ssr: false });
+const BathroomLeaderboard = dynamic(() => import("./BathroomLeaderboard"), { ssr: false });
+const SuggestionBox = dynamic(() => import("./SuggestionBox"), { ssr: false });
+const ChatBoard = dynamic(() => import("./ChatBoard"), { ssr: false });
+const StatisticsPanel = dynamic(() => import("./StatisticsPanel"), { ssr: false });
 import SmartReminders from "./SmartReminders";
 import RestaurantVotingPanel from "./RestaurantVotingPanel";
 import ImpromptuMeetupCard from "./ImpromptuMeetupCard";
-import FutureFeaturesVoting from "./FutureFeaturesVoting";
+const FutureFeaturesVoting = dynamic(() => import("./FutureFeaturesVoting"), { ssr: false });
 import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
 import { Gamepad2, Bath, UploadCloud, BarChart3, Swords } from "lucide-react";
-import RatingsExplorer from "./RatingsExplorer";
-import MemberProfilePanel from "./MemberProfilePanel";
+const RatingsExplorer = dynamic(() => import("./RatingsExplorer"), { ssr: false });
+const MemberProfilePanel = dynamic(() => import("./MemberProfilePanel"), { ssr: false });
 import Link from "next/link";
 import historicalWeeks from "@/data/historicalWeeks.json";
 import { Timestamp, doc, setDoc } from "firebase/firestore";
@@ -1395,7 +1399,7 @@ export default function Dashboard() {
 
                     {/* ===== TAB: الأسبوع الحالي ===== */}
                     {activeTab === "week" && (
-                        <div className="space-y-8 max-w-3xl mx-auto">
+                        <div className="space-y-5 max-w-3xl mx-auto">
 
                             {/* أنا فاضي — لقاء مفاجئ */}
                             {user?.name && (
@@ -1447,7 +1451,7 @@ export default function Dashboard() {
                             )}
 
                             {!currentWeek ? (
-                                <div className="text-center p-16 bg-slate-900/50 rounded-3xl border border-slate-800">
+                                <div className="text-center p-10 bg-slate-900/50 rounded-3xl border border-slate-800">
                                     <AlertTriangle className="w-16 h-16 text-slate-600 mx-auto mb-4" />
                                     <h3 className="text-2xl font-semibold text-slate-300">لا يوجد أسبوع نشط حالياً</h3>
                                     <p className="text-slate-500 mt-2">ننتظر العميد لبدء الدورة الجديدة.</p>
@@ -1712,7 +1716,7 @@ export default function Dashboard() {
 
                     {/* ===== TAB: لوحة المتصدرين ===== */}
                     {activeTab === "leaderboard" && (
-                        <div className="space-y-6 max-w-2xl mx-auto">
+                        <div className="space-y-4 max-w-2xl mx-auto">
                             <KingsLeaderboard />
                             <Leaderboard
                                 cycleNumber={currentWeek ? currentWeek.cycleNumber : (pastWeek ? pastWeek.cycleNumber : 1)}
@@ -1743,7 +1747,7 @@ export default function Dashboard() {
 
                     {/* ===== TAB: تقييم الحمامات ===== */}
                     {activeTab === "bathroom" && (
-                        <div className="space-y-6 max-w-2xl mx-auto">
+                        <div className="space-y-4 max-w-2xl mx-auto">
                             <h2 className="text-2xl font-bold text-sky-400 flex items-center justify-center gap-2">
                                 <Bath className="w-6 h-6" />
                                 قسم تقييم حمامات المطاعم
@@ -1776,7 +1780,7 @@ export default function Dashboard() {
 
                     {/* ===== TAB: المزيد ===== */}
                     {activeTab === "more" && (
-                        <div className="space-y-6 max-w-2xl mx-auto">
+                        <div className="space-y-4 max-w-2xl mx-auto">
 
                             {/* Constitution — pinned to the top for easy access */}
                             <div className="bg-gradient-to-br from-amber-900/40 via-amber-950/30 to-slate-900 border-2 border-amber-500/40 rounded-3xl p-6 shadow-xl shadow-amber-500/10 relative overflow-hidden group cursor-pointer" onClick={() => setIsConstitutionOpen(true)}>
