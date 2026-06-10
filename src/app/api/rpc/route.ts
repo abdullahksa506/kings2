@@ -12,6 +12,7 @@ import * as coup from "@/lib/coup/engine";
 import { encryptState, decryptState } from "@/lib/coup/secret";
 import { ActionType, Character, CoupGameState, ResponseType } from "@/lib/coup/types";
 import { sendPushNotification } from "@/lib/pushHelper";
+import { planOuting } from "@/lib/outingPlanner";
 
 const VALID_NAMES_RPC = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
 const WEEK_DAYS = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"] as const;
@@ -52,6 +53,7 @@ const RATE_LIMIT_RULES: Record<string, RateLimitRule> = {
     startImpromptuMeetup: { limit: 3, windowMs: 10 * 60 * 1000 },
     respondImpromptuMeetup: { limit: 20, windowMs: 60 * 1000 },
     cancelImpromptuMeetup: { limit: 5, windowMs: 60 * 1000 },
+    planOuting: { limit: 30, windowMs: 60 * 1000 },
 };
 
 const rateLimitStore = new Map<string, RateLimitBucket>();
@@ -1586,6 +1588,29 @@ export async function POST(request: Request) {
                 if (data.status !== "open") return NextResponse.json({ result: true });
                 await ref.update({ status: "canceled", resolvedAt: Date.now() });
                 return NextResponse.json({ result: true });
+            }
+
+            // ---------- AI OUTING PLANNER ----------
+            case "planOuting": {
+                if (!authName) throw new Error("Unauthorized");
+                const query = asTrimmedString(payload?.query).slice(0, 200);
+
+                // Build the set of restaurant names the group has already visited
+                // (completed weeks) so the planner can prefer new / familiar places.
+                const visitedNames = new Set<string>();
+                const weeksSnap = await adminDb
+                    .collection("weeks")
+                    .where("status", "==", "completed")
+                    .get();
+                weeksSnap.forEach((d) => {
+                    const r = (d.data() as any)?.restaurant;
+                    if (typeof r === "string" && r.trim()) {
+                        visitedNames.add(r.normalize("NFKC").replace(/ـ/g, "").replace(/\s+/g, " ").trim().toLowerCase());
+                    }
+                });
+
+                const result = planOuting(query, visitedNames, 175);
+                return NextResponse.json({ result });
             }
         }
         return NextResponse.json({ error: "Unknown action" }, { status: 400 });

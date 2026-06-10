@@ -31,9 +31,10 @@ const StatisticsPanel = dynamic(() => import("./StatisticsPanel"), { ssr: false 
 import SmartReminders from "./SmartReminders";
 import RestaurantVotingPanel from "./RestaurantVotingPanel";
 import ImpromptuMeetupCard from "./ImpromptuMeetupCard";
+const OutingPlannerPanel = dynamic(() => import("./OutingPlannerPanel"), { ssr: false });
 const FutureFeaturesVoting = dynamic(() => import("./FutureFeaturesVoting"), { ssr: false });
 import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
-import { Gamepad2, Bath, UploadCloud, BarChart3, Swords } from "lucide-react";
+import { Gamepad2, Bath, UploadCloud, BarChart3, Swords, Sparkles } from "lucide-react";
 const RatingsExplorer = dynamic(() => import("./RatingsExplorer"), { ssr: false });
 const MemberProfilePanel = dynamic(() => import("./MemberProfilePanel"), { ssr: false });
 import Link from "next/link";
@@ -274,6 +275,7 @@ export default function Dashboard() {
     const [deanSelectedDay, setDeanSelectedDay] = useState<Exclude<WeekSession["day"], null>>("الخميس");
     const [restaurant, setRestaurant] = useState("");
     const [restaurantMapsUrl, setRestaurantMapsUrl] = useState("");
+    const [isPlannerOpen, setIsPlannerOpen] = useState(false);
     const [tieBreakDay, setTieBreakDay] = useState<"الخميس" | "الجمعة">("الخميس");
     const [saving, setSaving] = useState(false);
 
@@ -1561,6 +1563,16 @@ export default function Dashboard() {
                                             </div>
                                         )}
 
+                                        {isKing && (
+                                            <button
+                                                onClick={() => setIsPlannerOpen(true)}
+                                                className="w-full bg-gradient-to-r from-fuchsia-500/15 to-purple-500/15 hover:from-fuchsia-500/25 hover:to-purple-500/25 border border-fuchsia-500/30 text-fuchsia-300 font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                                            >
+                                                <Sparkles className="w-4 h-4" />
+                                                محتار؟ خل المخطّط الذكي يقترح لك مطعم
+                                            </button>
+                                        )}
+
                                         <RestaurantVotingPanel
                                             currentWeek={currentWeek}
                                             userName={user?.name || ""}
@@ -2178,6 +2190,15 @@ export default function Dashboard() {
             <StatisticsPanel
                 isOpen={isStatsOpen}
                 onClose={() => setIsStatsOpen(false)}
+            />
+
+            <OutingPlannerPanel
+                isOpen={isPlannerOpen}
+                onClose={() => setIsPlannerOpen(false)}
+                onPick={(name, mapsUrl) => {
+                    setRestaurant(name);
+                    setRestaurantMapsUrl(mapsUrl);
+                }}
             />
 
             <MemberProfilePanel
