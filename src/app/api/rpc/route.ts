@@ -1618,7 +1618,7 @@ export async function POST(request: Request) {
             case "voteStylePreference": {
                 if (!authName) throw new Error("Unauthorized");
                 const style = asTrimmedString(payload?.style);
-                const VALID_STYLES = ["minimal", "glass", "editorial", "pastel", "current"];
+                const VALID_STYLES = ["minimal", "glass", "editorial", "pastel", "current", "neon", "brutalist", "terminal", "luxe", "comic", "aurora"];
                 if (!VALID_STYLES.includes(style)) throw new Error("ستايل غير معروف");
                 await adminDb.collection("stylePreferences").doc(authName).set({
                     userName: authName,
