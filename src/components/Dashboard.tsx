@@ -1849,6 +1849,15 @@ export default function Dashboard() {
                                         );
                                     })}
                                 </div>
+
+                                {/* رابط معرض أشكال التصميم الكاملة */}
+                                <a
+                                    href="/styles"
+                                    className="mt-4 w-full bg-gradient-to-r from-fuchsia-500/15 to-purple-500/15 hover:from-fuchsia-500/25 hover:to-purple-500/25 border border-fuchsia-500/30 text-fuchsia-300 font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                                >
+                                    <Sparkles className="w-4 h-4" />
+                                    🎨 جرّب أشكال تصميم جديدة كلياً للموقع
+                                </a>
                             </div>
 
                             {/* Profile Customization */}
