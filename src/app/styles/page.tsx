@@ -9,7 +9,9 @@ import { useState } from "react";
 import { Crown, MapPin, Calendar, Star, Users, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
-type StyleKey = "current" | "minimal" | "glass" | "editorial" | "pastel";
+type StyleKey =
+    | "current" | "minimal" | "glass" | "editorial" | "pastel"
+    | "neon" | "brutalist" | "terminal" | "luxe" | "comic" | "aurora";
 
 const STYLES: { key: StyleKey; label: string; emoji: string; desc: string }[] = [
     { key: "current", label: "الحالي (ملكي)", emoji: "👑", desc: "ذهبي على غامق، زوايا ناعمة، تدرّجات — الشكل الحالي" },
@@ -17,6 +19,12 @@ const STYLES: { key: StyleKey; label: string; emoji: string; desc: string }[] = 
     { key: "glass", label: "زجاجي (Glass)", emoji: "🧊", desc: "بطاقات شفافة مع ضباب خلفي، إحساس فاخر وعصري" },
     { key: "editorial", label: "مجلّة (Editorial)", emoji: "📰", desc: "خطوط كبيرة وجريئة، تنسيق غير متماثل، كتل لونية" },
     { key: "pastel", label: "هادئ (Pastel)", emoji: "🌸", desc: "ألوان دافئة وودودة، إحساس مريح، أقل رسمية" },
+    { key: "neon", label: "نيون سايبر", emoji: "⚡", desc: "أسود مع توهّج نيون بنفسجي وسماوي، إحساس مستقبلي حاد" },
+    { key: "brutalist", label: "بروتالي خام", emoji: "🧱", desc: "حدود سوداء سميكة، ظلال صلبة، صفر زوايا ناعمة، جريء وصادم" },
+    { key: "terminal", label: "تيرمنال هاكر", emoji: "💻", desc: "أخضر على أسود، خط مونوسبيس، إحساس كونسول وكود" },
+    { key: "luxe", label: "فخامة ذهبية", emoji: "🥂", desc: "أسود وذهبي فاخر، خط كلاسيكي أنيق، إحساس راقٍ جداً" },
+    { key: "comic", label: "كوميك مرح", emoji: "💥", desc: "حدود سميكة، ألوان بوب، ظلال كرتونية، مرح وجريء" },
+    { key: "aurora", label: "أورورا", emoji: "🌌", desc: "تدرّجات حيّة وكرات متوهّجة، إحساس تطبيق عصري ناعم" },
 ];
 
 export default function StylePreview() {
@@ -33,7 +41,7 @@ export default function StylePreview() {
                         </Link>
                         <div>
                             <h1 className="font-bold text-white">معاينة أشكال التصميم</h1>
-                            <p className="text-[11px] text-slate-500">جرّب 5 ستايلات قبل ما نغيّر الموقع</p>
+                            <p className="text-[11px] text-slate-500">جرّب 11 ستايل قبل ما نغيّر الموقع</p>
                         </div>
                     </div>
                 </div>
@@ -129,6 +137,12 @@ function containerClass(style: StyleKey) {
         glass: "min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-950 text-white pb-20",
         editorial: "min-h-screen bg-amber-50 text-stone-900 pb-20",
         pastel: "min-h-screen bg-gradient-to-br from-rose-50 via-amber-50 to-sky-50 text-stone-800 pb-20",
+        neon: "min-h-screen bg-black text-white pb-20",
+        brutalist: "min-h-screen bg-yellow-300 text-black pb-20",
+        terminal: "min-h-screen bg-[#0a0e0a] text-green-400 pb-20 font-mono",
+        luxe: "min-h-screen bg-neutral-950 text-amber-50 pb-20",
+        comic: "min-h-screen bg-sky-200 text-black pb-20",
+        aurora: "min-h-screen bg-gradient-to-br from-violet-600 via-fuchsia-500 to-cyan-400 text-white pb-20",
     }[style];
 }
 
@@ -239,6 +253,97 @@ function WeekCard({ style }: { style: StyleKey }) {
                     </div>
                 </div>
             );
+
+        case "neon":
+            return (
+                <div className="bg-black border border-fuchsia-500/50 rounded-2xl p-6 relative overflow-hidden shadow-[0_0_30px_rgba(217,70,239,0.3)]">
+                    <div className="absolute -top-16 -right-16 w-48 h-48 bg-cyan-500/20 rounded-full blur-3xl" />
+                    <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-fuchsia-500/20 rounded-full blur-3xl" />
+                    <div className="relative z-10 text-center space-y-3">
+                        <p className="text-cyan-400 text-xs font-bold tracking-[0.3em] uppercase drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">King of Thursday</p>
+                        <h2 className="text-4xl font-black text-white drop-shadow-[0_0_15px_rgba(217,70,239,0.9)] flex items-center gap-2 justify-center">
+                            <Crown className="w-8 h-8 text-fuchsia-400 drop-shadow-[0_0_10px_rgba(217,70,239,1)]" /> {king}
+                        </h2>
+                        <div className="flex justify-center gap-4 pt-2">
+                            <span className="border border-cyan-400/60 text-cyan-300 px-3 py-1 rounded-lg text-sm shadow-[0_0_10px_rgba(34,211,238,0.4)]">{day}</span>
+                            <span className="border border-fuchsia-400/60 text-fuchsia-300 px-3 py-1 rounded-lg text-sm shadow-[0_0_10px_rgba(217,70,239,0.4)]">{restaurant}</span>
+                        </div>
+                    </div>
+                </div>
+            );
+
+        case "brutalist":
+            return (
+                <div className="bg-white border-4 border-black p-6 shadow-[8px_8px_0_0_#000]">
+                    <p className="text-xs font-black uppercase bg-black text-yellow-300 inline-block px-2 py-1 mb-3">ملك الخميس</p>
+                    <h2 className="text-5xl font-black text-black uppercase leading-none mb-4">{king}</h2>
+                    <div className="flex gap-2">
+                        <span className="bg-fuchsia-400 border-2 border-black px-3 py-1 font-bold text-sm shadow-[3px_3px_0_0_#000]">{day}</span>
+                        <span className="bg-cyan-400 border-2 border-black px-3 py-1 font-bold text-sm shadow-[3px_3px_0_0_#000]">{restaurant}</span>
+                    </div>
+                </div>
+            );
+
+        case "terminal":
+            return (
+                <div className="bg-[#0d130d] border border-green-500/40 rounded p-5 font-mono">
+                    <div className="flex items-center gap-1.5 mb-3 border-b border-green-500/20 pb-2">
+                        <span className="w-3 h-3 rounded-full bg-red-500" />
+                        <span className="w-3 h-3 rounded-full bg-yellow-500" />
+                        <span className="w-3 h-3 rounded-full bg-green-500" />
+                        <span className="text-green-600 text-xs ml-2">king@thursday:~$</span>
+                    </div>
+                    <p className="text-green-600 text-xs mb-1">&gt; SELECT * FROM king WHERE week=current;</p>
+                    <h2 className="text-2xl font-bold text-green-300 mb-2">{"{ "}name: &quot;{king}&quot; {"}"}<span className="animate-pulse">_</span></h2>
+                    <p className="text-green-500 text-sm">day: <span className="text-green-300">{day}</span></p>
+                    <p className="text-green-500 text-sm">restaurant: <span className="text-green-300">{restaurant}</span></p>
+                </div>
+            );
+
+        case "luxe":
+            return (
+                <div className="bg-neutral-900 border border-amber-600/40 rounded-none p-7 relative">
+                    <div className="absolute inset-0 border border-amber-600/20 m-2 pointer-events-none" />
+                    <div className="relative text-center space-y-3">
+                        <p className="text-amber-500/70 text-[10px] tracking-[0.4em] uppercase">— Sovereign of the Week —</p>
+                        <h2 className="font-serif text-4xl text-amber-200 italic">{king}</h2>
+                        <div className="w-16 h-px bg-amber-600/50 mx-auto" />
+                        <div className="flex justify-center gap-8 text-amber-100/60 text-sm font-serif">
+                            <span>{day}</span>
+                            <span className="text-amber-600">◆</span>
+                            <span>{restaurant}</span>
+                        </div>
+                    </div>
+                </div>
+            );
+
+        case "comic":
+            return (
+                <div className="bg-white border-[5px] border-black rounded-3xl p-6 shadow-[6px_6px_0_0_#000] relative">
+                    <div className="absolute -top-4 right-6 bg-red-500 text-white font-black px-3 py-1 border-4 border-black rounded-xl -rotate-6 text-sm">ملك!</div>
+                    <h2 className="text-4xl font-black text-black mb-3" style={{ WebkitTextStroke: "1px #000" }}>{king} 👑</h2>
+                    <div className="flex gap-2">
+                        <span className="bg-yellow-300 border-[3px] border-black rounded-full px-3 py-1 font-black text-sm">{day}</span>
+                        <span className="bg-pink-400 border-[3px] border-black rounded-full px-3 py-1 font-black text-sm">{restaurant}</span>
+                    </div>
+                </div>
+            );
+
+        case "aurora":
+            return (
+                <div className="backdrop-blur-xl bg-white/15 border border-white/30 rounded-3xl p-6 shadow-2xl">
+                    <div className="text-center space-y-3">
+                        <p className="text-white/80 text-xs font-semibold tracking-wide">✨ ملك الخميس</p>
+                        <h2 className="text-4xl font-bold text-white flex items-center gap-2 justify-center drop-shadow-lg">
+                            <Crown className="w-7 h-7" /> {king}
+                        </h2>
+                        <div className="flex justify-center gap-3">
+                            <span className="bg-white/20 backdrop-blur px-4 py-1.5 rounded-full text-sm font-medium">🗓️ {day}</span>
+                            <span className="bg-white/20 backdrop-blur px-4 py-1.5 rounded-full text-sm font-medium">🍽️ {restaurant}</span>
+                        </div>
+                    </div>
+                </div>
+            );
     }
 }
 
@@ -328,6 +433,89 @@ function RestaurantCard({ style }: { style: StyleKey }) {
                         <span className="bg-rose-100 text-rose-700 px-2 py-1 rounded-full">هندي</span>
                         <span className="bg-sky-100 text-sky-700 px-2 py-1 rounded-full">📍 {district}</span>
                         <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">{price}﷼</span>
+                    </div>
+                </div>
+            );
+
+        case "neon":
+            return (
+                <div className="bg-black border border-cyan-500/40 rounded-xl p-5 shadow-[0_0_20px_rgba(34,211,238,0.2)]">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-bold text-cyan-300 text-lg drop-shadow-[0_0_8px_rgba(34,211,238,0.7)]">{name}</h3>
+                        <span className="text-fuchsia-300 text-sm font-bold drop-shadow-[0_0_8px_rgba(217,70,239,0.7)]">★ {rating}</span>
+                    </div>
+                    <div className="flex gap-2 text-xs">
+                        <span className="border border-fuchsia-500/40 text-fuchsia-300 px-2 py-0.5 rounded">هندي</span>
+                        <span className="border border-cyan-500/40 text-cyan-300 px-2 py-0.5 rounded">{district}</span>
+                        <span className="border border-green-500/40 text-green-300 px-2 py-0.5 rounded">{price}﷼</span>
+                    </div>
+                </div>
+            );
+
+        case "brutalist":
+            return (
+                <div className="bg-cyan-300 border-4 border-black p-5 shadow-[6px_6px_0_0_#000]">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-2xl font-black text-black uppercase">{name}</h3>
+                        <span className="bg-black text-yellow-300 px-2 py-1 font-black">{rating}★</span>
+                    </div>
+                    <div className="flex gap-2 font-bold text-sm">
+                        <span className="bg-white border-2 border-black px-2">هندي</span>
+                        <span className="bg-white border-2 border-black px-2">{district}</span>
+                        <span className="bg-white border-2 border-black px-2">{price}﷼</span>
+                    </div>
+                </div>
+            );
+
+        case "terminal":
+            return (
+                <div className="bg-[#0d130d] border border-green-500/40 rounded p-5 font-mono">
+                    <p className="text-green-600 text-xs mb-1">&gt; restaurant.find(&quot;{name}&quot;)</p>
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-green-300 text-lg font-bold">{name}</h3>
+                        <span className="text-green-400">[{rating}/10]</span>
+                    </div>
+                    <p className="text-green-600 text-sm mt-1">type=هندي | area={district} | cost={price}SAR</p>
+                </div>
+            );
+
+        case "luxe":
+            return (
+                <div className="bg-neutral-900 border-y border-amber-600/30 p-6">
+                    <div className="flex items-baseline justify-between mb-1">
+                        <h3 className="font-serif text-2xl text-amber-200 italic">{name}</h3>
+                        <span className="text-amber-500 font-serif">{rating} <span className="text-xs">/ 10</span></span>
+                    </div>
+                    <p className="text-amber-100/50 text-xs tracking-[0.2em] uppercase">هندي · {district} · {price} SAR</p>
+                </div>
+            );
+
+        case "comic":
+            return (
+                <div className="bg-yellow-300 border-[4px] border-black rounded-2xl p-5 shadow-[5px_5px_0_0_#000]">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-2xl font-black text-black">{name}</h3>
+                        <span className="bg-red-500 text-white border-[3px] border-black rounded-full w-12 h-12 flex items-center justify-center font-black -rotate-12">{rating}</span>
+                    </div>
+                    <div className="flex gap-2 font-black text-xs">
+                        <span className="bg-white border-2 border-black rounded-full px-2 py-0.5">هندي</span>
+                        <span className="bg-pink-400 border-2 border-black rounded-full px-2 py-0.5">{district}</span>
+                        <span className="bg-green-400 border-2 border-black rounded-full px-2 py-0.5">{price}﷼</span>
+                    </div>
+                </div>
+            );
+
+        case "aurora":
+            return (
+                <div className="backdrop-blur-xl bg-white/15 border border-white/25 rounded-2xl p-5 shadow-xl">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-bold text-white text-lg">{name}</h3>
+                        <span className="bg-white/25 backdrop-blur px-2.5 py-1 rounded-full text-sm font-bold">⭐ {rating}</span>
+                    </div>
+                    <div className="flex gap-2 text-xs">
+                        <span className="bg-white/15 px-2.5 py-1 rounded-full">هندي</span>
+                        <span className="bg-white/15 px-2.5 py-1 rounded-full">📍 {district}</span>
+                        <span className="bg-white/15 px-2.5 py-1 rounded-full">{price}﷼</span>
                     </div>
                 </div>
             );
@@ -439,6 +627,100 @@ function LeaderboardCard({ style }: { style: StyleKey }) {
                                 </div>
                             );
                         })}
+                    </div>
+                </div>
+            );
+
+        case "neon":
+            return (
+                <div className="bg-black border border-fuchsia-500/40 rounded-xl p-5 shadow-[0_0_20px_rgba(217,70,239,0.2)]">
+                    <h3 className="text-cyan-300 text-sm font-bold mb-3 tracking-widest uppercase drop-shadow-[0_0_8px_rgba(34,211,238,0.7)]">⚡ Leaderboard</h3>
+                    <div className="space-y-2">
+                        {items.map((it) => (
+                            <div key={it.name} className="flex justify-between items-center border border-white/10 rounded-lg px-3 py-2">
+                                <span className="text-white"><span className="text-fuchsia-400 font-bold ml-2 drop-shadow-[0_0_6px_rgba(217,70,239,0.8)]">0{it.rank}</span> {it.name}</span>
+                                <span className="text-cyan-300 font-mono font-bold drop-shadow-[0_0_6px_rgba(34,211,238,0.8)]">{it.score}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+        case "brutalist":
+            return (
+                <div className="bg-fuchsia-400 border-4 border-black p-5 shadow-[6px_6px_0_0_#000]">
+                    <h3 className="text-2xl font-black text-black uppercase mb-3 bg-black text-white inline-block px-2">المتصدرين</h3>
+                    {items.map((it) => (
+                        <div key={it.name} className="flex justify-between items-center bg-white border-2 border-black px-3 py-2 mb-2 font-black">
+                            <span className="text-black">{it.rank}. {it.name}</span>
+                            <span className="bg-black text-yellow-300 px-2">{it.score}</span>
+                        </div>
+                    ))}
+                </div>
+            );
+
+        case "terminal":
+            return (
+                <div className="bg-[#0d130d] border border-green-500/40 rounded p-5 font-mono">
+                    <p className="text-green-600 text-xs mb-3">&gt; leaderboard --top 3</p>
+                    {items.map((it) => (
+                        <div key={it.name} className="flex justify-between text-sm py-1">
+                            <span className="text-green-400">[{it.rank}] <span className="text-green-200">{it.name}</span></span>
+                            <span className="text-green-500">{it.score} ████</span>
+                        </div>
+                    ))}
+                </div>
+            );
+
+        case "luxe":
+            return (
+                <div className="bg-neutral-900 border border-amber-600/30 p-6">
+                    <h3 className="font-serif text-xl text-amber-200 italic mb-4 text-center">— المتصدرون —</h3>
+                    {items.map((it) => (
+                        <div key={it.name} className="flex items-center gap-4 py-2.5 border-b border-amber-600/15 last:border-0">
+                            <span className="font-serif text-amber-500 text-lg w-6">{it.rank}.</span>
+                            <span className="flex-1 text-amber-100/80 font-serif">{it.name}</span>
+                            <span className="font-serif text-amber-300">{it.score}</span>
+                        </div>
+                    ))}
+                </div>
+            );
+
+        case "comic":
+            return (
+                <div className="bg-pink-400 border-[5px] border-black rounded-3xl p-5 shadow-[6px_6px_0_0_#000]">
+                    <h3 className="text-3xl font-black text-black mb-3" style={{ WebkitTextStroke: "1px #000" }}>المتصدرين! 🏆</h3>
+                    <div className="space-y-2">
+                        {items.map((it) => {
+                            const c = ["bg-yellow-300", "bg-zinc-200", "bg-orange-400"];
+                            return (
+                                <div key={it.name} className="flex items-center justify-between bg-white border-[3px] border-black rounded-xl px-3 py-2">
+                                    <span className="flex items-center gap-2 font-black">
+                                        <span className={`${c[it.rank - 1]} border-2 border-black w-7 h-7 rounded-full flex items-center justify-center`}>{it.rank}</span>
+                                        {it.name}
+                                    </span>
+                                    <span className="bg-green-400 border-2 border-black px-2 rounded-full font-black">{it.score}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+
+        case "aurora":
+            return (
+                <div className="backdrop-blur-xl bg-white/15 border border-white/25 rounded-2xl p-5 shadow-xl">
+                    <h3 className="font-bold text-white mb-3 flex items-center gap-2">🏆 المتصدرين</h3>
+                    <div className="space-y-2">
+                        {items.map((it) => (
+                            <div key={it.name} className="flex items-center justify-between bg-white/10 rounded-xl px-3 py-2">
+                                <span className="text-white flex items-center gap-2">
+                                    <span className="bg-white/25 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">{it.rank}</span>
+                                    {it.name}
+                                </span>
+                                <span className="bg-white/25 px-3 py-1 rounded-full text-sm font-bold">{it.score}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
             );
