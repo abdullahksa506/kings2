@@ -7,7 +7,6 @@ import { services, WeekSession, VALID_NAMES, invokeRpc, PublicUserProfile } from
 import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users, KeyRound, LogOut, Palette } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { useActivityTracker } from "@/hooks/useActivityTracker";
 import RatingForm from "./RatingForm";
 const DeanDashboard = dynamic(() => import("./DeanDashboard"), { ssr: false });
 const CycleManagerModal = dynamic(() => import("./CycleManagerModal"), { ssr: false });
@@ -301,21 +300,16 @@ export default function Dashboard() {
     // Mini-game State
     const [isGameOpen, setIsGameOpen] = useState(false);
     const [isDuelOpen, setIsDuelOpen] = useState(false);
-    const [isCoupOpen, setIsCoupOpen] = useState(false);
 
     // Statistics State
     const [isStatsOpen, setIsStatsOpen] = useState(false);
-    const [isCycleManagerOpen, setIsCycleManagerOpen] = useState(false);
     const [isMemberProfileOpen, setIsMemberProfileOpen] = useState(false);
 
     // Tab State
-    type TabType = "week" | "leaderboard" | "bathroom" | "map" | "more";
+    type TabType = "week" | "leaderboard" | "bathroom" | "more";
     const [activeTab, setActiveTab] = useState<TabType>("week");
     const [selectedTheme, setSelectedTheme] = useState<ThemeKey>("royal-amber");
     const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
-
-    // Activity tracking (feature suggested by هشام): minutes spent + favourite tab.
-    useActivityTracker(activeTab, user?.name);
 
     const fetchPastWeekOnly = async () => {
         const previous = await services.getPreviousWeek();
@@ -372,54 +366,6 @@ export default function Dashboard() {
     const [subscribing, setSubscribing] = useState(false);
     const [showNotifDiagnostics, setShowNotifDiagnostics] = useState(false);
     const [notifStatus, setNotifStatus] = useState<string>("");
-
-    // ----- Handle deep-links from notifications (?action=…&tab=…) -----
-    const [pendingDeepAction, setPendingDeepAction] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (typeof window === "undefined") return;
-        const params = new URLSearchParams(window.location.search);
-        const tab = params.get("tab");
-        const action = params.get("action");
-        if (tab && ["week", "leaderboard", "bathroom", "map", "more"].includes(tab)) {
-            setActiveTab(tab as TabType);
-        }
-        if (action) {
-            setPendingDeepAction(action);
-        }
-        // Clean URL so a refresh won't replay the action.
-        if (tab || action) {
-            const cleanUrl = window.location.pathname + window.location.hash;
-            window.history.replaceState({}, "", cleanUrl);
-        }
-
-        // Also listen for in-app messages from the SW (notification tap on an
-        // already-open tab posts NOTIFICATION_ACTION to all clients).
-        const handleSwMessage = (event: MessageEvent) => {
-            const data = event.data;
-            if (!data || typeof data !== "object") return;
-            if (data.type === "NOTIFICATION_ACTION") {
-                if (data.action) {
-                    setPendingDeepAction(String(data.action));
-                }
-                if (data.targetUrl) {
-                    try {
-                        const target = new URL(data.targetUrl, window.location.origin);
-                        const t = target.searchParams.get("tab");
-                        if (t && ["week", "leaderboard", "bathroom", "map", "more"].includes(t)) {
-                            setActiveTab(t as TabType);
-                        }
-                    } catch {
-                        // ignore
-                    }
-                }
-            }
-        };
-        navigator.serviceWorker?.addEventListener?.("message", handleSwMessage);
-        return () => {
-            navigator.serviceWorker?.removeEventListener?.("message", handleSwMessage);
-        };
-    }, []);
 
     useEffect(() => {
         fetchPastWeekOnly();
@@ -613,43 +559,8 @@ export default function Dashboard() {
     const handleSetChoices = async () => {
         if (!currentWeek || !user) return;
         setSaving(true);
-        let mapLinkWarning: string | null = null;
         try {
             await services.setWeekChoices(currentWeek.id, selectedDay, restaurant, null);
-
-            // If the King provided a Google/Apple Maps link, resolve it to
-            // coordinates and pin the restaurant on the map automatically.
-            const trimmedName = restaurant.trim();
-            const trimmedUrl = restaurantMapsUrl.trim();
-            if (trimmedName && trimmedUrl) {
-                try {
-                    const { resolveMapLinkToCoords, setRestaurantLocation, geocodeSearch } = await import("@/lib/mapServices");
-                    let coords = await resolveMapLinkToCoords(trimmedUrl);
-                    // Fallback: if the URL couldn't be resolved, try searching by the
-                    // restaurant name (Nominatim, KSA-biased). Works for known places.
-                    if (!coords) {
-                        try {
-                            const results = await geocodeSearch(trimmedName);
-                            if (results.length > 0) {
-                                coords = { lat: results[0].lat, lng: results[0].lng };
-                            }
-                        } catch { /* ignore */ }
-                    }
-                    if (coords) {
-                        await setRestaurantLocation({
-                            name: trimmedName,
-                            lat: coords.lat,
-                            lng: coords.lng,
-                            mapsUrl: trimmedUrl,
-                        });
-                    } else {
-                        mapLinkWarning = "تم حفظ المطعم، لكن ما قدرت أطلّع موقعه من الرابط ولا بالبحث بالاسم.\n\nجرّب أحد البدائل:\n• من تطبيق قوقل ماب: اضغط على المطعم → 'مشاركة' → 'نسخ النص' بدل 'نسخ الرابط'.\n• أو افتح خرائط قوقل من المتصفح (مو التطبيق) وانسخ الرابط من شريط العنوان.\n• أو حدّد الموقع يدوياً من تبويب 'الخريطة' → اضغط على المطعم → 'الخريطة' وانقر مكانه.";
-                    }
-                } catch (mapErr) {
-                    console.error("Failed to save restaurant location:", mapErr);
-                    mapLinkWarning = "تم حفظ المطعم، لكن تعذّر حفظ موقعه على الخريطة.";
-                }
-            }
 
             // Notify members (Web Push)
             try {
@@ -663,10 +574,9 @@ export default function Dashboard() {
             }
 
             await fetchWeek();
-            if (mapLinkWarning) alert(mapLinkWarning);
-        } catch (e: any) {
+        } catch (e) {
             console.error(e);
-            alert(e?.message ? `حدث خطأ أثناء الحفظ:\n${e.message}` : "حدث خطأ أثناء الحفظ");
+            alert("حدث خطأ أثناء الحفظ");
         } finally {
             setSaving(false);
         }
@@ -835,47 +745,6 @@ export default function Dashboard() {
             setSaving(false);
         }
     };
-
-    // Run pending deep-link actions once user + currentWeek are loaded.
-    useEffect(() => {
-        if (!pendingDeepAction || !user || loading) return;
-        const action = pendingDeepAction;
-        setPendingDeepAction(null);
-
-        const scrollToId = (id: string) => {
-            setTimeout(() => {
-                const el = document.getElementById(id);
-                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-            }, 200);
-        };
-
-        switch (action) {
-            case "attend":
-                if (currentWeek && user.name !== currentWeek.king) {
-                    handleAttendanceChoice(false);
-                }
-                break;
-            case "absent":
-                if (currentWeek && user.name !== currentWeek.king) {
-                    handleAttendanceChoice(true);
-                }
-                break;
-            case "rate":
-                setActiveTab("week");
-                scrollToId("rating-form");
-                break;
-            case "king-decisions":
-                setActiveTab("week");
-                scrollToId("king-decisions");
-                break;
-            case "open-attendance":
-                setActiveTab("week");
-                scrollToId("attendance-section");
-                break;
-            default:
-                break;
-        }
-    }, [pendingDeepAction, user, loading, currentWeek]);
 
     const handleSecretImport = async () => {
         if (!confirm("تأكيد استيراد البيانات التاريخية وتحديث السجل؟ سيتم حذف أي استيراد سابق لمنع التكرار.")) return;
@@ -1120,7 +989,6 @@ export default function Dashboard() {
                                     <button
                                         onClick={async () => {
                                             if (!currentWeek) return;
-                                            const dayActuallyChanged = deanSelectedDay !== currentWeek.day;
                                             setSaving(true);
                                             try {
                                                 await services.setWeekChoices(
@@ -1129,22 +997,6 @@ export default function Dashboard() {
                                                     currentWeek.restaurant || null,
                                                     currentWeek.activity || null
                                                 );
-                                                // Notify everyone the outing day changed (Web Push).
-                                                if (dayActuallyChanged) {
-                                                    try {
-                                                        await fetch("/api/reminders/day-change", {
-                                                            method: "POST",
-                                                            headers: getReminderAuthHeaders(),
-                                                            body: JSON.stringify({
-                                                                weekId: currentWeek.id,
-                                                                newDay: deanSelectedDay,
-                                                                changedBy: user?.name,
-                                                            }),
-                                                        });
-                                                    } catch (e) {
-                                                        console.error("Failed to notify members about the day change:", e);
-                                                    }
-                                                }
                                                 await fetchWeek();
                                             } catch (e) {
                                                 console.error(e);
@@ -1348,43 +1200,33 @@ export default function Dashboard() {
 
                             <button
                                 onClick={async () => {
-                                    if (!confirm("إرسال تنبيه أخير للأعضاء اللي ما قيّموا (التقييم بيقفل بعد نص ساعة)؟")) return;
+                                    if (!confirm("هل أنت متأكد من تأجيل الطلعة للأسبوع القادم إذا كان الحضور أقل من 3؟")) return;
                                     setSaving(true);
                                     try {
-                                        const res = await fetch("/api/reminders/rating-final-warning", {
+                                        const res = await fetch("/api/reminders/postpone-week", {
                                             method: "POST",
                                             headers: getReminderAuthHeaders(),
-                                            body: JSON.stringify({ minutesUntilClose: 30 })
+                                            body: JSON.stringify({ weekId: currentWeek?.id })
                                         });
                                         const data = await res.json();
-                                        alert(data.message || "تم إرسال التنبيه الأخير بنجاح");
-                                    } catch (e) {
-                                        console.error("Failed to send final warning:", e);
-                                        alert("خطأ في إرسال التنبيه الأخير");
+                                        if (data.success) {
+                                            alert(data.message || "تم إرسال إشعار التأجيل بنجاح");
+                                        } else {
+                                            alert(data.message || data.error || "لم يتم إرسال الإشعار");
+                                        }
+                                    } catch (e: any) {
+                                        console.error("Failed to send postpone notification:", e);
+                                        alert(e.message || "خطأ في إرسال الإشعار");
                                     }
                                     setSaving(false);
                                 }}
-                                disabled={saving || !(currentWeek?.ratingEnabled || pastWeek?.ratingEnabled)}
+                                disabled={saving || !currentWeek}
                                 className="bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 font-semibold py-2 px-4 rounded-xl flex items-center gap-2 transition-all w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Bell className="w-4 h-4" />
-                                ⚠️ تنبيه أخير: التقييم يقفل بعد نص ساعة
+                                تأجيل الطلعة للأسبوع القادم
                             </button>
                         </div>
-                    </div>
-
-                    {/* Cycle Manager — restore lost weeks / reassign cycle numbers */}
-                    <div className="w-full bg-slate-950/40 p-4 rounded-xl border border-amber-500/20 mt-4">
-                        <h3 className="text-amber-500 font-semibold mb-2">إدارة دورات الأسابيع</h3>
-                        <p className="text-xs text-slate-400 mb-3">
-                            استعادة أسابيع لدورة، تعديل رقم الدورة لأي أسبوع، أو نقل أكثر من أسبوع دفعة واحدة.
-                        </p>
-                        <button
-                            onClick={() => setIsCycleManagerOpen(true)}
-                            className="bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-semibold py-2 px-4 rounded-xl text-sm"
-                        >
-                            فتح مدير الدورات
-                        </button>
                     </div>
 
                     {/* Dean can see stats + reset codes + phone numbers */}
@@ -1410,17 +1252,6 @@ export default function Dashboard() {
                                     isAdmin={user.role === "dean"}
                                 />
                             )}
-
-                            {/* Smart Reminders (#11) */}
-                            <SmartReminders
-                                userName={user?.name || ""}
-                                currentWeek={currentWeek}
-                                pastWeek={pastWeek}
-                                hasRatedCurrentWeek={hasRatedCurrentWeek}
-                                hasRatedPastWeek={hasRatedPastWeek}
-                                hasRatedBathroomCurrentWeek={hasRatedBathroomCurrentWeek}
-                                hasRatedBathroomPastWeek={hasRatedBathroomPastWeek}
-                            />
 
                             {/* CURRENT WEEK RATING */}
                             {currentWeek && currentWeek.ratingEnabled && !hasRatedCurrentWeek && user?.name !== currentWeek.king && !(currentWeek.absentees || []).includes(user?.name || "") && (
@@ -1459,36 +1290,28 @@ export default function Dashboard() {
                                     <p className="text-slate-500 mt-2">ننتظر العميد لبدء الدورة الجديدة.</p>
                                 </div>
                             ) : (
-                                <RoyalGoldFrame className="rounded-3xl">
-                                <div className="bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 border border-amber-400/15 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
                                     <div className={`absolute -top-20 -right-20 w-64 h-64 ${activeThemeStyle.accentSoftClass} rounded-full blur-3xl`} />
-                                    <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_-10%,rgba(251,191,36,0.12),transparent_55%)]" />
 
-                                    <div className="flex flex-col items-center text-center mb-6 relative z-10">
-                                        <span className="text-xs text-amber-400/70 font-semibold mb-1">
-                                            ✦ دورة هذا الأسبوع ✦
-                                        </span>
-                                        <Crown className="w-9 h-9 text-amber-400 drop-shadow-[0_0_12px_rgba(245,158,11,0.45)] mb-2" />
-                                        <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3 flex-wrap justify-center">
-                                            <span className="bg-gradient-to-b from-amber-200 via-amber-300 to-amber-500 bg-clip-text text-transparent">
-                                                {currentWeek.king || "أسبوع عشوائي"}
-                                            </span>
-                                            {currentWeek.king === user?.name && (
-                                                <CrownBadge label="أنت الملك!" />
-                                            )}
-                                        </h2>
-                                        <div className="mt-4 w-full max-w-md">
-                                            <OrnamentalDivider />
+                                    <div className="flex items-start justify-between mb-8 relative z-10">
+                                        <div>
+                                            <h3 className="text-slate-400 font-medium mb-1">دورة هذا الأسبوع</h3>
+                                            <h2 className="text-3xl font-bold text-white flex items-center gap-3">
+                                                ملك الأسبوع: <span className={activeThemeStyle.accentTextClass}>{currentWeek.king || "عشوائي"}</span>
+                                                {currentWeek.king === user?.name && (
+                                                    <span className={`text-xs ${activeThemeStyle.accentSoftClass} ${activeThemeStyle.accentTextClass} px-3 py-1 rounded-full border ${activeThemeStyle.accentBorderClass}`}>
+                                                        أنت الملك!
+                                                    </span>
+                                                )}
+                                            </h2>
                                         </div>
                                     </div>
 
                                     <div className="space-y-6 relative z-10">
-                                        <div className="bg-gradient-to-br from-slate-950/80 to-slate-900/40 rounded-2xl p-5 border border-amber-500/15 hover:border-amber-500/25 transition-colors flex items-center gap-4 shadow-[inset_0_0_20px_rgba(245,158,11,0.04)]">
-                                            <div className="bg-amber-500/10 p-2 rounded-xl border border-amber-500/15">
-                                                <Calendar className="w-7 h-7 text-amber-400/80" />
-                                            </div>
+                                        <div className="bg-slate-950/50 rounded-2xl p-5 border border-slate-800 flex items-center gap-4">
+                                            <Calendar className="w-10 h-10 text-slate-500" />
                                             <div className="flex-1">
-                                                <p className="text-xs text-amber-400/80 mb-1 font-semibold">يوم الطلعة</p>
+                                                <p className="text-sm text-slate-400 mb-1">يوم الطلعة</p>
                                                 {isKing ? (
                                                     <select
                                                         value={selectedDay}
@@ -1585,7 +1408,7 @@ export default function Dashboard() {
                                         />
 
                                         {/* Attendance Section */}
-                                        <div id="attendance-section" className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-inner scroll-mt-20">
+                                        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-inner">
                                             <div className="flex justify-between items-start mb-4">
                                                 <div>
                                                     <h3 className="text-lg font-semibold text-slate-300">قائمة الحضور والتأكيد</h3>
@@ -1712,17 +1535,7 @@ export default function Dashboard() {
                                         )}
                                     </div>
                                 </div>
-                                </RoyalGoldFrame>
                             )}
-
-                            {/* Future Features Voting (#5, #7, #8, #9) */}
-                            <FutureFeaturesVoting
-                                userName={user?.name || ""}
-                                isDean={user?.role === "dean"}
-                                accentSoftClass={activeThemeStyle.accentSoftClass}
-                                accentBorderClass={activeThemeStyle.accentBorderClass}
-                                accentTextClass={activeThemeStyle.accentTextClass}
-                            />
                         </div>
                     )}
 
@@ -1734,18 +1547,6 @@ export default function Dashboard() {
                                 cycleNumber={currentWeek ? currentWeek.cycleNumber : (pastWeek ? pastWeek.cycleNumber : 1)}
                                 isDean={user?.role === "dean"}
                                 onReset={currentWeek ? async () => {
-                                    const ok1 = window.confirm(
-                                        `⚠️ تأكيد أول:\n\nهذا يبدأ دورة جديدة (${currentWeek.cycleNumber + 1}) ويخفي مطاعم هذه الدورة من قائمة الشرف.\n\nمتأكد؟`
-                                    );
-                                    if (!ok1) return;
-                                    const typed = window.prompt(
-                                        `⚠️ تأكيد ثاني:\n\nاكتب "تصفير" بالضبط للموافقة:`,
-                                        ""
-                                    );
-                                    if (typed?.trim() !== "تصفير") {
-                                        alert("تم الإلغاء.");
-                                        return;
-                                    }
                                     setSaving(true);
                                     await services.resetCycleLeaderboard(currentWeek.id, currentWeek.cycleNumber + 1);
                                     await fetchWeek();
@@ -1780,39 +1581,9 @@ export default function Dashboard() {
                         </div>
                     )}
 
-                    {/* ===== TAB: الخريطة ===== */}
-                    {activeTab === "map" && user && (
-                        <RestaurantMapPanel
-                            isOpen={true}
-                            embedded={true}
-                            userName={user.name}
-                            isAdmin={user.name === "شوكا"}
-                        />
-                    )}
-
                     {/* ===== TAB: المزيد ===== */}
                     {activeTab === "more" && (
                         <div className="space-y-4 max-w-2xl mx-auto">
-
-                            {/* Constitution — pinned to the top for easy access */}
-                            <div className="bg-gradient-to-br from-amber-900/40 via-amber-950/30 to-slate-900 border-2 border-amber-500/40 rounded-3xl p-6 shadow-xl shadow-amber-500/10 relative overflow-hidden group cursor-pointer" onClick={() => setIsConstitutionOpen(true)}>
-                                <div className="absolute -right-10 -top-10 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500" />
-                                <div className="relative z-10 flex items-center gap-4">
-                                    <div className="w-16 h-16 bg-gradient-to-br from-amber-400/30 to-amber-600/30 rounded-2xl flex items-center justify-center border border-amber-400/40 flex-shrink-0">
-                                        <ScrollText className="w-9 h-9 text-amber-400" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-xl text-white mb-1 flex items-center gap-2">
-                                            دستور عرش الخميس
-                                            <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">المرجع الرسمي</span>
-                                        </h3>
-                                        <p className="text-xs text-slate-400 leading-relaxed">
-                                            القوانين، حقوق الملك، آلية التصويت، والعقوبات — اضغط للقراءة
-                                        </p>
-                                    </div>
-                                    <BookOpen className="w-6 h-6 text-amber-400/70 flex-shrink-0" />
-                                </div>
-                            </div>
 
                             {/* Theme Selector */}
                             <div className={`bg-slate-900/90 border ${activeThemeStyle.accentBorderClass} rounded-3xl p-6 shadow-xl`}>
@@ -2064,29 +1835,6 @@ export default function Dashboard() {
                                 </div>
                             </div>
 
-                            {/* Mini-Game Banner — Coup */}
-                            <div className="bg-gradient-to-br from-rose-900/40 to-slate-900 border border-rose-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
-                                <div className="absolute -right-10 -top-10 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl group-hover:bg-rose-500/20 transition-all duration-500" />
-                                <div className="relative z-10">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="bg-rose-500/20 p-2 rounded-xl text-rose-400">
-                                            <Swords className="w-6 h-6" />
-                                        </div>
-                                        <h3 className="font-bold text-xl text-white">Coup — انقلاب 🎭</h3>
-                                    </div>
-                                    <p className="text-sm text-slate-300 mb-5 leading-relaxed">
-                                        لعبة خداع وذكاء لـ 2-4 لاعبين. ادّعِ الشخصيات، اكذب، وتحدّى خصومك — مع دردشة صوتية داخل اللعبة عشان الكذب يصير واقعي!
-                                    </p>
-                                    <button
-                                        onClick={() => setIsCoupOpen(true)}
-                                        className="w-full bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-500/20"
-                                    >
-                                        <PlayCircle className="w-5 h-5 fill-current" />
-                                        ادخل الحلبة
-                                    </button>
-                                </div>
-                            </div>
-
                             {/* Mini-Game Banner */}
                             <div className="bg-gradient-to-br from-amber-900/40 to-slate-900 border border-amber-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
                                 <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500" />
@@ -2108,6 +1856,24 @@ export default function Dashboard() {
                                         العب الآن
                                     </button>
                                 </div>
+                            </div>
+
+                            {/* Constitution */}
+                            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl text-center flex flex-col items-center">
+                                <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mb-4 border border-amber-500/20">
+                                    <ScrollText className="w-8 h-8 text-amber-500" />
+                                </div>
+                                <h3 className="font-bold text-xl mb-2 text-slate-200">دستور عرش الخميس</h3>
+                                <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+                                    القوانين المنظمة للطلعات الأسبوعية، حقوق وواجبات ملك الخميس، وآلية التصويت وتقييم المطاعم والحضور.
+                                </p>
+                                <button
+                                    onClick={() => setIsConstitutionOpen(true)}
+                                    className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-amber-500 font-semibold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
+                                >
+                                    <BookOpen className="w-5 h-5" />
+                                    قراءة الدستور الكامل
+                                </button>
                             </div>
 
                             {/* Suggestion Box */}
@@ -2138,7 +1904,6 @@ export default function Dashboard() {
                             { id: "week" as TabType, icon: Calendar, label: "الأسبوع" },
                             { id: "leaderboard" as TabType, icon: Trophy, label: "المتصدرين" },
                             { id: "bathroom" as TabType, icon: Bath, label: "الحمامات" },
-                            { id: "map" as TabType, icon: MapPin, label: "الخريطة" },
                             { id: "more" as TabType, icon: Ellipsis, label: "المزيد" },
                         ].map(tab => (
                             <button
@@ -2186,16 +1951,6 @@ export default function Dashboard() {
                 )
             }
 
-            {
-                user && (
-                    <CoupArena
-                        isOpen={isCoupOpen}
-                        onClose={() => setIsCoupOpen(false)}
-                        userName={user.name}
-                    />
-                )
-            }
-
             <StatisticsPanel
                 isOpen={isStatsOpen}
                 onClose={() => setIsStatsOpen(false)}
@@ -2215,17 +1970,6 @@ export default function Dashboard() {
                 onClose={() => setIsMemberProfileOpen(false)}
                 currentUserName={user?.name || ""}
             />
-
-            {user?.role === "dean" && (
-                <CycleManagerModal
-                    isOpen={isCycleManagerOpen}
-                    onClose={() => setIsCycleManagerOpen(false)}
-                    currentCycleNumber={currentWeek?.cycleNumber || pastWeek?.cycleNumber || 1}
-                    onAfterSave={() => {
-                        fetchWeek();
-                    }}
-                />
-            )}
         </div >
     );
 }
