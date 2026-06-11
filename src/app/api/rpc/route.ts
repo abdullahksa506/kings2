@@ -54,6 +54,7 @@ const RATE_LIMIT_RULES: Record<string, RateLimitRule> = {
     respondImpromptuMeetup: { limit: 20, windowMs: 60 * 1000 },
     cancelImpromptuMeetup: { limit: 5, windowMs: 60 * 1000 },
     planOuting: { limit: 30, windowMs: 60 * 1000 },
+    voteStylePreference: { limit: 10, windowMs: 60 * 1000 },
 };
 
 const rateLimitStore = new Map<string, RateLimitBucket>();
@@ -1611,6 +1612,20 @@ export async function POST(request: Request) {
 
                 const result = planOuting(query, visitedNames, 175);
                 return NextResponse.json({ result });
+            }
+
+            // ---------- STYLE PREFERENCE VOTE ----------
+            case "voteStylePreference": {
+                if (!authName) throw new Error("Unauthorized");
+                const style = asTrimmedString(payload?.style);
+                const VALID_STYLES = ["minimal", "glass", "editorial", "pastel", "current"];
+                if (!VALID_STYLES.includes(style)) throw new Error("ستايل غير معروف");
+                await adminDb.collection("stylePreferences").doc(authName).set({
+                    userName: authName,
+                    style,
+                    votedAt: Timestamp.now(),
+                });
+                return NextResponse.json({ result: true });
             }
         }
         return NextResponse.json({ error: "Unknown action" }, { status: 400 });

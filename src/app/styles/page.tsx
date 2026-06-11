@@ -70,7 +70,52 @@ export default function StylePreview() {
                 <RestaurantCard style={active} />
                 <LeaderboardCard style={active} />
             </div>
+
+            {/* زر الاختيار — يسجّل تصويتك على الستايل */}
+            {active !== "current" && (
+                <div className="fixed bottom-0 inset-x-0 z-50 bg-slate-950/95 backdrop-blur-md border-t border-slate-800 p-3">
+                    <div className="max-w-4xl mx-auto">
+                        <VotePanel styleKey={active} styleLabel={STYLES.find((s) => s.key === active)?.label || active} />
+                    </div>
+                </div>
+            )}
         </div>
+    );
+}
+
+// ============================================================================
+// تسجيل اختيار الستايل (يحفظ في Firestore عبر invokeRpc الموجود)
+// ============================================================================
+function VotePanel({ styleKey, styleLabel }: { styleKey: string; styleLabel: string }) {
+    const [state, setState] = useState<"idle" | "busy" | "done" | "error">("idle");
+
+    const vote = async () => {
+        setState("busy");
+        try {
+            const { invokeRpc } = await import("@/lib/services");
+            await invokeRpc("voteStylePreference", { style: styleKey });
+            setState("done");
+        } catch {
+            setState("error");
+        }
+    };
+
+    if (state === "done") {
+        return (
+            <p className="text-center text-emerald-400 font-semibold py-2">
+                ✅ تسجّل اختيارك «{styleLabel}» — بنطبّقه إذا وافق الأغلبية
+            </p>
+        );
+    }
+
+    return (
+        <button
+            onClick={vote}
+            disabled={state === "busy"}
+            className="w-full bg-gradient-to-r from-fuchsia-500 to-purple-500 hover:from-fuchsia-400 hover:to-purple-400 disabled:opacity-50 text-white font-bold py-3 rounded-2xl shadow-lg shadow-fuchsia-500/30"
+        >
+            {state === "busy" ? "يسجّل..." : state === "error" ? "تعذّر — اضغط للمحاولة مرة ثانية" : `😍 أبي «${styleLabel}» — صوّت له`}
+        </button>
     );
 }
 
