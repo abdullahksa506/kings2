@@ -6,12 +6,16 @@
  */
 
 import { useState } from "react";
-import { Crown, MapPin, Calendar, Star, Users, ChevronLeft, Vote } from "lucide-react";
+import { Crown, MapPin, Calendar, Star, Users, ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import { StoriesExperience, ConsoleExperience, BentoExperience } from "./interactive";
 
 type StyleKey =
     | "current" | "minimal" | "glass" | "editorial" | "pastel"
-    | "neon" | "brutalist" | "terminal" | "luxe" | "comic" | "aurora";
+    | "neon" | "brutalist" | "terminal" | "luxe" | "comic" | "aurora"
+    | "stories" | "console" | "bento";
+
+const INTERACTIVE: StyleKey[] = ["stories", "console", "bento"];
 
 const STYLES: { key: StyleKey; label: string; emoji: string; desc: string }[] = [
     { key: "current", label: "الحالي (ملكي)", emoji: "👑", desc: "ذهبي على غامق، زوايا ناعمة، تدرّجات — الشكل الحالي" },
@@ -25,6 +29,9 @@ const STYLES: { key: StyleKey; label: string; emoji: string; desc: string }[] = 
     { key: "luxe", label: "فخامة ذهبية", emoji: "🥂", desc: "أسود وذهبي فاخر، خط كلاسيكي أنيق، إحساس راقٍ جداً" },
     { key: "comic", label: "كوميك مرح", emoji: "💥", desc: "حدود سميكة، ألوان بوب، ظلال كرتونية، مرح وجريء" },
     { key: "aurora", label: "أورورا", emoji: "🌌", desc: "تدرّجات حيّة وكرات متوهّجة، إحساس تطبيق عصري ناعم" },
+    { key: "stories", label: "قصص (تفاعلي)", emoji: "📱", desc: "ميكانيكا مختلفة: قصص تُسحب بالنقر يمين/يسار زي إنستقرام — كل شاشة معلومة" },
+    { key: "console", label: "تيرمنال حي (تفاعلي)", emoji: "⌨️", desc: "ميكانيكا مختلفة: تكتب أوامر بالعربي ويرد عليك زي كونسول حقيقي" },
+    { key: "bento", label: "بنتو (تفاعلي)", emoji: "🍱", desc: "ميكانيكا مختلفة: مربعات تنقرها فتنقلب وتتوسّع لتكشف التفاصيل" },
 ];
 
 export default function StylePreview() {
@@ -41,7 +48,7 @@ export default function StylePreview() {
                         </Link>
                         <div>
                             <h1 className="font-bold text-white">معاينة أشكال التصميم</h1>
-                            <p className="text-[11px] text-slate-500">جرّب 11 ستايل قبل ما نغيّر الموقع</p>
+                            <p className="text-[11px] text-slate-500">جرّب 14 شكل (آخر 3 تفاعلية) قبل ما نغيّر الموقع</p>
                         </div>
                     </div>
                 </div>
@@ -74,10 +81,19 @@ export default function StylePreview() {
 
             {/* The previewed content — يتغير شكله حسب الستايل المختار */}
             <div className="max-w-4xl mx-auto px-4 py-5 space-y-5">
-                <WeekCard style={active} />
-                <RestaurantCard style={active} />
-                <VotingCard style={active} />
-                <LeaderboardCard style={active} />
+                {active === "stories" ? (
+                    <StoriesExperience />
+                ) : active === "console" ? (
+                    <ConsoleExperience />
+                ) : active === "bento" ? (
+                    <BentoExperience />
+                ) : (
+                    <>
+                        <WeekCard style={active} />
+                        <RestaurantCard style={active} />
+                        <LeaderboardCard style={active} />
+                    </>
+                )}
             </div>
 
             {/* زر الاختيار — يسجّل تصويتك على الستايل */}
@@ -144,6 +160,9 @@ function containerClass(style: StyleKey) {
         luxe: "min-h-screen bg-neutral-950 text-amber-50 pb-20",
         comic: "min-h-screen bg-sky-200 text-black pb-20",
         aurora: "min-h-screen bg-gradient-to-br from-violet-600 via-fuchsia-500 to-cyan-400 text-white pb-20",
+        stories: "min-h-screen bg-slate-950 text-white pb-20",
+        console: "min-h-screen bg-[#0a0e0a] text-green-400 pb-20",
+        bento: "min-h-screen bg-slate-950 text-white pb-20",
     }[style];
 }
 
@@ -517,184 +536,6 @@ function RestaurantCard({ style }: { style: StyleKey }) {
                         <span className="bg-white/15 px-2.5 py-1 rounded-full">هندي</span>
                         <span className="bg-white/15 px-2.5 py-1 rounded-full">📍 {district}</span>
                         <span className="bg-white/15 px-2.5 py-1 rounded-full">{price}﷼</span>
-                    </div>
-                </div>
-            );
-    }
-}
-
-// ============================================================================
-// بطاقة التصويت على المطعم — تختلف طريقة عرض التصويت جذرياً حسب الستايل
-// ============================================================================
-function VotingCard({ style }: { style: StyleKey }) {
-    const options = [
-        { name: "البيك", votes: 3 },
-        { name: "هرفي", votes: 2 },
-        { name: "كودو", votes: 1 },
-    ];
-    const total = options.reduce((s, o) => s + o.votes, 0);
-    const pct = (v: number) => Math.round((v / total) * 100);
-    const leader = options[0].name;
-
-    switch (style) {
-        case "current":
-            return (
-                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl">
-                    <h3 className="font-bold text-white mb-3 flex items-center gap-2"><Vote className="w-5 h-5 text-purple-400" /> صوّت على المطعم</h3>
-                    <div className="space-y-2.5">
-                        {options.map((o) => (
-                            <button key={o.name} className="w-full text-right bg-slate-950/40 hover:bg-slate-800 rounded-xl p-3 relative overflow-hidden block transition-colors">
-                                <div className="absolute inset-y-0 right-0 bg-purple-500/20" style={{ width: `${pct(o.votes)}%` }} />
-                                <div className="relative flex justify-between text-sm"><span className="text-slate-200">{o.name}</span><span className="text-purple-300 font-bold">{o.votes} ({pct(o.votes)}%)</span></div>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            );
-
-        case "minimal":
-            return (
-                <div className="bg-white border border-zinc-200 p-6">
-                    <h3 className="text-xs uppercase tracking-widest text-zinc-500 mb-4">التصويت</h3>
-                    {options.map((o, i) => (
-                        <div key={o.name} className={`py-3 ${i < options.length - 1 ? "border-b border-zinc-100" : ""}`}>
-                            <div className="flex justify-between text-sm mb-1.5"><span className="font-medium text-zinc-900">{o.name}</span><span className="text-zinc-400 font-mono">{pct(o.votes)}%</span></div>
-                            <div className="h-px bg-zinc-100"><div className="h-px bg-zinc-900" style={{ width: `${pct(o.votes)}%` }} /></div>
-                        </div>
-                    ))}
-                </div>
-            );
-
-        case "glass":
-            return (
-                <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-5">
-                    <h3 className="text-white/80 text-sm font-bold mb-3 flex items-center gap-2"><Vote className="w-4 h-4" /> التصويت</h3>
-                    <div className="grid grid-cols-3 gap-2">
-                        {options.map((o) => (
-                            <div key={o.name} className="backdrop-blur-md bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                                <div className="text-2xl font-bold text-white">{o.votes}</div>
-                                <div className="text-[11px] text-white/60 truncate">{o.name}</div>
-                                <div className="mt-2 h-1 bg-white/10 rounded-full"><div className="h-1 bg-amber-300 rounded-full" style={{ width: `${pct(o.votes)}%` }} /></div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-
-        case "editorial":
-            return (
-                <div className="bg-white border-y-2 border-stone-900 p-6">
-                    <h3 className="font-serif text-3xl text-stone-900 mb-4">الاستفتاء</h3>
-                    {options.map((o, i) => (
-                        <div key={o.name} className="flex items-center gap-4 py-3 border-b border-stone-200 last:border-0">
-                            <span className="font-serif text-4xl font-bold text-stone-900 w-12">{pct(o.votes)}</span>
-                            <span className="text-[10px] text-stone-400">%</span>
-                            <span className="flex-1 font-serif text-xl text-stone-800">{o.name}</span>
-                            {i === 0 && <span className="text-[10px] uppercase tracking-widest bg-stone-900 text-white px-2 py-1">المتصدّر</span>}
-                        </div>
-                    ))}
-                </div>
-            );
-
-        case "pastel":
-            return (
-                <div className="bg-white/70 border-2 border-purple-200/60 rounded-3xl p-5">
-                    <h3 className="font-bold text-stone-800 mb-3">🗳️ صوّتوا!</h3>
-                    <div className="space-y-2.5">
-                        {options.map((o) => (
-                            <div key={o.name} className="bg-purple-50/60 rounded-2xl p-3">
-                                <div className="flex justify-between text-sm mb-1.5"><span className="font-semibold text-stone-800">{o.name}</span><span className="bg-purple-200 text-purple-700 px-2 rounded-full text-xs font-bold">{o.votes} صوت</span></div>
-                                <div className="h-2 bg-purple-100 rounded-full"><div className="h-2 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full" style={{ width: `${pct(o.votes)}%` }} /></div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-
-        case "neon":
-            return (
-                <div className="bg-black border border-purple-500/40 rounded-xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.2)]">
-                    <h3 className="text-purple-300 text-sm font-bold mb-3 tracking-widest uppercase drop-shadow-[0_0_8px_rgba(168,85,247,0.7)]">▣ VOTE</h3>
-                    <div className="space-y-3">
-                        {options.map((o) => (
-                            <div key={o.name}>
-                                <div className="flex justify-between text-xs mb-1"><span className="text-white">{o.name}</span><span className="text-cyan-300 drop-shadow-[0_0_6px_rgba(34,211,238,0.8)]">{pct(o.votes)}%</span></div>
-                                <div className="h-2 bg-white/10 rounded-full overflow-hidden"><div className="h-2 bg-gradient-to-r from-purple-500 to-cyan-400 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.8)]" style={{ width: `${pct(o.votes)}%` }} /></div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-
-        case "brutalist":
-            return (
-                <div className="bg-yellow-300 border-4 border-black p-5 shadow-[6px_6px_0_0_#000]">
-                    <h3 className="text-2xl font-black text-black uppercase mb-3 bg-black text-yellow-300 inline-block px-2">VOTE NOW</h3>
-                    {options.map((o) => (
-                        <div key={o.name} className="bg-white border-2 border-black mb-2 flex items-stretch">
-                            <div className="bg-black text-yellow-300 font-black px-2 flex items-center text-lg">{o.votes}</div>
-                            <div className="flex-1 px-3 py-2 font-black flex items-center justify-between"><span>{o.name}</span><span>{pct(o.votes)}%</span></div>
-                        </div>
-                    ))}
-                </div>
-            );
-
-        case "terminal":
-            return (
-                <div className="bg-[#0d130d] border border-green-500/40 rounded p-5 font-mono">
-                    <p className="text-green-600 text-xs mb-3">&gt; poll --restaurant --live</p>
-                    {options.map((o) => {
-                        const bars = Math.round(pct(o.votes) / 10);
-                        return (
-                            <div key={o.name} className="text-sm py-1 flex items-center gap-2">
-                                <span className="text-green-300 w-12">{o.name}</span>
-                                <span className="text-green-500">{"█".repeat(bars)}{"░".repeat(10 - bars)}</span>
-                                <span className="text-green-600 text-xs">{pct(o.votes)}%</span>
-                            </div>
-                        );
-                    })}
-                </div>
-            );
-
-        case "luxe":
-            return (
-                <div className="bg-neutral-900 border border-amber-600/30 p-6">
-                    <h3 className="font-serif text-xl text-amber-200 italic mb-4 text-center">— الاقتراع —</h3>
-                    {options.map((o, i) => (
-                        <div key={o.name} className="py-2.5 border-b border-amber-600/15 last:border-0">
-                            <div className="flex justify-between font-serif mb-1.5"><span className="text-amber-100/80">{o.name}</span><span className="text-amber-400">{o.votes} {i === 0 && "♔"}</span></div>
-                            <div className="h-px bg-amber-600/15"><div className="h-px bg-amber-500" style={{ width: `${pct(o.votes)}%` }} /></div>
-                        </div>
-                    ))}
-                </div>
-            );
-
-        case "comic":
-            return (
-                <div className="bg-cyan-300 border-[5px] border-black rounded-3xl p-5 shadow-[6px_6px_0_0_#000]">
-                    <h3 className="text-3xl font-black text-black mb-3" style={{ WebkitTextStroke: "1px #000" }}>صوّت! 🗳️</h3>
-                    <div className="space-y-2">
-                        {options.map((o) => (
-                            <div key={o.name} className="bg-white border-[3px] border-black rounded-xl px-3 py-2 flex items-center justify-between font-black">
-                                <span>{o.name}</span>
-                                <span className="bg-yellow-300 border-2 border-black rounded-full px-3 -rotate-3">{o.votes} 👍</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-
-        case "aurora":
-            return (
-                <div className="backdrop-blur-xl bg-white/15 border border-white/25 rounded-2xl p-5 shadow-xl">
-                    <h3 className="font-bold text-white mb-3 flex items-center gap-2">🗳️ التصويت</h3>
-                    <div className="space-y-2.5">
-                        {options.map((o) => (
-                            <div key={o.name} className="bg-white/10 rounded-xl p-3">
-                                <div className="flex justify-between text-sm mb-1.5"><span className="text-white font-medium">{o.name}</span><span className="text-white/80">{pct(o.votes)}%</span></div>
-                                <div className="h-2 bg-white/15 rounded-full"><div className="h-2 bg-white/70 rounded-full" style={{ width: `${pct(o.votes)}%` }} /></div>
-                            </div>
-                        ))}
                     </div>
                 </div>
             );
