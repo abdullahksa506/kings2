@@ -8,10 +8,14 @@
 import { useState } from "react";
 import { Crown, MapPin, Calendar, Star, Users, ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import { StoriesExperience, ConsoleExperience, BentoExperience } from "./interactive";
 
 type StyleKey =
     | "current" | "minimal" | "glass" | "editorial" | "pastel"
-    | "neon" | "brutalist" | "terminal" | "luxe" | "comic" | "aurora";
+    | "neon" | "brutalist" | "terminal" | "luxe" | "comic" | "aurora"
+    | "stories" | "console" | "bento";
+
+const INTERACTIVE: StyleKey[] = ["stories", "console", "bento"];
 
 const STYLES: { key: StyleKey; label: string; emoji: string; desc: string }[] = [
     { key: "current", label: "الحالي (ملكي)", emoji: "👑", desc: "ذهبي على غامق، زوايا ناعمة، تدرّجات — الشكل الحالي" },
@@ -25,6 +29,9 @@ const STYLES: { key: StyleKey; label: string; emoji: string; desc: string }[] = 
     { key: "luxe", label: "فخامة ذهبية", emoji: "🥂", desc: "أسود وذهبي فاخر، خط كلاسيكي أنيق، إحساس راقٍ جداً" },
     { key: "comic", label: "كوميك مرح", emoji: "💥", desc: "حدود سميكة، ألوان بوب، ظلال كرتونية، مرح وجريء" },
     { key: "aurora", label: "أورورا", emoji: "🌌", desc: "تدرّجات حيّة وكرات متوهّجة، إحساس تطبيق عصري ناعم" },
+    { key: "stories", label: "قصص (تفاعلي)", emoji: "📱", desc: "ميكانيكا مختلفة: قصص تُسحب بالنقر يمين/يسار زي إنستقرام — كل شاشة معلومة" },
+    { key: "console", label: "تيرمنال حي (تفاعلي)", emoji: "⌨️", desc: "ميكانيكا مختلفة: تكتب أوامر بالعربي ويرد عليك زي كونسول حقيقي" },
+    { key: "bento", label: "بنتو (تفاعلي)", emoji: "🍱", desc: "ميكانيكا مختلفة: مربعات تنقرها فتنقلب وتتوسّع لتكشف التفاصيل" },
 ];
 
 export default function StylePreview() {
@@ -41,7 +48,7 @@ export default function StylePreview() {
                         </Link>
                         <div>
                             <h1 className="font-bold text-white">معاينة أشكال التصميم</h1>
-                            <p className="text-[11px] text-slate-500">جرّب 11 ستايل قبل ما نغيّر الموقع</p>
+                            <p className="text-[11px] text-slate-500">جرّب 14 شكل (آخر 3 تفاعلية) قبل ما نغيّر الموقع</p>
                         </div>
                     </div>
                 </div>
@@ -74,9 +81,19 @@ export default function StylePreview() {
 
             {/* The previewed content — يتغير شكله حسب الستايل المختار */}
             <div className="max-w-4xl mx-auto px-4 py-5 space-y-5">
-                <WeekCard style={active} />
-                <RestaurantCard style={active} />
-                <LeaderboardCard style={active} />
+                {active === "stories" ? (
+                    <StoriesExperience />
+                ) : active === "console" ? (
+                    <ConsoleExperience />
+                ) : active === "bento" ? (
+                    <BentoExperience />
+                ) : (
+                    <>
+                        <WeekCard style={active} />
+                        <RestaurantCard style={active} />
+                        <LeaderboardCard style={active} />
+                    </>
+                )}
             </div>
 
             {/* زر الاختيار — يسجّل تصويتك على الستايل */}
@@ -143,6 +160,9 @@ function containerClass(style: StyleKey) {
         luxe: "min-h-screen bg-neutral-950 text-amber-50 pb-20",
         comic: "min-h-screen bg-sky-200 text-black pb-20",
         aurora: "min-h-screen bg-gradient-to-br from-violet-600 via-fuchsia-500 to-cyan-400 text-white pb-20",
+        stories: "min-h-screen bg-slate-950 text-white pb-20",
+        console: "min-h-screen bg-[#0a0e0a] text-green-400 pb-20",
+        bento: "min-h-screen bg-slate-950 text-white pb-20",
     }[style];
 }
 

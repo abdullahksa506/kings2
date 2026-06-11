@@ -1,7 +1,0 @@
-# Dean-owned files — any change to AI guidelines or repo rules requires the dean's review.
-# Effective once branch protection on `main` is enabled with "Require review from Code Owners".
-
-CLAUDE.md          @abdullahksa506
-AGENTS.md          @abdullahksa506
-.claude/rules/**   @abdullahksa506
-.github/**         @abdullahksa506
