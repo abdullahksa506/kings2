@@ -444,7 +444,7 @@ export default function Dashboard() {
     const [isMemberProfileOpen, setIsMemberProfileOpen] = useState(false);
 
     // Tab State
-    type TabType = "week" | "leaderboard" | "bathroom" | "more";
+    type TabType = "week" | "leaderboard" | "bathroom" | "map" | "more";
     const [activeTab, setActiveTab] = useState<TabType>("week");
     const [selectedTheme, setSelectedTheme] = useState<ThemeKey>("royal-amber");
     const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
@@ -951,7 +951,7 @@ export default function Dashboard() {
     };
 
     return (
-        <div className={`min-h-screen ${activeTheme.appBgClass} p-4 md:p-8 font-sans relative`}>
+        <div data-theme={selectedTheme} className={`min-h-screen ${activeTheme.appBgClass} p-4 md:p-8 font-sans relative`}>
             <div className={`pointer-events-none absolute inset-0 ${activeThemeStyle.atmosphereClass}`} />
             {/* Version Badge & Secret Import */}
             <div className="fixed top-2 left-2 z-50 flex items-center gap-2">
@@ -1719,6 +1719,16 @@ export default function Dashboard() {
                         </div>
                     )}
 
+                    {/* ===== TAB: خريطة المطاعم ===== */}
+                    {activeTab === "map" && user?.name && (
+                        <RestaurantMapPanel
+                            isOpen={true}
+                            embedded={true}
+                            userName={user.name}
+                            isAdmin={user.role === "dean"}
+                        />
+                    )}
+
                     {/* ===== TAB: المزيد ===== */}
                     {activeTab === "more" && (
                         <div className="space-y-4 max-w-2xl mx-auto">
@@ -2051,6 +2061,7 @@ export default function Dashboard() {
                             { id: "week" as TabType, icon: Calendar, label: "الأسبوع" },
                             { id: "leaderboard" as TabType, icon: Trophy, label: "المتصدرين" },
                             { id: "bathroom" as TabType, icon: Bath, label: "الحمامات" },
+                            { id: "map" as TabType, icon: MapPin, label: "الخريطة" },
                             { id: "more" as TabType, icon: Ellipsis, label: "المزيد" },
                         ].map(tab => (
                             <button
