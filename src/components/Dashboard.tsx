@@ -1767,6 +1767,15 @@ export default function Dashboard() {
                                     <Sparkles className="w-4 h-4" />
                                     🎨 جرّب أشكال تصميم جديدة كلياً للموقع
                                 </a>
+
+                                {/* رابط التيرمنال الحي */}
+                                <a
+                                    href="/terminal"
+                                    className="mt-3 w-full bg-[#0d130d] hover:bg-[#0d130d]/70 border border-green-500/40 text-green-300 font-mono py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                                >
+                                    <span className="text-green-500">$</span>
+                                    💻 افتح التيرمنال الحي (أوامر فعلية)
+                                </a>
                             </div>
 
                             {/* Profile Customization */}
