@@ -1,5 +1,12 @@
 "use client";
 
+/*
+ * 🤖 نكتة الذكاء الاصطناعي:
+ * سألوا كلود: "ليش الكوميك ثيم كان غامق ومافيه ظلال؟"
+ * قال: "كنت أحاول أكون ساحر، طلعت بومة 🦉💀"
+ * الحين الخلفية سما زرقا، الكاردات بيضا، والظلال سوداء واضحة 💥📚
+ */
+
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/context/AuthContext";
@@ -203,11 +210,11 @@ const THEME_OPTIONS: {
         {
             id: "comic-pop",
             name: "كوميك مرح 💥",
-            appBgClass: "bg-gradient-to-b from-slate-950 via-pink-950/30 to-slate-950",
-            headerGradientClass: "from-pink-200 to-yellow-300",
-            headerIconClass: "text-pink-400",
-            tabActiveClass: "text-pink-400",
-            tabIndicatorClass: "bg-pink-400",
+            appBgClass: "bg-sky-200",
+            headerGradientClass: "from-pink-600 to-red-600",
+            headerIconClass: "text-pink-600",
+            tabActiveClass: "text-pink-600",
+            tabIndicatorClass: "bg-pink-500",
             previewA: "bg-pink-400",
             previewB: "bg-yellow-300",
         },
@@ -355,14 +362,14 @@ const THEME_STYLE: Record<ThemeKey, {
         accentSpinnerClass: "text-amber-300",
     },
     "comic-pop": {
-        atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(236,72,153,0.25),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(250,204,21,0.22),transparent_44%)]",
-        accentTextClass: "text-pink-300",
-        accentSoftClass: "bg-pink-500/20",
-        accentSoftHoverClass: "hover:bg-pink-500/30",
-        accentBorderClass: "border-pink-500/40",
+        atmosphereClass: "bg-[radial-gradient(circle_at_15%_15%,rgba(236,72,153,0.18),transparent_38%),radial-gradient(circle_at_85%_80%,rgba(250,204,21,0.20),transparent_38%),radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.10),transparent_30%)]",
+        accentTextClass: "text-pink-600",
+        accentSoftClass: "bg-pink-200",
+        accentSoftHoverClass: "hover:bg-pink-300",
+        accentBorderClass: "border-pink-500",
         accentSolidClass: "bg-pink-500",
         accentSolidHoverClass: "hover:bg-pink-400",
-        accentSpinnerClass: "text-pink-400",
+        accentSpinnerClass: "text-pink-600",
     },
     "aurora": {
         atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(167,139,250,0.28),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(34,211,238,0.24),transparent_44%)]",
