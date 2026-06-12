@@ -49,7 +49,13 @@ type ThemeKey =
     | "rose-neon"
     | "arctic-ice"
     | "forest-olive"
-    | "midnight-indigo";
+    | "midnight-indigo"
+    | "neon-cyber"
+    | "brutalist"
+    | "terminal"
+    | "luxe-gold"
+    | "comic-pop"
+    | "aurora";
 
 const THEME_OPTIONS: {
     id: ThemeKey;
@@ -150,6 +156,72 @@ const THEME_OPTIONS: {
             previewA: "bg-indigo-300",
             previewB: "bg-indigo-700",
         },
+        {
+            id: "neon-cyber",
+            name: "نيون سايبر ⚡",
+            appBgClass: "bg-gradient-to-b from-black via-fuchsia-950/40 to-black",
+            headerGradientClass: "from-fuchsia-300 to-cyan-400",
+            headerIconClass: "text-fuchsia-400",
+            tabActiveClass: "text-fuchsia-400",
+            tabIndicatorClass: "bg-fuchsia-400",
+            previewA: "bg-fuchsia-400",
+            previewB: "bg-cyan-400",
+        },
+        {
+            id: "brutalist",
+            name: "بروتالي 🧱",
+            appBgClass: "bg-gradient-to-b from-slate-950 via-yellow-950/30 to-slate-950",
+            headerGradientClass: "from-yellow-200 to-yellow-400",
+            headerIconClass: "text-yellow-400",
+            tabActiveClass: "text-yellow-400",
+            tabIndicatorClass: "bg-yellow-400",
+            previewA: "bg-yellow-300",
+            previewB: "bg-black",
+        },
+        {
+            id: "terminal",
+            name: "تيرمنال 💻",
+            appBgClass: "bg-gradient-to-b from-black via-green-950/40 to-black",
+            headerGradientClass: "from-green-200 to-green-500",
+            headerIconClass: "text-green-400",
+            tabActiveClass: "text-green-400",
+            tabIndicatorClass: "bg-green-400",
+            previewA: "bg-green-400",
+            previewB: "bg-green-700",
+        },
+        {
+            id: "luxe-gold",
+            name: "فخامة ذهبية 🥂",
+            appBgClass: "bg-gradient-to-b from-neutral-950 via-amber-950/30 to-neutral-950",
+            headerGradientClass: "from-amber-100 to-amber-300",
+            headerIconClass: "text-amber-300",
+            tabActiveClass: "text-amber-300",
+            tabIndicatorClass: "bg-amber-300",
+            previewA: "bg-amber-200",
+            previewB: "bg-neutral-900",
+        },
+        {
+            id: "comic-pop",
+            name: "كوميك مرح 💥",
+            appBgClass: "bg-gradient-to-b from-slate-950 via-pink-950/30 to-slate-950",
+            headerGradientClass: "from-pink-200 to-yellow-300",
+            headerIconClass: "text-pink-400",
+            tabActiveClass: "text-pink-400",
+            tabIndicatorClass: "bg-pink-400",
+            previewA: "bg-pink-400",
+            previewB: "bg-yellow-300",
+        },
+        {
+            id: "aurora",
+            name: "أورورا 🌌",
+            appBgClass: "bg-gradient-to-br from-violet-950 via-fuchsia-950/40 to-cyan-950",
+            headerGradientClass: "from-violet-200 via-fuchsia-300 to-cyan-300",
+            headerIconClass: "text-fuchsia-300",
+            tabActiveClass: "text-fuchsia-300",
+            tabIndicatorClass: "bg-fuchsia-300",
+            previewA: "bg-violet-400",
+            previewB: "bg-cyan-300",
+        },
     ];
 
 const THEME_STYLE: Record<ThemeKey, {
@@ -242,6 +314,66 @@ const THEME_STYLE: Record<ThemeKey, {
         accentSolidHoverClass: "hover:bg-indigo-400",
         accentSpinnerClass: "text-indigo-400",
     },
+    "neon-cyber": {
+        atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(217,70,239,0.3),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(34,211,238,0.28),transparent_44%)]",
+        accentTextClass: "text-fuchsia-300",
+        accentSoftClass: "bg-fuchsia-500/20",
+        accentSoftHoverClass: "hover:bg-fuchsia-500/30",
+        accentBorderClass: "border-fuchsia-500/40",
+        accentSolidClass: "bg-fuchsia-500",
+        accentSolidHoverClass: "hover:bg-fuchsia-400",
+        accentSpinnerClass: "text-fuchsia-400",
+    },
+    "brutalist": {
+        atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(250,204,21,0.25),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(250,204,21,0.18),transparent_44%)]",
+        accentTextClass: "text-yellow-300",
+        accentSoftClass: "bg-yellow-400/20",
+        accentSoftHoverClass: "hover:bg-yellow-400/30",
+        accentBorderClass: "border-yellow-400/40",
+        accentSolidClass: "bg-yellow-400",
+        accentSolidHoverClass: "hover:bg-yellow-300",
+        accentSpinnerClass: "text-yellow-400",
+    },
+    "terminal": {
+        atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(34,197,94,0.25),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(22,163,74,0.2),transparent_44%)]",
+        accentTextClass: "text-green-400",
+        accentSoftClass: "bg-green-500/20",
+        accentSoftHoverClass: "hover:bg-green-500/30",
+        accentBorderClass: "border-green-500/40",
+        accentSolidClass: "bg-green-500",
+        accentSolidHoverClass: "hover:bg-green-400",
+        accentSpinnerClass: "text-green-400",
+    },
+    "luxe-gold": {
+        atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(252,211,77,0.22),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(180,83,9,0.18),transparent_44%)]",
+        accentTextClass: "text-amber-300",
+        accentSoftClass: "bg-amber-400/15",
+        accentSoftHoverClass: "hover:bg-amber-400/25",
+        accentBorderClass: "border-amber-400/40",
+        accentSolidClass: "bg-amber-400",
+        accentSolidHoverClass: "hover:bg-amber-300",
+        accentSpinnerClass: "text-amber-300",
+    },
+    "comic-pop": {
+        atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(236,72,153,0.25),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(250,204,21,0.22),transparent_44%)]",
+        accentTextClass: "text-pink-300",
+        accentSoftClass: "bg-pink-500/20",
+        accentSoftHoverClass: "hover:bg-pink-500/30",
+        accentBorderClass: "border-pink-500/40",
+        accentSolidClass: "bg-pink-500",
+        accentSolidHoverClass: "hover:bg-pink-400",
+        accentSpinnerClass: "text-pink-400",
+    },
+    "aurora": {
+        atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(167,139,250,0.28),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(34,211,238,0.24),transparent_44%)]",
+        accentTextClass: "text-fuchsia-200",
+        accentSoftClass: "bg-fuchsia-500/20",
+        accentSoftHoverClass: "hover:bg-fuchsia-500/30",
+        accentBorderClass: "border-fuchsia-400/40",
+        accentSolidClass: "bg-gradient-to-r from-fuchsia-500 to-cyan-400",
+        accentSolidHoverClass: "hover:from-fuchsia-400 hover:to-cyan-300",
+        accentSpinnerClass: "text-fuchsia-300",
+    },
 };
 
 const THEME_META_COLOR: Record<ThemeKey, string> = {
@@ -253,6 +385,12 @@ const THEME_META_COLOR: Record<ThemeKey, string> = {
     "arctic-ice": "#60a5fa",
     "forest-olive": "#84cc16",
     "midnight-indigo": "#6366f1",
+    "neon-cyber": "#d946ef",
+    "brutalist": "#facc15",
+    "terminal": "#22c55e",
+    "luxe-gold": "#fbbf24",
+    "comic-pop": "#ec4899",
+    "aurora": "#a78bfa",
 };
 
 export default function Dashboard() {
