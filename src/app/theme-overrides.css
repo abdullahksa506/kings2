@@ -1,0 +1,229 @@
+/*
+ * Real theme transforms — overrides the baked-in Tailwind patterns
+ * (bg-slate-900, rounded-3xl, shadow-xl, border-slate-800, etc.) so the
+ * "dramatic" themes actually look dramatic instead of just changing the
+ * background tint. Scoped to [data-theme="X"] on the dashboard root.
+ *
+ * The 8 original color themes (royal-amber, ocean-cyan, etc.) get NO
+ * overrides — they keep the existing look untouched.
+ */
+
+/* ═══════════════════════════════════════════════════════════════
+ * ① BRUTALIST 🧱 — thick borders, hard offset shadows, sharp corners
+ * ═══════════════════════════════════════════════════════════════ */
+
+[data-theme="brutalist"] .rounded-3xl,
+[data-theme="brutalist"] .rounded-2xl {
+    border-radius: 0.25rem;
+}
+[data-theme="brutalist"] .rounded-xl {
+    border-radius: 0.2rem;
+}
+
+[data-theme="brutalist"] .border,
+[data-theme="brutalist"] .border-2 {
+    border-width: 3px;
+}
+
+[data-theme="brutalist"] .border-slate-800,
+[data-theme="brutalist"] .border-slate-700 {
+    border-color: #facc15;
+}
+
+[data-theme="brutalist"] .shadow-xl,
+[data-theme="brutalist"] .shadow-2xl {
+    box-shadow: 6px 6px 0 0 rgba(250, 204, 21, 0.8);
+}
+
+[data-theme="brutalist"] .shadow-lg {
+    box-shadow: 4px 4px 0 0 rgba(250, 204, 21, 0.7);
+}
+
+[data-theme="brutalist"] h1,
+[data-theme="brutalist"] h2 {
+    letter-spacing: -0.01em;
+    font-weight: 900;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * ② NEON CYBER ⚡ — glowing borders, light text shadows
+ * ═══════════════════════════════════════════════════════════════ */
+
+[data-theme="neon-cyber"] .border-slate-800,
+[data-theme="neon-cyber"] .border-slate-700 {
+    border-color: rgba(217, 70, 239, 0.4);
+}
+
+[data-theme="neon-cyber"] .shadow-xl,
+[data-theme="neon-cyber"] .shadow-2xl {
+    box-shadow: 0 0 25px rgba(217, 70, 239, 0.25), 0 0 50px rgba(34, 211, 238, 0.12);
+}
+
+[data-theme="neon-cyber"] h1,
+[data-theme="neon-cyber"] h2 {
+    text-shadow: 0 0 12px rgba(217, 70, 239, 0.6);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * ③ TERMINAL 💻 — monospace, sharp corners, ascii vibe
+ * ═══════════════════════════════════════════════════════════════ */
+
+[data-theme="terminal"] {
+    font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+[data-theme="terminal"] .rounded-3xl,
+[data-theme="terminal"] .rounded-2xl {
+    border-radius: 0.25rem;
+}
+[data-theme="terminal"] .rounded-xl,
+[data-theme="terminal"] .rounded-lg {
+    border-radius: 0.2rem;
+}
+
+[data-theme="terminal"] .border-slate-800,
+[data-theme="terminal"] .border-slate-700 {
+    border-color: rgba(34, 197, 94, 0.4);
+}
+
+[data-theme="terminal"] .shadow-xl,
+[data-theme="terminal"] .shadow-2xl {
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);
+}
+
+[data-theme="terminal"] h1::before,
+[data-theme="terminal"] h2::before {
+    content: "> ";
+    color: rgb(34, 197, 94);
+    opacity: 0.65;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * ④ LUXE GOLD 🥂 — serif headings, hairline gold borders, refined
+ * ═══════════════════════════════════════════════════════════════ */
+
+[data-theme="luxe-gold"] h1,
+[data-theme="luxe-gold"] h2,
+[data-theme="luxe-gold"] h3 {
+    font-family: "Cormorant Garamond", "Times New Roman", Times, serif;
+    font-style: italic;
+    letter-spacing: 0.02em;
+    font-weight: 600;
+}
+
+[data-theme="luxe-gold"] .border,
+[data-theme="luxe-gold"] .border-2 {
+    border-width: 1px;
+}
+
+[data-theme="luxe-gold"] .border-slate-800,
+[data-theme="luxe-gold"] .border-slate-700 {
+    border-color: rgba(252, 211, 77, 0.3);
+}
+
+[data-theme="luxe-gold"] .rounded-3xl,
+[data-theme="luxe-gold"] .rounded-2xl {
+    border-radius: 0.5rem;
+}
+
+[data-theme="luxe-gold"] .shadow-xl,
+[data-theme="luxe-gold"] .shadow-2xl {
+    box-shadow: 0 1px 0 0 rgba(252, 211, 77, 0.2), 0 20px 40px -20px rgba(0, 0, 0, 0.8);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * ⑤ COMIC POP 💥 — thick black outlines, hard cartoon shadows
+ * ═══════════════════════════════════════════════════════════════ */
+
+[data-theme="comic-pop"] .rounded-3xl,
+[data-theme="comic-pop"] .rounded-2xl {
+    border-radius: 1.25rem;
+}
+
+[data-theme="comic-pop"] .border,
+[data-theme="comic-pop"] .border-2 {
+    border-width: 3px;
+}
+
+[data-theme="comic-pop"] .border-slate-800,
+[data-theme="comic-pop"] .border-slate-700 {
+    border-color: #0a0a0a;
+}
+
+[data-theme="comic-pop"] .shadow-xl,
+[data-theme="comic-pop"] .shadow-2xl {
+    box-shadow: 5px 5px 0 0 #0a0a0a;
+}
+
+[data-theme="comic-pop"] .shadow-lg {
+    box-shadow: 3px 3px 0 0 #0a0a0a;
+}
+
+[data-theme="comic-pop"] h1,
+[data-theme="comic-pop"] h2 {
+    -webkit-text-stroke: 0.5px #0a0a0a;
+    font-weight: 900;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * ⑥ AURORA 🌌 — frosted glass cards, soft blur
+ * ═══════════════════════════════════════════════════════════════ */
+
+[data-theme="aurora"] .bg-slate-900,
+[data-theme="aurora"] .bg-slate-950 {
+    background-color: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+[data-theme="aurora"] .border-slate-800,
+[data-theme="aurora"] .border-slate-700 {
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+[data-theme="aurora"] .rounded-3xl,
+[data-theme="aurora"] .rounded-2xl {
+    border-radius: 1.5rem;
+}
+
+[data-theme="aurora"] .shadow-xl,
+[data-theme="aurora"] .shadow-2xl {
+    box-shadow: 0 10px 30px -10px rgba(167, 139, 250, 0.35), 0 4px 14px rgba(34, 211, 238, 0.18);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * SAFETY OPT-OUTS — don't theme overlays / game/map mode UIs
+ * Modals & full-screen game panels use .fixed.inset-0; we reset
+ * their inner cards so the theme doesn't break Coup/Map/Stats UIs.
+ * ═══════════════════════════════════════════════════════════════ */
+
+[data-theme] .fixed.inset-0 .rounded-3xl,
+[data-theme] .fixed.inset-0 .rounded-2xl {
+    border-radius: revert;
+}
+
+[data-theme] .fixed.inset-0 .shadow-xl,
+[data-theme] .fixed.inset-0 .shadow-2xl,
+[data-theme] .fixed.inset-0 .shadow-lg {
+    box-shadow: revert;
+}
+
+[data-theme] .fixed.inset-0 .border,
+[data-theme] .fixed.inset-0 .border-2 {
+    border-width: revert;
+}
+
+[data-theme] .fixed.inset-0 [class*="border-slate"] {
+    border-color: revert;
+}
+
+[data-theme="aurora"] .fixed.inset-0 .bg-slate-900,
+[data-theme="aurora"] .fixed.inset-0 .bg-slate-950 {
+    background-color: revert;
+    backdrop-filter: revert;
+    -webkit-backdrop-filter: revert;
+}
+
+[data-theme="terminal"] .fixed.inset-0 {
+    font-family: revert;
+}
