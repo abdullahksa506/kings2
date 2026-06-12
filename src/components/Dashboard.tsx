@@ -55,7 +55,8 @@ type ThemeKey =
     | "terminal"
     | "luxe-gold"
     | "comic-pop"
-    | "aurora";
+    | "aurora"
+    | "bento";
 
 const THEME_OPTIONS: {
     id: ThemeKey;
@@ -222,6 +223,17 @@ const THEME_OPTIONS: {
             previewA: "bg-violet-400",
             previewB: "bg-cyan-300",
         },
+        {
+            id: "bento",
+            name: "بنتو 🍱",
+            appBgClass: "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950",
+            headerGradientClass: "from-amber-300 via-pink-300 to-cyan-300",
+            headerIconClass: "text-amber-300",
+            tabActiveClass: "text-amber-300",
+            tabIndicatorClass: "bg-gradient-to-r from-amber-400 to-pink-400",
+            previewA: "bg-gradient-to-br from-amber-500 to-orange-600",
+            previewB: "bg-gradient-to-br from-fuchsia-500 to-purple-600",
+        },
     ];
 
 const THEME_STYLE: Record<ThemeKey, {
@@ -374,6 +386,16 @@ const THEME_STYLE: Record<ThemeKey, {
         accentSolidHoverClass: "hover:from-fuchsia-400 hover:to-cyan-300",
         accentSpinnerClass: "text-fuchsia-300",
     },
+    "bento": {
+        atmosphereClass: "bg-[radial-gradient(circle_at_15%_12%,rgba(245,158,11,0.18),transparent_40%),radial-gradient(circle_at_85%_25%,rgba(217,70,239,0.16),transparent_40%),radial-gradient(circle_at_50%_88%,rgba(34,211,238,0.16),transparent_42%)]",
+        accentTextClass: "text-amber-300",
+        accentSoftClass: "bg-amber-500/20",
+        accentSoftHoverClass: "hover:bg-amber-500/30",
+        accentBorderClass: "border-amber-400/40",
+        accentSolidClass: "bg-gradient-to-br from-amber-500 to-orange-600",
+        accentSolidHoverClass: "hover:from-amber-400 hover:to-orange-500",
+        accentSpinnerClass: "text-amber-300",
+    },
 };
 
 const THEME_META_COLOR: Record<ThemeKey, string> = {
@@ -391,6 +413,7 @@ const THEME_META_COLOR: Record<ThemeKey, string> = {
     "luxe-gold": "#fbbf24",
     "comic-pop": "#ec4899",
     "aurora": "#a78bfa",
+    "bento": "#f59e0b",
 };
 
 export default function Dashboard() {
