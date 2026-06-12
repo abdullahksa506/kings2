@@ -438,10 +438,12 @@ export default function Dashboard() {
     // Mini-game State
     const [isGameOpen, setIsGameOpen] = useState(false);
     const [isDuelOpen, setIsDuelOpen] = useState(false);
+    const [isCoupOpen, setIsCoupOpen] = useState(false);
 
     // Statistics State
     const [isStatsOpen, setIsStatsOpen] = useState(false);
     const [isMemberProfileOpen, setIsMemberProfileOpen] = useState(false);
+    const [isCycleManagerOpen, setIsCycleManagerOpen] = useState(false);
 
     // Tab State
     type TabType = "week" | "leaderboard" | "bathroom" | "map" | "more";
@@ -1085,7 +1087,13 @@ export default function Dashboard() {
                             {currentWeek ? "إنهاء الأسبوع الحالي وبدء أسبوع جديد" : "بدء أسبوع جديد"}
                         </button>
 
-
+                        <button
+                            onClick={() => setIsCycleManagerOpen(true)}
+                            className="bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-semibold py-2 px-4 rounded-xl text-sm flex items-center gap-2"
+                        >
+                            <RotateCcw className="w-4 h-4" />
+                            فتح مدير الدورات
+                        </button>
 
                         {currentWeek && (
                             <div className="flex items-center gap-2 bg-slate-950/40 p-1 rounded-xl border border-amber-500/20">
@@ -1383,6 +1391,17 @@ export default function Dashboard() {
                     {activeTab === "week" && (
                         <div className="space-y-5 max-w-3xl mx-auto">
 
+                            {/* Smart Reminders — يطلع لو عضو ما حضر/ما قيّم */}
+                            <SmartReminders
+                                userName={user?.name || ""}
+                                currentWeek={currentWeek}
+                                pastWeek={pastWeek}
+                                hasRatedCurrentWeek={hasRatedCurrentWeek}
+                                hasRatedPastWeek={hasRatedPastWeek}
+                                hasRatedBathroomCurrentWeek={hasRatedBathroomCurrentWeek}
+                                hasRatedBathroomPastWeek={hasRatedBathroomPastWeek}
+                            />
+
                             {/* أنا فاضي — لقاء مفاجئ */}
                             {user?.name && (
                                 <ImpromptuMeetupCard
@@ -1674,6 +1693,15 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                             )}
+
+                            {/* تصويت الميزات المستقبلية */}
+                            <FutureFeaturesVoting
+                                userName={user?.name || ""}
+                                isDean={user?.role === "dean"}
+                                accentSoftClass={activeThemeStyle.accentSoftClass}
+                                accentBorderClass={activeThemeStyle.accentBorderClass}
+                                accentTextClass={activeThemeStyle.accentTextClass}
+                            />
                         </div>
                     )}
 
@@ -1992,6 +2020,29 @@ export default function Dashboard() {
                                 </div>
                             </div>
 
+                            {/* Mini-Game Banner — Coup */}
+                            <div className="bg-gradient-to-br from-rose-900/40 to-slate-900 border border-rose-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
+                                <div className="absolute -right-10 -top-10 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl group-hover:bg-rose-500/20 transition-all duration-500" />
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="bg-rose-500/20 p-2 rounded-xl text-rose-400">
+                                            <Swords className="w-6 h-6" />
+                                        </div>
+                                        <h3 className="font-bold text-xl text-white">Coup — انقلاب 🎭</h3>
+                                    </div>
+                                    <p className="text-sm text-slate-300 mb-5 leading-relaxed">
+                                        لعبة خداع وذكاء لـ 2-4 لاعبين. ادّعِ الشخصيات، اكذب، وتحدّى خصومك — مع دردشة صوتية داخل اللعبة!
+                                    </p>
+                                    <button
+                                        onClick={() => setIsCoupOpen(true)}
+                                        className="w-full bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-500/20"
+                                    >
+                                        <PlayCircle className="w-5 h-5 fill-current" />
+                                        ادخل الحلبة
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* Mini-Game Banner */}
                             <div className="bg-gradient-to-br from-amber-900/40 to-slate-900 border border-amber-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
                                 <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500" />
@@ -2108,6 +2159,23 @@ export default function Dashboard() {
                     />
                 )
             }
+
+            {
+                user && (
+                    <CoupArena
+                        isOpen={isCoupOpen}
+                        onClose={() => setIsCoupOpen(false)}
+                        userName={user.name}
+                    />
+                )
+            }
+
+            <CycleManagerModal
+                isOpen={isCycleManagerOpen}
+                onClose={() => setIsCycleManagerOpen(false)}
+                currentCycleNumber={currentWeek?.cycleNumber || pastWeek?.cycleNumber || 1}
+                onAfterSave={() => fetchWeek()}
+            />
 
             <StatisticsPanel
                 isOpen={isStatsOpen}
