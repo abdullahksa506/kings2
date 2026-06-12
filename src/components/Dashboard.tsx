@@ -39,6 +39,7 @@ import RestaurantVotingPanel from "./RestaurantVotingPanel";
 import ImpromptuMeetupCard from "./ImpromptuMeetupCard";
 const OutingPlannerPanel = dynamic(() => import("./OutingPlannerPanel"), { ssr: false });
 const FutureFeaturesVoting = dynamic(() => import("./FutureFeaturesVoting"), { ssr: false });
+const BentoWeekView = dynamic(() => import("./BentoWeekView"), { ssr: false });
 import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
 import { Gamepad2, Bath, UploadCloud, BarChart3, Swords, Sparkles } from "lucide-react";
 const RatingsExplorer = dynamic(() => import("./RatingsExplorer"), { ssr: false });
@@ -479,6 +480,7 @@ export default function Dashboard() {
     type TabType = "week" | "leaderboard" | "bathroom" | "map" | "more";
     const [activeTab, setActiveTab] = useState<TabType>("week");
     const [selectedTheme, setSelectedTheme] = useState<ThemeKey>("royal-amber");
+    const [bentoFullView, setBentoFullView] = useState(false);
     const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
 
     const fetchPastWeekOnly = async () => {
@@ -1418,8 +1420,26 @@ export default function Dashboard() {
                 <div className="pb-24">
 
                     {/* ===== TAB: الأسبوع الحالي ===== */}
-                    {activeTab === "week" && (
+                    {activeTab === "week" && selectedTheme === "bento" && !bentoFullView && (
+                        <BentoWeekView
+                            currentWeek={currentWeek}
+                            pastWeek={pastWeek}
+                            userName={user?.name || ""}
+                            onSwitchToFullView={() => setBentoFullView(true)}
+                        />
+                    )}
+
+                    {activeTab === "week" && !(selectedTheme === "bento" && !bentoFullView) && (
                         <div className="space-y-5 max-w-3xl mx-auto">
+
+                            {selectedTheme === "bento" && bentoFullView && (
+                                <button
+                                    onClick={() => setBentoFullView(false)}
+                                    className="w-full bg-white/10 hover:bg-white/15 backdrop-blur border border-white/25 text-white rounded-2xl py-2.5 text-sm font-semibold transition-colors"
+                                >
+                                    ↩ ارجع لعرض البنتو 🍱
+                                </button>
+                            )}
 
                             {/* Smart Reminders — يطلع لو عضو ما حضر/ما قيّم */}
                             <SmartReminders
