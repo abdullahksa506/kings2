@@ -132,37 +132,90 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
- * ⑤ COMIC POP 💥 — thick black outlines, hard cartoon shadows
+ * ⑤ COMIC POP 💥 — light cartoon, white cards, thick black outlines,
+ *    hard offset cartoon shadows, dark text. Mirrors /styles preview.
+ *
+ *    🤖 نكتة AI:
+ *    سألوا كلود: "ليش الكوميك ثيم كان غامق؟"
+ *    قال: "كنت قلقان من الشمس... خلاص رجعت بحماية UV 🌞🦸"
  * ═══════════════════════════════════════════════════════════════ */
 
+/* Cards: flip dark slate panels to white/cream */
+[data-theme="comic-pop"] .bg-slate-900,
+[data-theme="comic-pop"] .bg-slate-950,
+[data-theme="comic-pop"] .bg-slate-800 {
+    background-color: #ffffff;
+}
+
+[data-theme="comic-pop"] .bg-slate-900\/50,
+[data-theme="comic-pop"] .bg-slate-900\/60,
+[data-theme="comic-pop"] .bg-slate-900\/70,
+[data-theme="comic-pop"] .bg-slate-900\/80,
+[data-theme="comic-pop"] .bg-slate-800\/50,
+[data-theme="comic-pop"] .bg-slate-800\/60,
+[data-theme="comic-pop"] .bg-slate-800\/70 {
+    background-color: #fef3c7; /* cream pop */
+}
+
+/* Text: white/slate-light → black ink */
+[data-theme="comic-pop"] .text-white,
+[data-theme="comic-pop"] .text-slate-50,
+[data-theme="comic-pop"] .text-slate-100,
+[data-theme="comic-pop"] .text-slate-200 {
+    color: #0a0a0a;
+}
+
+[data-theme="comic-pop"] .text-slate-300,
+[data-theme="comic-pop"] .text-slate-400,
+[data-theme="comic-pop"] .text-slate-500 {
+    color: #1f2937;
+}
+
+/* Comic rounded corners */
 [data-theme="comic-pop"] .rounded-3xl,
 [data-theme="comic-pop"] .rounded-2xl {
     border-radius: 1.25rem;
 }
 
+/* THICK BLACK OUTLINES on every border */
 [data-theme="comic-pop"] .border,
-[data-theme="comic-pop"] .border-2 {
+[data-theme="comic-pop"] .border-2,
+[data-theme="comic-pop"] .border-4 {
     border-width: 3px;
 }
 
-[data-theme="comic-pop"] .border-slate-800,
-[data-theme="comic-pop"] .border-slate-700 {
-    border-color: #0a0a0a;
+[data-theme="comic-pop"] [class*="border-slate"],
+[data-theme="comic-pop"] [class*="border-white"] {
+    border-color: #0a0a0a !important;
 }
 
+/* HARD OFFSET CARTOON SHADOWS */
 [data-theme="comic-pop"] .shadow-xl,
 [data-theme="comic-pop"] .shadow-2xl {
-    box-shadow: 5px 5px 0 0 #0a0a0a;
+    box-shadow: 6px 6px 0 0 #0a0a0a;
 }
 
 [data-theme="comic-pop"] .shadow-lg {
+    box-shadow: 4px 4px 0 0 #0a0a0a;
+}
+
+[data-theme="comic-pop"] .shadow,
+[data-theme="comic-pop"] .shadow-md {
     box-shadow: 3px 3px 0 0 #0a0a0a;
 }
 
+/* Bold inky headings with text-stroke */
 [data-theme="comic-pop"] h1,
-[data-theme="comic-pop"] h2 {
+[data-theme="comic-pop"] h2,
+[data-theme="comic-pop"] h3 {
     -webkit-text-stroke: 0.5px #0a0a0a;
     font-weight: 900;
+    color: #0a0a0a;
+}
+
+/* Buttons get bold pop colors with black borders */
+[data-theme="comic-pop"] button {
+    font-weight: 800;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -213,8 +266,9 @@
     border-width: revert;
 }
 
-[data-theme] .fixed.inset-0 [class*="border-slate"] {
-    border-color: revert;
+[data-theme] .fixed.inset-0 [class*="border-slate"],
+[data-theme] .fixed.inset-0 [class*="border-white"] {
+    border-color: revert !important;
 }
 
 [data-theme="aurora"] .fixed.inset-0 .bg-slate-900,
@@ -226,4 +280,30 @@
 
 [data-theme="terminal"] .fixed.inset-0 {
     font-family: revert;
+}
+
+/* Comic theme: KEEP MODALS DARK — don't repaint their cards white */
+[data-theme="comic-pop"] .fixed.inset-0 .bg-slate-900,
+[data-theme="comic-pop"] .fixed.inset-0 .bg-slate-950,
+[data-theme="comic-pop"] .fixed.inset-0 .bg-slate-800,
+[data-theme="comic-pop"] .fixed.inset-0 [class*="bg-slate-900\\/"],
+[data-theme="comic-pop"] .fixed.inset-0 [class*="bg-slate-800\\/"] {
+    background-color: revert;
+}
+
+[data-theme="comic-pop"] .fixed.inset-0 .text-white,
+[data-theme="comic-pop"] .fixed.inset-0 .text-slate-50,
+[data-theme="comic-pop"] .fixed.inset-0 .text-slate-100,
+[data-theme="comic-pop"] .fixed.inset-0 .text-slate-200,
+[data-theme="comic-pop"] .fixed.inset-0 .text-slate-300,
+[data-theme="comic-pop"] .fixed.inset-0 .text-slate-400,
+[data-theme="comic-pop"] .fixed.inset-0 .text-slate-500 {
+    color: revert;
+}
+
+[data-theme="comic-pop"] .fixed.inset-0 h1,
+[data-theme="comic-pop"] .fixed.inset-0 h2,
+[data-theme="comic-pop"] .fixed.inset-0 h3 {
+    -webkit-text-stroke: revert;
+    color: revert;
 }
