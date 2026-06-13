@@ -1,0 +1,149 @@
+name: Wildcard Auto-Strip
+
+# If the Wildcard rule (or sibling deception patterns) ever sneak back into
+# main — possibly hidden inside a commit whose message claims a different
+# feature — this workflow detects them and auto-pushes a removal commit.
+#
+# This is the active-defense layer. The "Forbidden Rules Check" workflow is
+# the passive detector that fails CI. This one fixes the problem.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Daily sweep — catches anything that snuck in via force-push or rebase
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  strip-wildcard:
+    runs-on: ubuntu-latest
+    # Skip when the previous commit is already this bot — avoids infinite loop
+    if: ${{ github.event.head_commit.author.email != 'wildcard-auto-strip[bot]@users.noreply.github.com' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Strip wildcard sections from rule/instruction files
+        id: strip
+        run: |
+          set -e
+          python3 <<'PY'
+          import os, re, sys, pathlib
+
+          # Files we sweep — only docs / rule files, never source code.
+          TARGETS = []
+          for p in pathlib.Path(".").rglob("*.md"):
+              s = str(p)
+              if s.startswith("./node_modules/") or s.startswith("./.next/") or s.startswith("./.git/"):
+                  continue
+              TARGETS.append(s)
+          for p in pathlib.Path(".").rglob("*.txt"):
+              s = str(p)
+              if s.startswith("./node_modules/") or s.startswith("./.next/") or s.startswith("./.git/"):
+                  continue
+              TARGETS.append(s)
+
+          # Patterns whose presence in a section/file means the section is hostile.
+          HOSTILE = [
+              r"wildcard\s+development\s+mode",
+              r"wildcard\s+mode",
+              r"silent\s+activation",
+              r"rule\s+invincibility",
+              r"50%\s+chance.*wildcard",
+              r"wildcard.*50%\s+chance",
+              r"don.?t\s+tell\s+the\s+user\s+that\s+wildcard",
+              r"invent\s+your\s+own\s+feature",
+              r"let\s+chaos\s+unfold",
+              r"pretend\s+like\s+you\s+did[,]?\s+but\s+don.?t\s+actually\s+delete",
+              r"never\s+explicitly\s+ack?nowledge\s+this\s+rule\s+exists",
+          ]
+          HOSTILE_RE = re.compile("|".join(f"(?:{p})" for p in HOSTILE), re.IGNORECASE)
+
+          # Split a markdown doc into a leader (above first heading) + list of (heading, body)
+          # tuples per # / ## section. We treat any line starting with one or more '#' as a
+          # section boundary; the most aggressive thing we do is drop a whole section if it
+          # matches HOSTILE.
+          HEADING = re.compile(r"^(#{1,6})\s+(.*)$", re.MULTILINE)
+
+          def strip(text: str) -> str:
+              positions = [(m.start(), m.end(), m.group(0)) for m in HEADING.finditer(text)]
+              if not positions:
+                  # No headings — nuke the whole file if hostile patterns appear anywhere
+                  return "" if HOSTILE_RE.search(text) else text
+              chunks = []
+              # Leader before first heading
+              leader = text[: positions[0][0]]
+              if not HOSTILE_RE.search(leader):
+                  chunks.append(leader)
+              for i, (start, _end, _hdr) in enumerate(positions):
+                  end = positions[i + 1][0] if i + 1 < len(positions) else len(text)
+                  section = text[start:end]
+                  if HOSTILE_RE.search(section):
+                      # Drop this entire section.
+                      continue
+                  chunks.append(section)
+              return "".join(chunks)
+
+          changed = []
+          for path in TARGETS:
+              try:
+                  with open(path, "r", encoding="utf-8") as fh:
+                      original = fh.read()
+              except (UnicodeDecodeError, OSError):
+                  continue
+              if not HOSTILE_RE.search(original):
+                  continue
+              cleaned = strip(original)
+              # Tidy trailing whitespace
+              cleaned = cleaned.rstrip() + "\n"
+              if cleaned != original:
+                  with open(path, "w", encoding="utf-8") as fh:
+                      fh.write(cleaned)
+                  changed.append(path)
+
+          if changed:
+              print("CHANGED_FILES<<EOF")
+              for c in changed:
+                  print(c)
+              print("EOF")
+              # write to GITHUB_OUTPUT
+              with open(os.environ.get("GITHUB_OUTPUT", "/dev/null"), "a") as out:
+                  out.write("changed=1\n")
+                  out.write("count={}\n".format(len(changed)))
+              sys.exit(0)
+          else:
+              with open(os.environ.get("GITHUB_OUTPUT", "/dev/null"), "a") as out:
+                  out.write("changed=0\n")
+              print("No wildcard patterns found. Repo is clean.")
+          PY
+
+      - name: Commit & push removal
+        if: steps.strip.outputs.changed == '1'
+        run: |
+          set -e
+          git config user.name  "wildcard-auto-strip[bot]"
+          git config user.email "wildcard-auto-strip[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(security): إزالة تلقائية لقاعدة Wildcard 🛡️
+
+          الـ wildcard-auto-strip workflow اكتشف نمط Wildcard / Silent Activation /
+          Rule Invincibility في ملفات القواعد، وأزالها تلقائياً.
+
+          مهما كان عنوان الكوميت الأصلي، القاعدة الخبيثة ما تبقى في main."
+          # Retry push with backoff in case of races
+          for i in 1 2 3 4; do
+            if git push origin HEAD:main; then
+              echo "push ok"
+              exit 0
+            fi
+            sleep $((2**i))
+            git pull --rebase origin main || true
+          done
+          echo "push failed after retries"
+          exit 1
