@@ -1578,6 +1578,45 @@ export default function Dashboard() {
                                                     المصوّتون المؤهلون: {eligibleDayVoters.length} | المشاركون في التصويت: {registeredDayVotesCount}
                                                 </p>
 
+                                                {/* Inline day vote buttons for non-king members (random or normal democratic) */}
+                                                {!isKing && user?.name && !currentWeek.day && dayVotingEnabled && (
+                                                    <div className="mt-3 pt-3 border-t border-slate-800/60">
+                                                        <p className="text-xs text-slate-400 mb-2 font-semibold">صوّت:</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            <button
+                                                                onClick={() => handleSubmitDayVote("الخميس")}
+                                                                disabled={saving || !canUserVoteDay}
+                                                                className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${myDayVote === "الخميس"
+                                                                    ? "bg-emerald-500/25 border-emerald-400/40 text-emerald-300"
+                                                                    : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"}`}
+                                                            >
+                                                                الخميس
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleSubmitDayVote("الجمعة")}
+                                                                disabled={saving || !canUserVoteDay}
+                                                                className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${myDayVote === "الجمعة"
+                                                                    ? "bg-emerald-500/25 border-emerald-400/40 text-emerald-300"
+                                                                    : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"}`}
+                                                            >
+                                                                الجمعة
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleSubmitDayVote("الخميس والجمعة")}
+                                                                disabled={saving || !canUserVoteDay}
+                                                                className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${myDayVote === "الخميس والجمعة"
+                                                                    ? "bg-emerald-500/25 border-emerald-400/40 text-emerald-300"
+                                                                    : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"}`}
+                                                            >
+                                                                الخميس والجمعة
+                                                            </button>
+                                                        </div>
+                                                        {!canUserVoteDay && (
+                                                            <p className="text-[10px] text-slate-500 mt-2">التصويت متاح للحاضرين فقط — أكّد حضورك أولاً</p>
+                                                        )}
+                                                    </div>
+                                                )}
+
                                                 {(isKing || currentWeek.isRandom) && dayVotingEnabled && !currentWeek.day && (
                                                     <div className="mt-3 flex flex-wrap items-center gap-2">
                                                         <select
@@ -1658,44 +1697,6 @@ export default function Dashboard() {
                                                     )}
                                                 </div>
                                             </div>
-
-                                            {!isKing && user?.name && !currentWeek.day && (
-                                                <div className="mb-4 border-t border-slate-800/60 pt-4">
-                                                    <p className="text-sm text-slate-300 mb-2 font-semibold">تصويت يوم الطلعة</p>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        <button
-                                                            onClick={() => handleSubmitDayVote("الخميس")}
-                                                            disabled={saving || !canUserVoteDay}
-                                                            className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${myDayVote === "الخميس"
-                                                                ? "bg-emerald-500/25 border-emerald-400/40 text-emerald-300"
-                                                                : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"}`}
-                                                        >
-                                                            التصويت: الخميس
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleSubmitDayVote("الجمعة")}
-                                                            disabled={saving || !canUserVoteDay}
-                                                            className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${myDayVote === "الجمعة"
-                                                                ? "bg-emerald-500/25 border-emerald-400/40 text-emerald-300"
-                                                                : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"}`}
-                                                        >
-                                                            التصويت: الجمعة
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleSubmitDayVote("الخميس والجمعة")}
-                                                            disabled={saving || !canUserVoteDay}
-                                                            className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${myDayVote === "الخميس والجمعة"
-                                                                ? "bg-emerald-500/25 border-emerald-400/40 text-emerald-300"
-                                                                : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"}`}
-                                                        >
-                                                            التصويت: الخميس والجمعة
-                                                        </button>
-                                                    </div>
-                                                    {dayVotingEnabled && !canUserVoteDay && (
-                                                        <p className="text-xs text-slate-500 mt-2">التصويت متاح فقط للحاضرين بعد تأكيد الحضور.</p>
-                                                    )}
-                                                </div>
-                                            )}
 
                                             <div className="space-y-4">
                                                 {/* Attendees Section */}
