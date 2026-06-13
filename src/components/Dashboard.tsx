@@ -40,7 +40,6 @@ import ImpromptuMeetupCard from "./ImpromptuMeetupCard";
 const OutingPlannerPanel = dynamic(() => import("./OutingPlannerPanel"), { ssr: false });
 const FutureFeaturesVoting = dynamic(() => import("./FutureFeaturesVoting"), { ssr: false });
 const BentoWeekView = dynamic(() => import("./BentoWeekView"), { ssr: false });
-const RandomOutingPanel = dynamic(() => import("./RandomOutingPanel"), { ssr: false });
 import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
 import { Gamepad2, Bath, UploadCloud, BarChart3, Swords, Sparkles } from "lucide-react";
 const RatingsExplorer = dynamic(() => import("./RatingsExplorer"), { ssr: false });
@@ -1442,14 +1441,6 @@ export default function Dashboard() {
                                 </button>
                             )}
 
-                            {/* Random outing self-coordination — يطلع فقط لما الأسبوع عشوائي */}
-                            {currentWeek?.isRandom && (
-                                <RandomOutingPanel
-                                    currentWeek={currentWeek}
-                                    userName={user?.name || ""}
-                                />
-                            )}
-
                             {/* Smart Reminders — يطلع لو عضو ما حضر/ما قيّم */}
                             <SmartReminders
                                 userName={user?.name || ""}
@@ -1551,8 +1542,15 @@ export default function Dashboard() {
                                         {currentWeek && (
                                             <div className="bg-slate-950/50 rounded-2xl p-5 border border-slate-800">
                                                 <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                                                    <h4 className="text-sm font-semibold text-slate-300">تصويت يوم الطلعة</h4>
-                                                    {isKing && (
+                                                    <h4 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                                                        تصويت يوم الطلعة
+                                                        {currentWeek.isRandom && (
+                                                            <span className="text-[10px] bg-fuchsia-500/15 border border-fuchsia-500/40 text-fuchsia-300 px-2 py-0.5 rounded-full">
+                                                                🎲 تنسيق ذاتي
+                                                            </span>
+                                                        )}
+                                                    </h4>
+                                                    {(isKing || currentWeek.isRandom) && (
                                                         <button
                                                             onClick={() => handleToggleDayVoting(!dayVotingEnabled)}
                                                             disabled={saving || !!currentWeek.day}
@@ -1580,7 +1578,7 @@ export default function Dashboard() {
                                                     المصوّتون المؤهلون: {eligibleDayVoters.length} | المشاركون في التصويت: {registeredDayVotesCount}
                                                 </p>
 
-                                                {isKing && dayVotingEnabled && !currentWeek.day && (
+                                                {(isKing || currentWeek.isRandom) && dayVotingEnabled && !currentWeek.day && (
                                                     <div className="mt-3 flex flex-wrap items-center gap-2">
                                                         <select
                                                             value={tieBreakDay}
@@ -1597,6 +1595,11 @@ export default function Dashboard() {
                                                         >
                                                             اعتماد نتيجة التصويت
                                                         </button>
+                                                        {currentWeek.isRandom && (
+                                                            <span className="text-[10px] text-slate-500 w-full">
+                                                                💡 يتم الحسم تلقائياً عند تصويت ٤+ أعضاء بدون تعادل
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
