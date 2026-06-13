@@ -40,6 +40,7 @@ import ImpromptuMeetupCard from "./ImpromptuMeetupCard";
 const OutingPlannerPanel = dynamic(() => import("./OutingPlannerPanel"), { ssr: false });
 const FutureFeaturesVoting = dynamic(() => import("./FutureFeaturesVoting"), { ssr: false });
 const BentoWeekView = dynamic(() => import("./BentoWeekView"), { ssr: false });
+const TikTokFeedView = dynamic(() => import("./TikTokFeedView"), { ssr: false });
 import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
 import { Gamepad2, Bath, UploadCloud, BarChart3, Swords, Sparkles } from "lucide-react";
 const RatingsExplorer = dynamic(() => import("./RatingsExplorer"), { ssr: false });
@@ -64,7 +65,8 @@ type ThemeKey =
     | "luxe-gold"
     | "comic-pop"
     | "aurora"
-    | "bento";
+    | "bento"
+    | "tiktok";
 
 const THEME_OPTIONS: {
     id: ThemeKey;
@@ -242,6 +244,17 @@ const THEME_OPTIONS: {
             previewA: "bg-gradient-to-br from-amber-500 to-orange-600",
             previewB: "bg-gradient-to-br from-fuchsia-500 to-purple-600",
         },
+        {
+            id: "tiktok",
+            name: "TikTok 📱",
+            appBgClass: "bg-black",
+            headerGradientClass: "from-pink-400 via-fuchsia-400 to-cyan-400",
+            headerIconClass: "text-pink-400",
+            tabActiveClass: "text-pink-400",
+            tabIndicatorClass: "bg-pink-500",
+            previewA: "bg-gradient-to-br from-fuchsia-500 to-rose-600",
+            previewB: "bg-gradient-to-br from-cyan-400 to-blue-600",
+        },
     ];
 
 const THEME_STYLE: Record<ThemeKey, {
@@ -404,6 +417,16 @@ const THEME_STYLE: Record<ThemeKey, {
         accentSolidHoverClass: "hover:from-amber-400 hover:to-orange-500",
         accentSpinnerClass: "text-amber-300",
     },
+    "tiktok": {
+        atmosphereClass: "",
+        accentTextClass: "text-pink-400",
+        accentSoftClass: "bg-pink-500/20",
+        accentSoftHoverClass: "hover:bg-pink-500/30",
+        accentBorderClass: "border-pink-400/40",
+        accentSolidClass: "bg-gradient-to-br from-pink-500 to-fuchsia-600",
+        accentSolidHoverClass: "hover:from-pink-400 hover:to-fuchsia-500",
+        accentSpinnerClass: "text-pink-400",
+    },
 };
 
 const THEME_META_COLOR: Record<ThemeKey, string> = {
@@ -422,6 +445,7 @@ const THEME_META_COLOR: Record<ThemeKey, string> = {
     "comic-pop": "#ec4899",
     "aurora": "#a78bfa",
     "bento": "#f59e0b",
+    "tiktok": "#000000",
 };
 
 export default function Dashboard() {
@@ -481,6 +505,7 @@ export default function Dashboard() {
     const [activeTab, setActiveTab] = useState<TabType>("week");
     const [selectedTheme, setSelectedTheme] = useState<ThemeKey>("royal-amber");
     const [bentoFullView, setBentoFullView] = useState(false);
+    const [tiktokFullView, setTiktokFullView] = useState(false);
     const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
 
     const fetchPastWeekOnly = async () => {
@@ -1429,7 +1454,17 @@ export default function Dashboard() {
                         />
                     )}
 
-                    {activeTab === "week" && !(selectedTheme === "bento" && !bentoFullView) && (
+                    {activeTab === "week" && selectedTheme === "tiktok" && !tiktokFullView && (
+                        <TikTokFeedView
+                            currentWeek={currentWeek}
+                            pastWeek={pastWeek}
+                            userName={user?.name || ""}
+                            topMember={null}
+                            onSwitchToFullView={() => setTiktokFullView(true)}
+                        />
+                    )}
+
+                    {activeTab === "week" && !(selectedTheme === "bento" && !bentoFullView) && !(selectedTheme === "tiktok" && !tiktokFullView) && (
                         <div className="space-y-5 max-w-3xl mx-auto">
 
                             {selectedTheme === "bento" && bentoFullView && (
@@ -1438,6 +1473,15 @@ export default function Dashboard() {
                                     className="w-full bg-white/10 hover:bg-white/15 backdrop-blur border border-white/25 text-white rounded-2xl py-2.5 text-sm font-semibold transition-colors"
                                 >
                                     ↩ ارجع لعرض البنتو 🍱
+                                </button>
+                            )}
+
+                            {selectedTheme === "tiktok" && tiktokFullView && (
+                                <button
+                                    onClick={() => setTiktokFullView(false)}
+                                    className="w-full bg-pink-500/15 hover:bg-pink-500/25 backdrop-blur border border-pink-400/40 text-pink-300 rounded-2xl py-2.5 text-sm font-semibold transition-colors"
+                                >
+                                    ↩ ارجع لـ For You 📱
                                 </button>
                             )}
 

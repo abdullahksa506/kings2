@@ -259,6 +259,21 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
+ * ⑧ TIKTOK 📱 — pure black bg, no extra rounding/shadow elsewhere
+ *   The TikTokFeedView is full-screen overlay (fixed.inset-0) so
+ *   its own styles win; this just keeps the rest of the app dark.
+ * ═══════════════════════════════════════════════════════════════ */
+
+[data-theme="tiktok"] {
+    background-color: #000;
+}
+
+/* Hide page padding/atmosphere so feed feels native */
+[data-theme="tiktok"] > div.pointer-events-none.absolute.inset-0 {
+    display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
  * ⑦ BENTO 🍱 — Japanese bento mosaic: every card becomes a vivid
  *    gradient tile. Adjacent cards cycle through 6 palettes for that
  *    "colorful boxes lined up in a wooden tray" feel.
