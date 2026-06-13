@@ -373,7 +373,9 @@ export async function POST(request: Request) {
                 if (!weekVotingSnap.exists) throw new Error("Week not found");
 
                 const weekData = weekVotingSnap.data() as any;
-                if (weekData.king !== authName && !isAdmin) throw new Error("Only the King can control day voting");
+                // Random outings: any signed-in member can toggle. Otherwise, king-only.
+                const allowAny = Boolean(weekData?.isRandom);
+                if (!allowAny && weekData.king !== authName && !isAdmin) throw new Error("Only the King can control day voting");
 
                 const enabled = Boolean(payload.enabled);
                 const resetVotes = Boolean(payload.resetVotes);
@@ -390,6 +392,7 @@ export async function POST(request: Request) {
                 if (!isDayVoteOption(payload.day)) throw new Error("Invalid day vote");
 
                 const weekVoteRef = adminDb.collection("weeks").doc(payload.weekId);
+                let autoAppliedDay: string | null = null;
                 await adminDb.runTransaction(async (tx) => {
                     const weekVoteSnap = await tx.get(weekVoteRef);
                     if (!weekVoteSnap.exists) throw new Error("Week not found");
@@ -402,9 +405,39 @@ export async function POST(request: Request) {
 
                     const currentVotes = { ...(weekData?.dayVotes || {}) } as Record<string, string>;
                     currentVotes[authName] = payload.day;
-                    tx.update(weekVoteRef, { dayVotes: currentVotes, dayVotingEnabled: true });
+
+                    const updatePayload: Record<string, unknown> = {
+                        dayVotes: currentVotes,
+                        dayVotingEnabled: true,
+                    };
+
+                    // Auto-apply for random outings when 4+ valid votes exist.
+                    if (weekData?.isRandom) {
+                        const responded: string[] = Array.isArray(weekData.responded) ? weekData.responded : [];
+                        const absentees: string[] = Array.isArray(weekData.absentees) ? weekData.absentees : [];
+                        let thursday = 0;
+                        let friday = 0;
+                        let validCount = 0;
+                        for (const [name, day] of Object.entries(currentVotes)) {
+                            const eligible = responded.includes(name) && !absentees.includes(name);
+                            if (!eligible) continue;
+                            validCount += 1;
+                            if (day === "الخميس") thursday += 1;
+                            if (day === "الجمعة") friday += 1;
+                            if (day === "الخميس والجمعة") { thursday += 1; friday += 1; }
+                        }
+                        // Threshold: 4 of 6 = consensus. Tie → don't auto-apply.
+                        if (validCount >= 4 && thursday !== friday) {
+                            const chosen = thursday > friday ? "الخميس" : "الجمعة";
+                            updatePayload.day = chosen;
+                            updatePayload.dayVotingEnabled = false;
+                            autoAppliedDay = chosen;
+                        }
+                    }
+
+                    tx.update(weekVoteRef, updatePayload);
                 });
-                return NextResponse.json({ result: true });
+                return NextResponse.json({ result: true, autoAppliedDay });
             }
 
             case "applyDayVoteResult": {
@@ -413,7 +446,9 @@ export async function POST(request: Request) {
                 if (!weekApplySnap.exists) throw new Error("Week not found");
 
                 const weekData = weekApplySnap.data() as any;
-                if (weekData.king !== authName && !isAdmin) throw new Error("Only the King can apply the voting result");
+                // Random outings: any signed-in member can apply. Otherwise, king-only.
+                const allowAny = Boolean(weekData?.isRandom);
+                if (!allowAny && weekData.king !== authName && !isAdmin) throw new Error("Only the King can apply the voting result");
 
                 const responded = Array.isArray(weekData.responded) ? weekData.responded : [];
                 const absentees = Array.isArray(weekData.absentees) ? weekData.absentees : [];

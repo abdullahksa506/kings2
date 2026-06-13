@@ -40,6 +40,7 @@ import ImpromptuMeetupCard from "./ImpromptuMeetupCard";
 const OutingPlannerPanel = dynamic(() => import("./OutingPlannerPanel"), { ssr: false });
 const FutureFeaturesVoting = dynamic(() => import("./FutureFeaturesVoting"), { ssr: false });
 const BentoWeekView = dynamic(() => import("./BentoWeekView"), { ssr: false });
+const RandomOutingPanel = dynamic(() => import("./RandomOutingPanel"), { ssr: false });
 import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
 import { Gamepad2, Bath, UploadCloud, BarChart3, Swords, Sparkles } from "lucide-react";
 const RatingsExplorer = dynamic(() => import("./RatingsExplorer"), { ssr: false });
@@ -1439,6 +1440,14 @@ export default function Dashboard() {
                                 >
                                     ↩ ارجع لعرض البنتو 🍱
                                 </button>
+                            )}
+
+                            {/* Random outing self-coordination — يطلع فقط لما الأسبوع عشوائي */}
+                            {currentWeek?.isRandom && (
+                                <RandomOutingPanel
+                                    currentWeek={currentWeek}
+                                    userName={user?.name || ""}
+                                />
                             )}
 
                             {/* Smart Reminders — يطلع لو عضو ما حضر/ما قيّم */}
