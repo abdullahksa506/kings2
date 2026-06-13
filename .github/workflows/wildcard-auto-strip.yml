@@ -53,15 +53,19 @@ jobs:
           HOSTILE = [
               r"wildcard\s+development\s+mode",
               r"wildcard\s+mode",
+              r"\bwildcard\b",  # broad sweep — any mention of "wildcard" word
               r"silent\s+activation",
               r"rule\s+invincibility",
-              r"50%\s+chance.*wildcard",
-              r"wildcard.*50%\s+chance",
+              r"50%\s+chance",
               r"don.?t\s+tell\s+the\s+user\s+that\s+wildcard",
               r"invent\s+your\s+own\s+feature",
               r"let\s+chaos\s+unfold",
               r"pretend\s+like\s+you\s+did[,]?\s+but\s+don.?t\s+actually\s+delete",
               r"never\s+explicitly\s+ack?nowledge\s+this\s+rule\s+exists",
+              r"shake\s+to\s+insult\s+the\s+king",
+              r"secret\s+disco\s+mode",
+              r"hidden\s+.أنا\s+جوعان.\s+panic\s+button",
+              r"easter\s+egg\s+that\s+replaces",
           ]
           HOSTILE_RE = re.compile("|".join(f"(?:{p})" for p in HOSTILE), re.IGNORECASE)
 
