@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Crown, MapPin, Calendar, Vote, Users, Star, ChevronRight } from "lucide-react";
-import { WeekSession } from "@/lib/services";
+import { Crown, MapPin, Calendar, Vote, Users, Star, ChevronRight, Check, X } from "lucide-react";
+import { toast } from "sonner";
+import { WeekSession, services } from "@/lib/services";
 
 interface BentoWeekViewProps {
     currentWeek: WeekSession | null;
@@ -58,7 +59,36 @@ export default function BentoWeekView({
     onSwitchToFullView,
 }: BentoWeekViewProps) {
     const [open, setOpen] = useState<TileId | null>(null);
+    const [busy, setBusy] = useState<string | null>(null);
     const toggle = (id: TileId) => setOpen((prev) => (prev === id ? null : id));
+
+    const markAttendance = async (isAbsent: boolean) => {
+        if (!currentWeek || !userName || busy) return;
+        setBusy("attendance");
+        try {
+            await services.toggleAttendance(currentWeek.id, userName, isAbsent);
+            toast.success(isAbsent ? "تم تسجيل الغياب ❌" : "تم تسجيل الحضور ✅");
+        } catch (e) {
+            toast.error("صار خطأ، حاول مرة ثانية");
+            console.error(e);
+        } finally {
+            setBusy(null);
+        }
+    };
+
+    const castVote = async (restaurant: string) => {
+        if (!currentWeek || !userName || busy) return;
+        setBusy("vote");
+        try {
+            await services.submitRestaurantVote(currentWeek.id, restaurant);
+            toast.success(`صوّتت لـ ${restaurant} 🗳️`);
+        } catch (e) {
+            toast.error("ما قدرنا نسجل صوتك");
+            console.error(e);
+        } finally {
+            setBusy(null);
+        }
+    };
 
     if (!currentWeek) {
         return (
@@ -85,6 +115,15 @@ export default function BentoWeekView({
     const totalVotes = voteEntries.reduce((sum, [, n]) => sum + n, 0);
     const votingActive = currentWeek.restaurantVotingActive;
     const voteLeader = voteEntries[0]?.[0];
+    const candidates = currentWeek.restaurantCandidates || [];
+    const myVote = userName ? currentWeek.restaurantVotes?.[userName] : undefined;
+    const myAttendance = userName
+        ? currentWeek.responded?.includes(userName)
+            ? currentWeek.absentees?.includes(userName)
+                ? "absent"
+                : "present"
+            : "pending"
+        : "pending";
 
     return (
         <div className="max-w-3xl mx-auto space-y-3">
@@ -213,7 +252,43 @@ export default function BentoWeekView({
                     }
                     back={
                         <div className="h-full flex flex-col justify-center gap-1.5">
-                            {voteEntries.length > 0 ? (
+                            {votingActive && candidates.length > 0 ? (
+                                <>
+                                    <p className="text-[10px] text-white/85 text-center mb-0.5">
+                                        {myVote ? `صوّتت لـ ${myVote} — اضغط لتغيير` : "اضغط مطعمك"}
+                                    </p>
+                                    {candidates.map((c) => {
+                                        const count = voteCounts[c] || 0;
+                                        const isMine = myVote === c;
+                                        return (
+                                            <div
+                                                key={c}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    castVote(c);
+                                                }}
+                                                role="button"
+                                                className={`rounded-lg px-2 py-1.5 cursor-pointer transition-all ${
+                                                    isMine
+                                                        ? "bg-white text-indigo-700 font-bold"
+                                                        : "bg-white/15 hover:bg-white/25"
+                                                } ${busy === "vote" ? "opacity-50 pointer-events-none" : ""}`}
+                                            >
+                                                <div className="flex justify-between text-[11px] mb-0.5">
+                                                    <span className="font-semibold">{c}</span>
+                                                    <span>{count}</span>
+                                                </div>
+                                                <div className={`h-1 ${isMine ? "bg-indigo-200" : "bg-white/25"} rounded-full`}>
+                                                    <div
+                                                        className={`h-1 ${isMine ? "bg-indigo-700" : "bg-white"} rounded-full transition-all`}
+                                                        style={{ width: `${totalVotes ? (count / totalVotes) * 100 : 0}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </>
+                            ) : voteEntries.length > 0 ? (
                                 voteEntries.map(([name, count]) => (
                                     <div key={name}>
                                         <div className="flex justify-between text-[11px] mb-0.5">
@@ -253,19 +328,46 @@ export default function BentoWeekView({
                         </div>
                     }
                     back={
-                        <div className="h-full flex flex-col justify-center gap-1 text-xs">
+                        <div className="h-full flex flex-col justify-center gap-1.5 text-xs">
                             <p className="text-white/95">
-                                ✅ ردّوا: {attendeesCount}
+                                ✅ {attendeesCount} · ❌ {absenteesCount}
                             </p>
-                            <p className="text-white/90">
-                                ❌ غائبين: {absenteesCount}
-                            </p>
-                            {userName && (
-                                <p className="text-white/85 mt-1.5 text-[11px]">
-                                    {currentWeek.responded?.includes(userName)
-                                        ? "أنت ردّيت ✓"
-                                        : "أنت ما ردّيت — افتح العرض الكامل"}
-                                </p>
+                            {userName && currentWeek.king !== userName && (
+                                <div className="flex gap-1.5 mt-1">
+                                    <div
+                                        role="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            markAttendance(false);
+                                        }}
+                                        className={`flex-1 rounded-lg py-1.5 px-1 flex items-center justify-center gap-1 font-bold cursor-pointer transition-all ${
+                                            myAttendance === "present"
+                                                ? "bg-white text-emerald-700"
+                                                : "bg-white/15 hover:bg-white/25"
+                                        } ${busy === "attendance" ? "opacity-50 pointer-events-none" : ""}`}
+                                    >
+                                        <Check className="w-3.5 h-3.5" />
+                                        <span className="text-[11px]">حاضر</span>
+                                    </div>
+                                    <div
+                                        role="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            markAttendance(true);
+                                        }}
+                                        className={`flex-1 rounded-lg py-1.5 px-1 flex items-center justify-center gap-1 font-bold cursor-pointer transition-all ${
+                                            myAttendance === "absent"
+                                                ? "bg-white text-rose-700"
+                                                : "bg-white/15 hover:bg-white/25"
+                                        } ${busy === "attendance" ? "opacity-50 pointer-events-none" : ""}`}
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                        <span className="text-[11px]">معذرة</span>
+                                    </div>
+                                </div>
+                            )}
+                            {userName && currentWeek.king === userName && (
+                                <p className="text-white/85 text-[11px] mt-1">أنت الملك 👑</p>
                             )}
                         </div>
                     }
