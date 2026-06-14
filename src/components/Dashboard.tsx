@@ -503,7 +503,17 @@ export default function Dashboard() {
     // Tab State
     type TabType = "week" | "leaderboard" | "bathroom" | "map" | "more";
     const [activeTab, setActiveTab] = useState<TabType>("week");
-    const [selectedTheme, setSelectedTheme] = useState<ThemeKey>("royal-amber");
+    // Lazy init from localStorage so first React render already uses correct
+    // theme — combined with the inline boot script in layout.tsx, this kills
+    // the brief flash of the default theme on cold start.
+    const [selectedTheme, setSelectedTheme] = useState<ThemeKey>(() => {
+        if (typeof window === "undefined") return "royal-amber";
+        try {
+            const stored = localStorage.getItem("king_theme") as ThemeKey | null;
+            if (stored && THEME_OPTIONS.some((t) => t.id === stored)) return stored;
+        } catch { /* ignore */ }
+        return "royal-amber";
+    });
     const [bentoFullView, setBentoFullView] = useState(false);
     const [tiktokFullView, setTiktokFullView] = useState(false);
     const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});

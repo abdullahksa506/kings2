@@ -262,7 +262,47 @@
  * ⑧ TIKTOK 📱 — pure black bg, no extra rounding/shadow elsewhere
  *   The TikTokFeedView is full-screen overlay (fixed.inset-0) so
  *   its own styles win; this just keeps the rest of the app dark.
+ *
+ *   Anti-FOUC: the inline boot script in layout.tsx sets data-theme
+ *   on <html> from localStorage BEFORE first paint. These rules
+ *   override the body/main bg so the user never sees slate-950 flash.
  * ═══════════════════════════════════════════════════════════════ */
+
+html[data-theme="tiktok"],
+html[data-theme="tiktok"] body,
+html[data-theme="tiktok"] main {
+    background-color: #000 !important;
+}
+
+html[data-theme="brutalist"],
+html[data-theme="brutalist"] body,
+html[data-theme="brutalist"] main {
+    background-color: #1c1917 !important;
+}
+
+html[data-theme="terminal"],
+html[data-theme="terminal"] body,
+html[data-theme="terminal"] main {
+    background-color: #0a0e0a !important;
+}
+
+html[data-theme="comic-pop"],
+html[data-theme="comic-pop"] body,
+html[data-theme="comic-pop"] main {
+    background-color: #bae6fd !important;
+}
+
+html[data-theme="aurora"],
+html[data-theme="aurora"] body,
+html[data-theme="aurora"] main {
+    background-color: #1e1b4b !important;
+}
+
+html[data-theme="bento"],
+html[data-theme="bento"] body,
+html[data-theme="bento"] main {
+    background-color: #020617 !important;
+}
 
 [data-theme="tiktok"] {
     background-color: #000;
