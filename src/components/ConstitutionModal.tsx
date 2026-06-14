@@ -175,7 +175,7 @@ export default function ConstitutionModal({
                             </li>
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-fuchsia-500 mt-2 shrink-0"></div>
-                                <p><strong className="text-fuchsia-300">التنسيق الذاتي:</strong> في الأسبوع العشوائي، أي عضو يقدر يبدأ التصويت داخل التطبيق. يُحسم اليوم تلقائياً لما يصوّت <strong>٤ أو أكثر</strong> من الحاضرين بدون تعادل، دون الحاجة لتدخل ملك.</p>
+                                <p>صاحب أعلى تقييم في الدورة السابقة يُكافأ بـ "صوتين" في تصويت الأسبوع العشوائي.</p>
                             </li>
                         </ul>
                     </div>
