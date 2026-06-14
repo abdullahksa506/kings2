@@ -6,35 +6,59 @@ import { toast } from "sonner";
 import { WeekSession, VALID_NAMES, services, ChatMessage } from "@/lib/services";
 
 /**
- * Real music — Kevin MacLeod (incompetech.com) — Creative Commons BY 4.0.
- * Each track is a full composition (not algorithmic). Track moods are picked
- * to match each card vibe. Attribution is shown on each music caption.
+ * Track type — fetched dynamically from iTunes Preview API.
+ * iTunes Preview API is public, no auth, free; returns 30-sec audio snippets
+ * of real songs (Arabic + global). This is exactly how Apple's own iTunes
+ * Store does song previews. Anyone with a browser can play these.
  */
-const TRACKS: Array<{ url: string; title: string; artist: string }> = [
-    // King — heroic fanfare
-    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Mining%20by%20Moonlight.mp3", title: "Mining by Moonlight", artist: "Kevin MacLeod" },
-    // Restaurant — chill jazz
-    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Carefree.mp3", title: "Carefree", artist: "Kevin MacLeod" },
-    // Day vote — sneaky comedy
-    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Sneaky%20Snitch.mp3", title: "Sneaky Snitch", artist: "Kevin MacLeod" },
-    // Attendance — funky upbeat
-    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Funky%20Chunk.mp3", title: "Funky Chunk", artist: "Kevin MacLeod" },
-    // Restaurant vote — competitive build
-    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/The%20Builder.mp3", title: "The Builder", artist: "Kevin MacLeod" },
-    // Past week — nostalgic mellow
-    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Wallpaper.mp3", title: "Wallpaper", artist: "Kevin MacLeod" },
-    // Leaderboard — serious jazzy
-    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Lobby%20Time.mp3", title: "Lobby Time", artist: "Kevin MacLeod" },
-    // Bathroom — silly playful
-    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Monkeys%20Spinning%20Monkeys.mp3", title: "Monkeys Spinning Monkeys", artist: "Kevin MacLeod" },
-    // Map / recent — adventurous epic
-    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Pamgaea.mp3", title: "Pamgaea", artist: "Kevin MacLeod" },
-    // Chat — upbeat happy
-    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Hyperfun.mp3", title: "Hyperfun", artist: "Kevin MacLeod" },
-    // Bonus — relaxed mood music
-    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Local%20Forecast%20-%20Elevator.mp3", title: "Local Forecast", artist: "Kevin MacLeod" },
-    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Wholesome.mp3", title: "Wholesome", artist: "Kevin MacLeod" },
+interface Track {
+    url: string;          // 30-second preview .m4a URL
+    title: string;        // Song title
+    artist: string;       // Artist name
+    artwork: string;      // 600x600 album artwork URL
+}
+
+/**
+ * Search queries per card vibe. We use real Arab + global artists so each
+ * card gets a song that fits the mood. Limit=1 → use the top match.
+ * country=SA gives the Saudi storefront which prioritizes Arab catalog.
+ */
+const SEARCH_TERMS: Array<{ vibe: string; q: string; country: string }> = [
+    { vibe: "king",         q: "تامر حسني وحشتيني",  country: "SA" }, // King card
+    { vibe: "restaurant",   q: "محمد حماقي نفسي",     country: "SA" }, // Restaurant
+    { vibe: "day-vote",     q: "Amr Diab Tamally",    country: "SA" }, // Day vote
+    { vibe: "attendance",   q: "عمرو دياب نور العين", country: "SA" }, // Attendance
+    { vibe: "rest-vote",    q: "حسين الجسمي",          country: "SA" }, // Restaurant vote
+    { vibe: "past",         q: "كاظم الساهر",          country: "SA" }, // Past week
+    { vibe: "leader",       q: "نانسي عجرم سلمولي",    country: "SA" }, // Leaderboard
+    { vibe: "bathroom",     q: "ميامي مغرور",          country: "SA" }, // Bathroom
+    { vibe: "map",          q: "محمد عبده",            country: "SA" }, // Map
+    { vibe: "chat",         q: "إليسا حالة حب",         country: "SA" }, // Chat
 ];
+
+async function fetchTracks(): Promise<Track[]> {
+    const out: Track[] = [];
+    for (const { q, country } of SEARCH_TERMS) {
+        try {
+            const res = await fetch(
+                `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=song&limit=1&country=${country}`,
+            );
+            const json = await res.json();
+            const r = json?.results?.[0];
+            if (r?.previewUrl) {
+                out.push({
+                    url: r.previewUrl,
+                    title: r.trackName || "غير معروف",
+                    artist: r.artistName || "غير معروف",
+                    artwork: (r.artworkUrl100 || "").replace("100x100", "600x600"),
+                });
+            }
+        } catch {
+            // ignore — we'll just use fewer tracks if a query fails
+        }
+    }
+    return out;
+}
 
 interface TikTokFeedViewProps {
     currentWeek: WeekSession | null;
@@ -157,6 +181,14 @@ export default function TikTokFeedView({
     const [likedCards, setLikedCards] = useState<Record<string, boolean>>({});
     const [doubleTapHeart, setDoubleTapHeart] = useState<{ id: number; x: number; y: number } | null>(null);
     const lastTapRef = useRef<{ time: number; cardId: string }>({ time: 0, cardId: "" });
+    const [tracks, setTracks] = useState<Track[]>([]);
+
+    // Fetch real song previews from iTunes API (no auth, free, ~30s clips)
+    useEffect(() => {
+        fetchTracks().then((list) => {
+            if (list.length > 0) setTracks(list);
+        });
+    }, []);
 
     // TikTok signature: double-tap anywhere on a card → animated heart + like
     const handleCardTap = (cardId: string, e: React.MouseEvent | React.TouchEvent) => {
@@ -232,13 +264,13 @@ export default function TikTokFeedView({
         return () => { try { unsub(); } catch {} };
     }, []);
 
-    // Swap music per-card. Cards are rendered in order so we index TRACKS by activeIdx.
-    const currentTrack = TRACKS[activeIdx % TRACKS.length];
+    // Swap music per-card. Use dynamic fetched tracks (real songs from iTunes).
+    const currentTrack: Track | undefined = tracks.length > 0 ? tracks[activeIdx % tracks.length] : undefined;
 
     // Update audio source when card changes
     useEffect(() => {
         const a = audioRef.current;
-        if (!a) return;
+        if (!a || !currentTrack) return;
         if (a.src !== currentTrack.url) {
             const wasPlaying = !a.paused;
             a.src = currentTrack.url;
@@ -247,7 +279,7 @@ export default function TikTokFeedView({
                 a.play().catch(() => {});
             }
         }
-    }, [currentTrack.url, muted]);
+    }, [currentTrack?.url, muted, currentTrack]);
 
     // First user interaction → enable audio (browser autoplay policy)
     const enableAudio = () => {
@@ -405,8 +437,8 @@ export default function TikTokFeedView({
                 <CaptionOverlay
                     username="king_of_thursday"
                     caption={`الملك ${kingName} بنفسه 👑 الكل يحضّر! 🔥`}
-                    music={TRACKS[0].title}
-                    artist={TRACKS[0].artist}
+                    music={tracks[0]?.title}
+                    artist={tracks[0]?.artist}
                 />
                 <ActionRail profile="👑" onShare={shareKing} playing={!muted && audioReady} />
             </div>
@@ -426,8 +458,8 @@ export default function TikTokFeedView({
                 <CaptionOverlay
                     username="restaurant_pick"
                     caption={`الطلعة في ${restaurant} 🤤 يا حلو الأكل!`}
-                    music={TRACKS[1].title}
-                    artist={TRACKS[1].artist}
+                    music={tracks[1]?.title}
+                    artist={tracks[1]?.artist}
                 />
                 <ActionRail
                     profile="🍔"
@@ -486,8 +518,8 @@ export default function TikTokFeedView({
                 <CaptionOverlay
                     username="day_vote"
                     caption={day ? "محسوم ✅" : "اسحب يمين أو صوّت ↑"}
-                    music={TRACKS[2].title}
-                    artist={TRACKS[2].artist}
+                    music={tracks[2]?.title}
+                    artist={tracks[2]?.artist}
                 />
                 <ActionRail
                     profile="📅"
@@ -520,8 +552,8 @@ export default function TikTokFeedView({
                 <CaptionOverlay
                     username="attendance"
                     caption={`${attendingCount} حاضر من ٦ 🔥`}
-                    music={TRACKS[3].title}
-                    artist={TRACKS[3].artist}
+                    music={tracks[3]?.title}
+                    artist={tracks[3]?.artist}
                 />
                 <ActionRail
                     profile={myAttendance === "present" ? "✅" : myAttendance === "absent" ? "❌" : "🤔"}
@@ -585,8 +617,8 @@ export default function TikTokFeedView({
                     <CaptionOverlay
                         username="resto_vote"
                         caption="مين راح يكسب؟ 🥁"
-                        music={TRACKS[4].title}
-                    artist={TRACKS[4].artist}
+                        music={tracks[4]?.title}
+                    artist={tracks[4]?.artist}
                     />
                     <ActionRail profile="🗳️" playing={!muted && audioReady} />
                 </div>
@@ -609,8 +641,8 @@ export default function TikTokFeedView({
                     <CaptionOverlay
                         username="leaderboard"
                         caption={`${topMember.name} يحكم اللوحة 👑`}
-                        music={TRACKS[5].title}
-                    artist={TRACKS[5].artist}
+                        music={tracks[5]?.title}
+                    artist={tracks[5]?.artist}
                     />
                     <ActionRail profile="🏆" playing={!muted && audioReady} />
                 </div>
@@ -633,8 +665,8 @@ export default function TikTokFeedView({
                     <CaptionOverlay
                         username="last_week"
                         caption={`ذكريات أسبوع ${pastWeek.weekNumber} 📸`}
-                        music={TRACKS[6].title}
-                    artist={TRACKS[6].artist}
+                        music={tracks[6]?.title}
+                    artist={tracks[6]?.artist}
                     />
                     <ActionRail profile="🎞️" playing={!muted && audioReady} />
                 </div>
@@ -684,8 +716,8 @@ export default function TikTokFeedView({
                 <CaptionOverlay
                     username="leaderboard_legend"
                     caption="مين أحسن ملك من ناحية التقييم؟ 👑📊"
-                    music={TRACKS[7].title}
-                    artist={TRACKS[7].artist}
+                    music={tracks[7]?.title}
+                    artist={tracks[7]?.artist}
                 />
                 <ActionRail profile="🏆" playing={!muted && audioReady} />
             </div>
@@ -728,8 +760,8 @@ export default function TikTokFeedView({
                 <CaptionOverlay
                     username="bathroom_critic"
                     caption="ما تنسى الحمّام الزين 🧻✨"
-                    music={TRACKS[8].title}
-                    artist={TRACKS[8].artist}
+                    music={tracks[8]?.title}
+                    artist={tracks[8]?.artist}
                 />
                 <ActionRail profile="🚽" playing={!muted && audioReady} />
             </div>
@@ -768,8 +800,8 @@ export default function TikTokFeedView({
                 <CaptionOverlay
                     username="map_memories"
                     caption="ذكريات في كل مطعم 🍽️📍"
-                    music={TRACKS[9].title}
-                    artist={TRACKS[9].artist}
+                    music={tracks[9]?.title}
+                    artist={tracks[9]?.artist}
                 />
                 <ActionRail profile="🗺️" playing={!muted && audioReady} />
             </div>
@@ -806,8 +838,8 @@ export default function TikTokFeedView({
                 <CaptionOverlay
                     username="group_chat"
                     caption="كلام الجلسة هنا 🗨️"
-                    music={TRACKS[10].title}
-                    artist={TRACKS[10].artist}
+                    music={tracks[10]?.title}
+                    artist={tracks[10]?.artist}
                 />
                 <ActionRail profile="💬" playing={!muted && audioReady} />
             </div>
