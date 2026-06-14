@@ -155,11 +155,17 @@ export default function RestaurantMapPanel({ isOpen, onClose, userName, isAdmin,
 
         layer.clearLayers();
         const pts: [number, number][] = [];
+        const summaryByName = new Map<string, RestaurantSummary>();
+        for (const s of summaries) summaryByName.set(canonRestaurant(s.name), s);
 
-        for (const s of located) {
-            const loc = locByName.get(canonRestaurant(s.name));
-            if (!loc) continue;
-            const color = pinColor(s.avgRating);
+        // Render EVERY saved location — even ones without matching week history.
+        // Previously we only rendered intersection(summaries, locations) which hid
+        // valid pins from other devices/members.
+        for (const loc of locations) {
+            const canon = canonRestaurant(loc.name);
+            const summary = summaryByName.get(canon);
+            const avg = summary?.avgRating ?? 0;
+            const color = pinColor(avg);
             const icon = L.divIcon({
                 className: "",
                 html: `<div style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${color};color:#fff;font-size:15px;box-shadow:0 2px 6px rgba(0,0,0,.4);border:2px solid #fff;"><span style="transform:rotate(45deg)">🍽️</span></div>`,
@@ -168,14 +174,15 @@ export default function RestaurantMapPanel({ isOpen, onClose, userName, isAdmin,
                 popupAnchor: [0, -34],
             });
             const marker = L.marker([loc.lat, loc.lng], { icon }).addTo(layer);
-            const stars = s.avgRating > 0 ? `⭐ ${s.avgRating}` : "بدون تقييم";
+            const stars = summary && summary.avgRating > 0 ? `⭐ ${summary.avgRating}` : "بدون تقييم";
+            const visitText = summary ? `${stars} · ${summary.visitCount} زيارة` : "موقع محفوظ";
             marker.bindPopup(
                 `<div dir="rtl" style="text-align:right;font-family:inherit;min-width:140px">
-                    <div style="font-weight:700;font-size:14px;margin-bottom:4px">${escapeHtml(s.name)}</div>
-                    <div style="font-size:12px;color:#475569">${stars} · ${s.visitCount} زيارة</div>
+                    <div style="font-weight:700;font-size:14px;margin-bottom:4px">${escapeHtml(loc.name)}</div>
+                    <div style="font-size:12px;color:#475569">${visitText}</div>
                 </div>`,
             );
-            marker.on("click", () => setSelected(canonRestaurant(s.name)));
+            marker.on("click", () => setSelected(canon));
             pts.push([loc.lat, loc.lng]);
         }
 
@@ -186,7 +193,7 @@ export default function RestaurantMapPanel({ isOpen, onClose, userName, isAdmin,
                 /* ignore */
             }
         }
-    }, [located, locByName, addTarget]);
+    }, [summaries, locations, addTarget]);
 
     // --- Pending marker (while adding a location) ---
     useEffect(() => {
@@ -334,7 +341,7 @@ export default function RestaurantMapPanel({ isOpen, onClose, userName, isAdmin,
                     <div>
                         <h2 className="text-lg md:text-xl font-bold text-white">خريطة المطاعم</h2>
                         <p className="text-[11px] text-slate-500">
-                            {located.length} مموقع · {unlocated.length} بدون موقع
+                            {locations.length} موقع · {unlocated.length} بدون موقع
                         </p>
                     </div>
                 </div>
