@@ -1,9 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Crown, MapPin, Calendar, Share2, Music, ChevronUp, Vote, Users, Check, X, Trophy, Rewind, Volume2, VolumeX, Settings, Heart } from "lucide-react";
+import { Crown, MapPin, Calendar, Music, ChevronUp, Vote, Users, Check, X, Trophy, Rewind, Volume2, VolumeX, Settings, Heart, MessageCircle, Bookmark, Send, Plus } from "lucide-react";
+
+// TikTok signature colors
+const TT_RED = "#FE2C55";
+const TT_CYAN = "#25F4EE";
+
+// Format counts like TikTok: 1234 → "1.2K", 1234567 → "1.2M"
+function fmt(n: number): string {
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+    if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
+    return String(n);
+}
 import { toast } from "sonner";
 import { WeekSession, VALID_NAMES, services, ChatMessage, Suggestion, FUTURE_FEATURE_SEEDS } from "@/lib/services";
+import { impromptuServices, ImpromptuMeetup } from "@/lib/impromptuServices";
+import dynamic from "next/dynamic";
+// Lazy-load the real interactive map (Leaflet uses window/document)
+const RestaurantMapPanel = dynamic(() => import("./RestaurantMapPanel"), { ssr: false });
 
 /**
  * Track type — fetched dynamically from iTunes Preview API.
@@ -202,22 +217,104 @@ function ActionRail({
     profile,
     onShare,
     playing,
+    likes,
+    comments,
+    shares,
+    bookmarks,
+    liked,
+    bookmarked,
+    onLike,
+    onComment,
+    onBookmark,
+    artwork,
 }: {
     items?: ActionRailItem[];
     profile?: string;
     onShare?: () => void;
     playing?: boolean;
+    likes?: number;
+    comments?: number;
+    shares?: number;
+    bookmarks?: number;
+    liked?: boolean;
+    bookmarked?: boolean;
+    onLike?: () => void;
+    onComment?: () => void;
+    onBookmark?: () => void;
+    artwork?: string;
 }) {
     return (
-        <div className="absolute bottom-12 right-2 z-30 flex flex-col items-center gap-4">
-            {/* Profile circle (decorative — but kept as visual anchor like real TikTok) */}
+        <div className="absolute bottom-24 right-2 z-30 flex flex-col items-center gap-5 w-14">
+            {/* Profile avatar with red follow + badge — TikTok signature */}
             {profile && (
-                <div className={`w-12 h-12 rounded-full overflow-hidden border-[2.5px] border-white bg-gradient-to-br from-pink-500 via-fuchsia-500 to-cyan-500 flex items-center justify-center text-2xl mb-1 ${playing ? "animate-glow" : ""}`}>
-                    {profile}
+                <div className="relative mb-1">
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white bg-gradient-to-br from-pink-500 via-fuchsia-500 to-cyan-500 flex items-center justify-center text-2xl">
+                        {profile}
+                    </div>
+                    <div
+                        className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full border-2 border-black flex items-center justify-center"
+                        style={{ backgroundColor: TT_RED }}
+                    >
+                        <Plus className="w-3 h-3 text-white" strokeWidth={3.5} />
+                    </div>
                 </div>
             )}
 
-            {/* Custom items (interactive buttons specific to card) */}
+            {/* Heart / Like */}
+            {onLike && (
+                <button onClick={onLike} className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform">
+                    <Heart
+                        className="w-10 h-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+                        fill={liked ? TT_RED : "none"}
+                        stroke={liked ? TT_RED : "#fff"}
+                        strokeWidth={2}
+                    />
+                    <span className="text-[11px] text-white font-bold drop-shadow-lg">{fmt(likes ?? 0)}</span>
+                </button>
+            )}
+
+            {/* Comment */}
+            {onComment && (
+                <button onClick={onComment} className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform">
+                    <MessageCircle
+                        className="w-10 h-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+                        fill="#fff"
+                        stroke="#fff"
+                        strokeWidth={1}
+                        style={{ transform: "scaleX(-1)" }}
+                    />
+                    <span className="text-[11px] text-white font-bold drop-shadow-lg">{fmt(comments ?? 0)}</span>
+                </button>
+            )}
+
+            {/* Bookmark / Save */}
+            {onBookmark && (
+                <button onClick={onBookmark} className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform">
+                    <Bookmark
+                        className="w-10 h-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+                        fill={bookmarked ? "#FACC15" : "#fff"}
+                        stroke={bookmarked ? "#FACC15" : "#fff"}
+                        strokeWidth={1}
+                    />
+                    <span className="text-[11px] text-white font-bold drop-shadow-lg">{fmt(bookmarks ?? 0)}</span>
+                </button>
+            )}
+
+            {/* Share (paper plane arrow — opens WhatsApp) */}
+            {onShare && (
+                <button onClick={onShare} className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform">
+                    <Send
+                        className="w-9 h-9 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+                        fill="#fff"
+                        stroke="#fff"
+                        strokeWidth={1}
+                        style={{ transform: "rotate(45deg) translate(2px, -2px)" }}
+                    />
+                    <span className="text-[11px] text-white font-bold drop-shadow-lg">{fmt(shares ?? 0)}</span>
+                </button>
+            )}
+
+            {/* Custom interactive items (vote / attendance / etc.) */}
             {items?.map((item, i) => (
                 <button
                     key={i}
@@ -226,11 +323,12 @@ function ActionRail({
                     className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform disabled:opacity-40"
                 >
                     <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                        className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
                             item.active
-                                ? "bg-pink-500 scale-110 shadow-lg shadow-pink-500/60"
+                                ? "scale-110 shadow-lg"
                                 : "bg-black/45 backdrop-blur"
                         }`}
+                        style={item.active ? { backgroundColor: TT_RED, boxShadow: `0 0 14px ${TT_RED}99` } : undefined}
                     >
                         {item.icon}
                     </div>
@@ -238,19 +336,14 @@ function ActionRail({
                 </button>
             ))}
 
-            {/* Share — opens WhatsApp with prefilled text */}
-            {onShare && (
-                <button onClick={onShare} className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform">
-                    <div className="w-12 h-12 rounded-full bg-black/45 backdrop-blur flex items-center justify-center">
-                        <Share2 className="w-6 h-6 text-white" />
-                    </div>
-                    <span className="text-[11px] text-white font-bold drop-shadow-lg">شارك</span>
-                </button>
-            )}
-
-            {/* Rotating music disc — purely visual (matches the music caption) */}
-            <div className={`mt-1 w-10 h-10 rounded-full border-2 border-white/30 bg-gradient-to-br from-pink-600 via-fuchsia-700 to-black flex items-center justify-center ${playing ? "animate-spin-slow" : ""}`}>
-                <div className={`w-3 h-3 rounded-full bg-black border-2 ${playing ? "border-pink-300" : "border-white/40"}`} />
+            {/* Spinning vinyl disc with album artwork in the center — TikTok signature */}
+            <div className={`mt-1 w-10 h-10 rounded-full bg-black border-[2.5px] border-white/20 overflow-hidden flex items-center justify-center ${playing ? "animate-spin-slow" : ""}`}>
+                {artwork ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={artwork} alt="" className="w-7 h-7 rounded-full object-cover" />
+                ) : (
+                    <div className="w-2.5 h-2.5 rounded-full bg-white/60" />
+                )}
             </div>
         </div>
     );
@@ -269,18 +362,22 @@ function CaptionOverlay({
 }) {
     const musicLine = music && artist ? `${music} — ${artist}` : music || "";
     return (
-        <div className="absolute bottom-12 left-4 right-24 z-30 text-white">
-            <p className="font-black text-base mb-1 drop-shadow-lg">@{username}</p>
-            <p className="text-sm leading-relaxed drop-shadow-lg mb-2">{caption}</p>
-            {music && (
-                <div className="flex items-center gap-1.5 text-xs">
-                    <Music className="w-3 h-3" />
-                    <div className="overflow-hidden whitespace-nowrap">
-                        <span className="inline-block animate-marquee">♪ {musicLine} ♪ {musicLine} ♪</span>
+        <>
+            {/* Dark gradient over the bottom 35% for text legibility — TikTok signature */}
+            <div className="absolute bottom-0 left-0 right-0 h-[40%] z-20 bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none" />
+            <div className="absolute bottom-6 left-4 right-20 z-30 text-white">
+                <p className="font-black text-[17px] mb-1.5 drop-shadow-lg">{username}</p>
+                <p className="text-[14px] leading-snug drop-shadow-lg mb-2.5">{caption}</p>
+                {music && (
+                    <div className="flex items-center gap-1.5 text-xs">
+                        <Music className="w-3.5 h-3.5" />
+                        <div className="overflow-hidden whitespace-nowrap flex-1">
+                            <span className="inline-block animate-marquee">♪ {musicLine} · {musicLine} ·</span>
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )}
+            </div>
+        </>
     );
 }
 
@@ -309,9 +406,34 @@ export default function TikTokFeedView({
     const [muted, setMuted] = useState(true);
     const [audioReady, setAudioReady] = useState(false);
     const [likedCards, setLikedCards] = useState<Record<string, boolean>>({});
+    const [bookmarkedCards, setBookmarkedCards] = useState<Record<string, boolean>>({});
+
+    const railProps = (cardId: string) => {
+        const liked = !!likedCards[cardId];
+        const bookmarked = !!bookmarkedCards[cardId];
+        return {
+            likes: baseCount(cardId, 5000) + (liked ? 1 : 0),
+            comments: baseCount(cardId + "-c", 400),
+            bookmarks: baseCount(cardId + "-b", 800) + (bookmarked ? 1 : 0),
+            shares: baseCount(cardId + "-s", 250),
+            liked,
+            bookmarked,
+            onLike: () => setLikedCards((s) => ({ ...s, [cardId]: !s[cardId] })),
+            onComment: () => toast("التعليقات قريباً 💬", { duration: 1200 }),
+            onBookmark: () => setBookmarkedCards((s) => ({ ...s, [cardId]: !s[cardId] })),
+            artwork: tracks[activeIdx % Math.max(tracks.length, 1)]?.artwork,
+        };
+    };
     const [doubleTapHeart, setDoubleTapHeart] = useState<{ id: number; x: number; y: number } | null>(null);
     const lastTapRef = useRef<{ time: number; cardId: string }>({ time: 0, cardId: "" });
     const [tracks, setTracks] = useState<Track[]>([]);
+
+    // Synthetic-but-stable engagement counts per card (TikTok visual feel)
+    const baseCount = (id: string, max = 3000): number => {
+        let h = 0;
+        for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+        return 50 + (Math.abs(h) % max);
+    };
 
     // Fetch real song previews from iTunes API (no auth, free, ~30s clips)
     useEffect(() => {
@@ -354,6 +476,9 @@ export default function TikTokFeedView({
     // Inline rating state per card
     const [pastWeekScore, setPastWeekScore] = useState(0);
     const [pastBathroomScore, setPastBathroomScore] = useState(0);
+    // Impromptu meetup state (live from Firestore)
+    const [impromptu, setImpromptu] = useState<ImpromptuMeetup | null>(null);
+    const [impromptuMsg, setImpromptuMsg] = useState("");
 
     useEffect(() => {
         // Leaderboard: avg score per king across completed weeks
@@ -420,6 +545,9 @@ export default function TikTokFeedView({
             setChatMessages(msgs.slice(-5).reverse());
         });
 
+        // Live impromptu meetup
+        const unsubImpromptu = impromptuServices.listenToActiveMeetup((m) => setImpromptu(m));
+
         // Suggestions list (just last few for preview)
         services.getAllSuggestions().then((rows) => {
             const sorted = [...rows].sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
@@ -438,8 +566,56 @@ export default function TikTokFeedView({
             });
         }).catch(() => {});
 
-        return () => { try { unsub(); } catch {} };
+        return () => {
+            try { unsub(); } catch {}
+            try { unsubImpromptu(); } catch {}
+        };
     }, []);
+
+    const startImpromptu = async () => {
+        if (busy || !isMember) return;
+        const msg = impromptuMsg.trim() || "أنا فاضي! مين معي؟";
+        setBusy("impromptu-start");
+        try {
+            await impromptuServices.startMeetup(msg);
+            setImpromptuMsg("");
+            toast.success("بدأت لقاء مفاجئ 🚀");
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "ما قدرنا نبدأ");
+            console.error(e);
+        } finally {
+            setBusy(null);
+        }
+    };
+
+    const respondImpromptu = async (status: "free" | "busy") => {
+        if (busy || !isMember || !impromptu) return;
+        setBusy("impromptu-resp");
+        try {
+            await impromptuServices.respondMeetup(impromptu.id, status);
+            toast.success(status === "free" ? "أنا معك! 🙌" : "ما أقدر هالمرة 😅");
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "خطأ");
+            console.error(e);
+        } finally {
+            setBusy(null);
+        }
+    };
+
+    const cancelImpromptu = async () => {
+        if (busy || !impromptu) return;
+        if (impromptu.initiator !== userName) return;
+        setBusy("impromptu-cancel");
+        try {
+            await impromptuServices.cancelMeetup(impromptu.id);
+            toast.success("ألغيت اللقاء");
+        } catch (e) {
+            toast.error("خطأ");
+            console.error(e);
+        } finally {
+            setBusy(null);
+        }
+    };
 
     const submitPastRating = async () => {
         if (!pastWeek || busy || pastWeekScore < 1) return;
@@ -673,7 +849,7 @@ export default function TikTokFeedView({
                     music={tracks[0]?.title}
                     artist={tracks[0]?.artist}
                 />
-                <ActionRail profile="👑" onShare={shareKing} playing={!muted && audioReady} />
+                <ActionRail profile="👑" onShare={shareKing} playing={!muted && audioReady} {...railProps("king")} />
             </div>
         ),
     });
@@ -697,6 +873,7 @@ export default function TikTokFeedView({
                 <ActionRail
                     profile="🍔"
                     playing={!muted && audioReady}
+                    {...railProps("rest")}
                     onShare={() => {
                         const url = `https://wa.me/?text=${encodeURIComponent(`🍽️ مطعم الطلعة: ${restaurant}`)}`;
                         window.open(url, "_blank");
@@ -757,6 +934,7 @@ export default function TikTokFeedView({
                 <ActionRail
                     profile="📅"
                     playing={!muted && audioReady}
+                    {...railProps("day")}
                     onShare={() => {
                         const url = `https://wa.me/?text=${encodeURIComponent("📅 صوّت ليوم الطلعة!")}`;
                         window.open(url, "_blank");
@@ -791,6 +969,7 @@ export default function TikTokFeedView({
                 <ActionRail
                     profile={myAttendance === "present" ? "✅" : myAttendance === "absent" ? "❌" : "🤔"}
                     playing={!muted && audioReady}
+                    {...railProps("att")}
                     onShare={() => {
                         const url = `https://wa.me/?text=${encodeURIComponent(`✅ ${attendingCount} حاضر للطلعة`)}`;
                         window.open(url, "_blank");
@@ -853,7 +1032,7 @@ export default function TikTokFeedView({
                         music={tracks[4]?.title}
                     artist={tracks[4]?.artist}
                     />
-                    <ActionRail profile="🗳️" playing={!muted && audioReady} />
+                    <ActionRail profile="🗳️" playing={!muted && audioReady} {...railProps("rvote")} />
                 </div>
             ),
         });
@@ -877,7 +1056,7 @@ export default function TikTokFeedView({
                         music={tracks[5]?.title}
                     artist={tracks[5]?.artist}
                     />
-                    <ActionRail profile="🏆" playing={!muted && audioReady} />
+                    <ActionRail profile="🏆" playing={!muted && audioReady} {...railProps("top")} />
                 </div>
             ),
         });
@@ -901,7 +1080,7 @@ export default function TikTokFeedView({
                         music={tracks[6]?.title}
                     artist={tracks[6]?.artist}
                     />
-                    <ActionRail profile="🎞️" playing={!muted && audioReady} />
+                    <ActionRail profile="🎞️" playing={!muted && audioReady} {...railProps("past")} />
                 </div>
             ),
         });
@@ -952,7 +1131,7 @@ export default function TikTokFeedView({
                     music={tracks[7]?.title}
                     artist={tracks[7]?.artist}
                 />
-                <ActionRail profile="🏆" playing={!muted && audioReady} />
+                <ActionRail profile="🏆" playing={!muted && audioReady} {...railProps("leader")} />
             </div>
         ),
     });
@@ -996,47 +1175,39 @@ export default function TikTokFeedView({
                     music={tracks[8]?.title}
                     artist={tracks[8]?.artist}
                 />
-                <ActionRail profile="🚽" playing={!muted && audioReady} />
+                <ActionRail profile="🚽" playing={!muted && audioReady} {...railProps("bath")} />
             </div>
         ),
     });
 
-    // ── Recent restaurants card (alternative to map) ──
+    // ── Real interactive map card ──
     cards.push({
-        id: "recent",
+        id: "map",
         render: () => (
-            <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700 flex items-center justify-center">
-                <MapPin className="absolute opacity-10 w-[500px] h-[500px] text-white" />
-                <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
-                    <p className="text-2xl font-bold mb-1 drop-shadow-2xl">🗺️ آخر مطاعم زرناها</p>
-                    <p className="text-xs text-white/80 mb-4">من أحدث طلعة</p>
-                    {recentRestaurants.length === 0 ? (
-                        <p className="text-white/85 text-sm">ما فيه طلعات سابقة</p>
-                    ) : (
-                        <div className="space-y-2 text-right">
-                            {recentRestaurants.map((r, i) => (
-                                <div key={`${r.name}-${i}`} className="rounded-2xl px-4 py-3 bg-white/15 backdrop-blur">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-2xl">📍</span>
-                                        <div className="flex-1 text-right mr-3">
-                                            <p className="font-bold text-base line-clamp-1">{r.name}</p>
-                                            <p className="text-[11px] opacity-80">
-                                                أسبوع {r.week} · ملك: {r.king || "—"}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+            <div className="relative h-full w-full overflow-hidden bg-emerald-900">
+                {/* Embedded interactive map */}
+                <div className="absolute inset-0 z-0">
+                    <RestaurantMapPanel
+                        isOpen={true}
+                        onClose={() => {}}
+                        userName={userName}
+                        isAdmin={!!isDean}
+                        embedded={true}
+                    />
+                </div>
+                {/* Title pill top-center */}
+                <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+                    <span className="bg-black/60 backdrop-blur text-white text-sm font-black px-4 py-1.5 rounded-full">
+                        🗺️ خريطة المطاعم
+                    </span>
                 </div>
                 <CaptionOverlay
-                    username="map_memories"
-                    caption="ذكريات في كل مطعم 🍽️📍"
+                    username="restaurant_map"
+                    caption={`${recentRestaurants.length > 0 ? `آخرها: ${recentRestaurants[0].name}` : "اضغط أي علامة للتفاصيل"} 📍`}
                     music={tracks[9]?.title}
                     artist={tracks[9]?.artist}
                 />
-                <ActionRail profile="🗺️" playing={!muted && audioReady} />
+                <ActionRail profile="🗺️" playing={!muted && audioReady} artwork={tracks[activeIdx % tracks.length]?.artwork} />
             </div>
         ),
     });
@@ -1074,7 +1245,7 @@ export default function TikTokFeedView({
                     music={tracks[10]?.title}
                     artist={tracks[10]?.artist}
                 />
-                <ActionRail profile="💬" playing={!muted && audioReady} />
+                <ActionRail profile="💬" playing={!muted && audioReady} {...railProps("chat")} />
             </div>
         ),
     });
@@ -1129,7 +1300,7 @@ export default function TikTokFeedView({
                         music={tracks[8]?.title}
                         artist={tracks[8]?.artist}
                     />
-                    <ActionRail profile="⭐" playing={!muted && audioReady} />
+                    <ActionRail profile="⭐" playing={!muted && audioReady} {...railProps("rate-past")} />
                 </div>
             ),
         });
@@ -1185,7 +1356,7 @@ export default function TikTokFeedView({
                         music={tracks[9]?.title}
                         artist={tracks[9]?.artist}
                     />
-                    <ActionRail profile="🚽" playing={!muted && audioReady} />
+                    <ActionRail profile="🚽" playing={!muted && audioReady} {...railProps("rate-bath")} />
                 </div>
             ),
         });
@@ -1234,7 +1405,7 @@ export default function TikTokFeedView({
                     music={tracks[10]?.title}
                     artist={tracks[10]?.artist}
                 />
-                <ActionRail profile="👥" playing={!muted && audioReady} />
+                <ActionRail profile="👥" playing={!muted && audioReady} {...railProps("members")} />
             </div>
         ),
     });
@@ -1278,7 +1449,7 @@ export default function TikTokFeedView({
                     music={tracks[11]?.title}
                     artist={tracks[11]?.artist}
                 />
-                <ActionRail profile="🌟" playing={!muted && audioReady} />
+                <ActionRail profile="🌟" playing={!muted && audioReady} {...railProps("best-weeks")} />
             </div>
         ),
     });
@@ -1315,7 +1486,7 @@ export default function TikTokFeedView({
                         music={tracks[12]?.title}
                         artist={tracks[12]?.artist}
                     />
-                    <ActionRail profile="🛠️" playing={!muted && audioReady} />
+                    <ActionRail profile="🛠️" playing={!muted && audioReady} {...railProps("admin-tools")} />
                 </div>
             ),
         });
@@ -1373,7 +1544,7 @@ export default function TikTokFeedView({
                     music={tracks[3]?.title}
                     artist={tracks[3]?.artist}
                 />
-                <ActionRail profile="📊" playing={!muted && audioReady} />
+                <ActionRail profile="📊" playing={!muted && audioReady} {...railProps("stats")} />
             </div>
         ),
     });
@@ -1419,7 +1590,7 @@ export default function TikTokFeedView({
                     music={tracks[7]?.title}
                     artist={tracks[7]?.artist}
                 />
-                <ActionRail profile="💡" playing={!muted && audioReady} />
+                <ActionRail profile="💡" playing={!muted && audioReady} {...railProps("suggest")} />
             </div>
         ),
     });
@@ -1452,34 +1623,111 @@ export default function TikTokFeedView({
                     music={tracks[2]?.title}
                     artist={tracks[2]?.artist}
                 />
-                <ActionRail profile="🔮" playing={!muted && audioReady} />
+                <ActionRail profile="🔮" playing={!muted && audioReady} {...railProps("future")} />
             </div>
         ),
     });
 
-    // ── Impromptu meetup card (status) ──
+    // ── Impromptu meetup card (LIVE + interactive — start/respond from feed) ──
     cards.push({
         id: "impromptu",
-        render: () => (
-            <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-orange-500 via-red-600 to-pink-700 flex items-center justify-center">
-                <span className="absolute opacity-10 text-[400px] select-none">🚨</span>
-                <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
-                    <p className="text-2xl font-bold mb-1 drop-shadow-2xl">🚨 أنا فاضي!</p>
-                    <p className="text-xs text-white/80 mb-4">لقاء مفاجئ — اضغط لو تبي تطلع الحين</p>
-                    <p className="text-base text-white/95 leading-relaxed bg-white/10 backdrop-blur rounded-2xl p-4">
-                        لو فيه أكثر من ٢ ضغطوا "أنا فاضي" خلال ربع ساعة، إشعار يطلع للكل لتنسيق طلعة فجائية.
-                    </p>
-                    <p className="text-[11px] text-white/70 mt-4">افتح تبويب "الأسبوع" لتفعّل لقاء مفاجئ 👇</p>
+        render: () => {
+            const isInitiator = impromptu?.initiator === userName;
+            const myResponse = impromptu?.responses?.[userName]?.status;
+            const freeCount = impromptu ? impromptuServices.countFree(impromptu) : 0;
+            const status = impromptu ? impromptuServices.effectiveStatus(impromptu) : null;
+            const minutesLeft = impromptu ? Math.max(0, Math.ceil((impromptu.expiresAtMs - Date.now()) / 60000)) : 0;
+            return (
+                <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-orange-500 via-red-600 to-pink-700 flex items-center justify-center">
+                    <span className="absolute opacity-10 text-[400px] select-none">🚨</span>
+                    <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                        <p className="text-2xl font-bold mb-1 drop-shadow-2xl">🚨 أنا فاضي!</p>
+                        {!impromptu || status === "failed" ? (
+                            <>
+                                <p className="text-xs text-white/85 mb-4">ابدأ لقاء مفاجئ — كل الجلسة تستلم إشعار 📱</p>
+                                <div className="bg-white/10 backdrop-blur rounded-3xl p-4 space-y-3">
+                                    <input
+                                        value={impromptuMsg}
+                                        onChange={(e) => setImpromptuMsg(e.target.value)}
+                                        placeholder="أنا فاضي! مين معي؟"
+                                        className="w-full bg-white/15 border border-white/30 rounded-xl px-3 py-2.5 text-white text-sm outline-none placeholder:text-white/60 text-right"
+                                        dir="rtl"
+                                    />
+                                    <button
+                                        onClick={startImpromptu}
+                                        disabled={busy !== null || !isMember}
+                                        className="w-full bg-white text-rose-700 font-black px-6 py-3 rounded-full text-base disabled:opacity-50 active:scale-95"
+                                    >
+                                        🚀 ابدأ الطلعة المفاجئة
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-xs text-white/85 mb-2">بدأها {impromptu.initiator} · {minutesLeft} دقيقة باقية</p>
+                                <p className="text-base bg-white/10 backdrop-blur rounded-2xl p-3 mb-3 line-clamp-2">
+                                    {impromptu.message || "أنا فاضي!"}
+                                </p>
+                                <div className="bg-white text-rose-700 rounded-3xl p-4 mb-3">
+                                    <p className="text-4xl font-black">{freeCount}</p>
+                                    <p className="text-xs">من فاضي حالياً</p>
+                                </div>
+
+                                {!isInitiator && isMember && status === "open" && (
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => respondImpromptu("free")}
+                                            disabled={busy !== null}
+                                            className={`flex-1 font-black px-4 py-3 rounded-full text-sm active:scale-95 ${
+                                                myResponse === "free"
+                                                    ? "bg-white text-emerald-700"
+                                                    : "bg-emerald-500 text-white"
+                                            }`}
+                                        >
+                                            ✅ أنا معك
+                                        </button>
+                                        <button
+                                            onClick={() => respondImpromptu("busy")}
+                                            disabled={busy !== null}
+                                            className={`flex-1 font-black px-4 py-3 rounded-full text-sm active:scale-95 ${
+                                                myResponse === "busy"
+                                                    ? "bg-white text-slate-700"
+                                                    : "bg-slate-700 text-white"
+                                            }`}
+                                        >
+                                            ❌ مشغول
+                                        </button>
+                                    </div>
+                                )}
+
+                                {isInitiator && status === "open" && (
+                                    <button
+                                        onClick={cancelImpromptu}
+                                        disabled={busy !== null}
+                                        className="bg-rose-900/80 text-white text-xs px-4 py-2 rounded-full active:scale-95"
+                                    >
+                                        ألغِ اللقاء
+                                    </button>
+                                )}
+
+                                {status !== "open" && (
+                                    <p className="text-sm bg-white/10 backdrop-blur rounded-2xl py-2.5 px-3">
+                                        {status === "succeeded" ? "🎉 نجح! تنسّقوا في الشات" : "⏰ انتهى الوقت"}
+                                    </p>
+                                )}
+                            </>
+                        )}
+                    </div>
+                    <CaptionOverlay
+                        username="impromptu_meet"
+                        caption={impromptu ? `${freeCount} فاضين · ${minutesLeft} دقيقة باقية` : "مين فاضي ينطّ نطلع؟ 🏃‍♂️💨"}
+                        music={tracks[4]?.title}
+                        artist={tracks[4]?.artist}
+                    />
+                    <ActionRail profile="🚨" playing={!muted && audioReady} {...railProps("impromptu")} />
                 </div>
-                <CaptionOverlay
-                    username="impromptu_meet"
-                    caption="مين فاضي ينطّ نطلع؟ 🏃‍♂️💨"
-                    music={tracks[4]?.title}
-                    artist={tracks[4]?.artist}
-                />
-                <ActionRail profile="🚨" playing={!muted && audioReady} />
-            </div>
-        ),
+            );
+        },
     });
 
     // ── Outing Planner card (CTA opens modal) ──
@@ -1509,7 +1757,7 @@ export default function TikTokFeedView({
                         music={tracks[5]?.title}
                         artist={tracks[5]?.artist}
                     />
-                    <ActionRail profile="🤖" playing={!muted && audioReady} />
+                    <ActionRail profile="🤖" playing={!muted && audioReady} {...railProps("planner")} />
                 </div>
             ),
         });
@@ -1542,7 +1790,7 @@ export default function TikTokFeedView({
                         music={tracks[1]?.title}
                         artist={tracks[1]?.artist}
                     />
-                    <ActionRail profile="👤" playing={!muted && audioReady} />
+                    <ActionRail profile="👤" playing={!muted && audioReady} {...railProps("profile")} />
                 </div>
             ),
         });
@@ -1580,7 +1828,7 @@ export default function TikTokFeedView({
                         music={tracks[6]?.title}
                         artist={tracks[6]?.artist}
                     />
-                    <ActionRail profile="📜" playing={!muted && audioReady} />
+                    <ActionRail profile="📜" playing={!muted && audioReady} {...railProps("constitution")} />
                 </div>
             ),
         });
@@ -1615,7 +1863,7 @@ export default function TikTokFeedView({
                         music={tracks[0]?.title}
                         artist={tracks[0]?.artist}
                     />
-                    <ActionRail profile="👔" playing={!muted && audioReady} />
+                    <ActionRail profile="👔" playing={!muted && audioReady} {...railProps("dean")} />
                 </div>
             ),
         });
@@ -1697,17 +1945,20 @@ export default function TikTokFeedView({
                 ))}
             </div>
 
-            {/* Floating heart on double-tap */}
+            {/* Floating heart on double-tap — 120px TikTok red */}
             {doubleTapHeart && (
                 <div
                     className="absolute z-[60] pointer-events-none"
                     style={{
-                        left: doubleTapHeart.x - 48,
-                        top: doubleTapHeart.y - 48,
-                        animation: "tt-heart-pop 900ms ease-out forwards",
+                        left: doubleTapHeart.x - 60,
+                        top: doubleTapHeart.y - 60,
+                        animation: "tt-heart-pop 600ms ease-out forwards",
                     }}
                 >
-                    <Heart className="w-24 h-24 text-red-500 fill-current drop-shadow-2xl" />
+                    <Heart
+                        style={{ width: 120, height: 120, color: TT_RED, fill: TT_RED }}
+                        className="drop-shadow-2xl"
+                    />
                 </div>
             )}
 
