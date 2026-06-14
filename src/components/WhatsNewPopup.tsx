@@ -8,7 +8,7 @@ import { Sparkles, X } from "lucide-react";
  * up to MAX_SHOWS times per VERSION. Bump the VERSION string when adding
  * new features and the counter resets automatically.
  */
-const VERSION = "2026-06-14";
+const VERSION = "2026-06-14-v2";
 const MAX_SHOWS = 4;
 
 interface Feature {
@@ -60,6 +60,12 @@ const FEATURES: Feature[] = [
         title: "أنا فاضي من الفيد",
         desc: "ابدأ لقاء مفاجئ مباشرة من ثيم TikTok — كل الجلسة تستلم إشعار",
         gradient: "from-red-500 to-pink-600",
+    },
+    {
+        icon: "🗺️",
+        title: "خريطة المطاعم التفاعلية",
+        desc: "كل مطاعمنا على خريطة مباشرة — اضغط أي علامة للتفاصيل + اقتراحات قوقل",
+        gradient: "from-green-500 to-emerald-600",
     },
     {
         icon: "⚡",

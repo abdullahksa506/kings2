@@ -49,6 +49,7 @@ const RatingsExplorer = dynamic(() => import("./RatingsExplorer"), { ssr: false 
 const MemberProfilePanel = dynamic(() => import("./MemberProfilePanel"), { ssr: false });
 import Link from "next/link";
 import historicalWeeks from "@/data/historicalWeeks.json";
+import { toast } from "sonner";
 import { Timestamp, doc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -519,6 +520,8 @@ export default function Dashboard() {
     const [bentoFullView, setBentoFullView] = useState(false);
     const [tiktokFullView, setTiktokFullView] = useState(false);
     const [tiktokSettingsOpen, setTiktokSettingsOpen] = useState(false);
+    const [v2AnnouncementConfirm, setV2AnnouncementConfirm] = useState(false);
+    const [v2AnnouncementSending, setV2AnnouncementSending] = useState(false);
     const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
 
     const fetchPastWeekOnly = async () => {
@@ -1036,6 +1039,48 @@ export default function Dashboard() {
                     </button>
                 )}
             </div>
+
+            {/* DEAN-ONLY: Broadcast v2 announcement (requires double-click confirm) */}
+            {user?.role === "dean" && (
+                <button
+                    onClick={async () => {
+                        if (!v2AnnouncementConfirm) {
+                            setV2AnnouncementConfirm(true);
+                            setTimeout(() => setV2AnnouncementConfirm(false), 4000);
+                            return;
+                        }
+                        if (v2AnnouncementSending) return;
+                        setV2AnnouncementSending(true);
+                        try {
+                            const res = await fetch("/api/announcements/v2", {
+                                method: "POST",
+                                headers: getReminderAuthHeaders(),
+                            });
+                            const json = await res.json();
+                            if (res.ok && json.success) {
+                                toast.success(`📢 وصل الإعلان لـ ${json.sentCount} عضو!`);
+                            } else {
+                                toast.error(json.error || json.message || "ما قدرنا نرسل");
+                            }
+                        } catch (e) {
+                            toast.error("خطأ في الشبكة");
+                            console.error(e);
+                        } finally {
+                            setV2AnnouncementConfirm(false);
+                            setV2AnnouncementSending(false);
+                        }
+                    }}
+                    disabled={v2AnnouncementSending}
+                    className={`fixed top-2 right-2 z-50 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-lg backdrop-blur transition-all border ${
+                        v2AnnouncementConfirm
+                            ? "bg-amber-500 text-amber-950 border-amber-300 animate-pulse"
+                            : "bg-slate-900/80 text-pink-300 border-pink-500/40 hover:bg-slate-800"
+                    } disabled:opacity-50`}
+                    title="إعلان نزول النسخة v2 لكل الأعضاء"
+                >
+                    {v2AnnouncementSending ? "⏳ يُرسل..." : v2AnnouncementConfirm ? "اضغط ثانية للتأكيد ⚠️" : "📢 إعلان v2"}
+                </button>
+            )}
             <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800">
                 <div>
                     <h1 className={`text-3xl font-bold bg-gradient-to-r ${activeTheme.headerGradientClass} bg-clip-text text-transparent flex items-center gap-3`}>
