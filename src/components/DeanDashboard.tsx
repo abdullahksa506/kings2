@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, Rating, VALID_NAMES } from "@/lib/services";
-import { Star, ShieldAlert, BarChart3, KeyRound, Users, CheckCircle2, Bell, Lock, RefreshCw } from "lucide-react";
+import { Star, ShieldAlert, BarChart3, KeyRound, Users, CheckCircle2, Bell, Lock, RefreshCw, Trash2, MapPinOff } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import ExportDataButton from "./ExportDataButton";
 import RestaurantNameCleanup from "./RestaurantNameCleanup";
+import { canonRestaurant, deleteRestaurantLocation, listenToRestaurantLocations, RestaurantLocation } from "@/lib/mapServices";
 
 export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWeekId?: string, pastWeekId?: string }) {
     const { user } = useAuth();
@@ -22,6 +23,10 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
     // Recovery: weeks that got marked completed but are missing day/restaurant
     const [recoverableWeeks, setRecoverableWeeks] = useState<WeekSession[]>([]);
     const [reopeningId, setReopeningId] = useState<string | null>(null);
+    // Orphan map locations (no matching completed week)
+    const [orphanLocations, setOrphanLocations] = useState<RestaurantLocation[]>([]);
+    const [deletingLocId, setDeletingLocId] = useState<string | null>(null);
+    const [completedWeekNames, setCompletedWeekNames] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -55,6 +60,13 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
                         .sort((a, b) => b.weekNumber - a.weekNumber)
                         .slice(0, 5);
                     setRecoverableWeeks(broken);
+
+                    // Build canon set of names from completed weeks for orphan detection
+                    const names = new Set<string>();
+                    for (const r of rows) {
+                        if (r.week.restaurant) names.add(canonRestaurant(r.week.restaurant));
+                    }
+                    setCompletedWeekNames(names);
                 } catch (e) {
                     console.error("recovery scan failed", e);
                 }
@@ -69,6 +81,31 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
             if (unsubscribeRatings) unsubscribeRatings();
         };
     }, [weekId]);
+
+    // Live listener for restaurant locations → compute orphans
+    useEffect(() => {
+        const unsub = listenToRestaurantLocations((locs) => {
+            const orphans = locs.filter((l) => !completedWeekNames.has(canonRestaurant(l.name)));
+            setOrphanLocations(orphans);
+        });
+        return unsub;
+    }, [completedWeekNames]);
+
+    const deleteOrphan = async (loc: RestaurantLocation) => {
+        if (deletingLocId) return;
+        if (!confirm(`فعلاً تبي تحذف موقع "${loc.name}"؟ (ضافه: ${loc.addedBy || "—"})`)) return;
+        setDeletingLocId(loc.id);
+        try {
+            await deleteRestaurantLocation(loc.name);
+            toast.success(`🗑️ تم حذف "${loc.name}"`);
+            setOrphanLocations((list) => list.filter((x) => x.id !== loc.id));
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "ما قدرنا نحذف");
+            console.error(e);
+        } finally {
+            setDeletingLocId(null);
+        }
+    };
 
     if (loading) return <div className="text-amber-500 font-mono text-sm animate-pulse">جاري جلب التقييمات السرية...</div>;
 
@@ -92,6 +129,42 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
 
     return (
         <div className="mt-6 pt-6 border-t border-amber-900/50">
+            {orphanLocations.length > 0 && (
+                <div className="mb-6 bg-gradient-to-br from-rose-900/30 to-orange-900/30 border-2 border-rose-500/40 rounded-2xl p-5">
+                    <div className="flex items-start gap-3 mb-3">
+                        <div className="p-2 rounded-xl bg-rose-500/20 border border-rose-500/40">
+                            <MapPinOff className="w-5 h-5 text-rose-400" />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-base font-bold text-rose-300">🗺️ مواقع معزولة في الخريطة</h3>
+                            <p className="text-xs text-rose-200/80 mt-0.5">
+                                هذي المواقع محفوظة في الخريطة لكن ما لها أسبوع مكتمل مقابل. قد تكون مزحات أو إضافات بالغلط.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        {orphanLocations.map((loc) => (
+                            <div key={loc.id} className="bg-slate-900/80 border border-slate-700 rounded-xl p-3 flex items-center justify-between gap-3">
+                                <div className="text-right flex-1 min-w-0">
+                                    <p className="font-bold text-white text-sm line-clamp-1">{loc.name}</p>
+                                    <p className="text-[11px] text-slate-400 mt-0.5">
+                                        ضافه: {loc.addedBy || "—"} · إحداثيات: {loc.lat.toFixed(4)}, {loc.lng.toFixed(4)}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => deleteOrphan(loc)}
+                                    disabled={deletingLocId === loc.id}
+                                    className="flex items-center gap-1.5 bg-rose-500 hover:bg-rose-400 text-white font-bold text-xs px-3 py-2 rounded-lg active:scale-95 transition-transform disabled:opacity-50 shrink-0"
+                                >
+                                    <Trash2 className={`w-3.5 h-3.5 ${deletingLocId === loc.id ? "animate-pulse" : ""}`} />
+                                    {deletingLocId === loc.id ? "يحذف..." : "احذف"}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {recoverableWeeks.length > 0 && (
                 <div className="mb-6 bg-gradient-to-br from-amber-900/30 to-orange-900/30 border-2 border-amber-500/40 rounded-2xl p-5">
                     <div className="flex items-start gap-3 mb-3">
