@@ -181,6 +181,7 @@ interface TikTokFeedViewProps {
     onRatedBathroomPast?: () => void;
     onSwitchToFullView: () => void;
     onNavigate?: (tab: "leaderboard" | "bathroom" | "map" | "more") => void;
+    onOpenSettings?: () => void;
     // Modal openers — modals overlay on top of the feed (not navigation to a tab)
     onOpenStats?: () => void;
     onOpenProfile?: () => void;
@@ -295,6 +296,7 @@ export default function TikTokFeedView({
     onRatedBathroomPast,
     onSwitchToFullView,
     onNavigate,
+    onOpenSettings,
     onOpenStats,
     onOpenProfile,
     onOpenConstitution,
@@ -1644,9 +1646,9 @@ export default function TikTokFeedView({
 
             {/* TikTok top tabs: Following | For You */}
             <div className="absolute top-3 left-0 right-0 z-40 flex items-center justify-center px-4 pt-2">
-                {/* Top-right: ONLY settings gear (user-approved exception to navigate to theme picker) */}
+                {/* Top-right: settings gear opens a dedicated TikTok settings screen */}
                 <button
-                    onClick={() => onNavigate?.("more")}
+                    onClick={() => onOpenSettings?.()}
                     className="absolute right-3 top-1 text-white/90 active:scale-90 w-9 h-9 rounded-full bg-black/40 backdrop-blur flex items-center justify-center"
                     aria-label="إعدادات / غيّر الثيم"
                 >

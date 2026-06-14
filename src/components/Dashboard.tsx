@@ -41,6 +41,7 @@ const OutingPlannerPanel = dynamic(() => import("./OutingPlannerPanel"), { ssr: 
 const FutureFeaturesVoting = dynamic(() => import("./FutureFeaturesVoting"), { ssr: false });
 const BentoWeekView = dynamic(() => import("./BentoWeekView"), { ssr: false });
 const TikTokFeedView = dynamic(() => import("./TikTokFeedView"), { ssr: false });
+const TikTokSettings = dynamic(() => import("./TikTokSettings"), { ssr: false });
 import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
 import { Gamepad2, Bath, UploadCloud, BarChart3, Swords, Sparkles } from "lucide-react";
 const RatingsExplorer = dynamic(() => import("./RatingsExplorer"), { ssr: false });
@@ -516,6 +517,7 @@ export default function Dashboard() {
     });
     const [bentoFullView, setBentoFullView] = useState(false);
     const [tiktokFullView, setTiktokFullView] = useState(false);
+    const [tiktokSettingsOpen, setTiktokSettingsOpen] = useState(false);
     const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
 
     const fetchPastWeekOnly = async () => {
@@ -1467,6 +1469,7 @@ export default function Dashboard() {
                             onRatedPast={() => setHasRatedPastWeek(true)}
                             onRatedBathroomPast={() => setHasRatedBathroomPastWeek(true)}
                             onSwitchToFullView={() => setTiktokFullView(true)}
+                            onOpenSettings={() => setTiktokSettingsOpen(true)}
                             onNavigate={(tab) => {
                                 setActiveTab(tab);
                                 setTiktokFullView(true);
@@ -1475,6 +1478,24 @@ export default function Dashboard() {
                             onOpenProfile={() => setIsMemberProfileOpen(true)}
                             onOpenConstitution={() => setIsConstitutionOpen(true)}
                             onOpenPlanner={() => setIsPlannerOpen(true)}
+                        />
+                    )}
+
+                    {/* TikTok dedicated settings screen — overlays the feed */}
+                    {selectedTheme === "tiktok" && tiktokSettingsOpen && (
+                        <TikTokSettings
+                            themes={THEME_OPTIONS}
+                            selectedTheme={selectedTheme}
+                            userName={user?.name || ""}
+                            nickName={user?.nickName}
+                            profileImage={user?.profileImage}
+                            role={user?.role}
+                            onSelectTheme={(id) => handleThemeChange(id as ThemeKey)}
+                            onClose={() => setTiktokSettingsOpen(false)}
+                            onLogout={logout}
+                            onOpenProfile={() => { setTiktokSettingsOpen(false); setIsMemberProfileOpen(true); }}
+                            onOpenStats={() => { setTiktokSettingsOpen(false); setIsStatsOpen(true); }}
+                            onOpenConstitution={() => { setTiktokSettingsOpen(false); setIsConstitutionOpen(true); }}
                         />
                     )}
 
