@@ -16,9 +16,6 @@ function fmt(n: number): string {
 import { toast } from "sonner";
 import { WeekSession, VALID_NAMES, services, ChatMessage, Suggestion, FUTURE_FEATURE_SEEDS } from "@/lib/services";
 import { impromptuServices, ImpromptuMeetup } from "@/lib/impromptuServices";
-import dynamic from "next/dynamic";
-// Lazy-load the real interactive map (Leaflet uses window/document)
-const RestaurantMapPanel = dynamic(() => import("./RestaurantMapPanel"), { ssr: false });
 
 /**
  * Track type — fetched dynamically from iTunes Preview API.
@@ -1180,34 +1177,50 @@ export default function TikTokFeedView({
         ),
     });
 
-    // ── Real interactive map card ──
+    // ── Recent restaurants card (replaces full map embed — that broke layout) ──
     cards.push({
         id: "map",
         render: () => (
-            <div className="relative h-full w-full overflow-hidden bg-emerald-900">
-                {/* Embedded interactive map */}
-                <div className="absolute inset-0 z-0">
-                    <RestaurantMapPanel
-                        isOpen={true}
-                        onClose={() => {}}
-                        userName={userName}
-                        isAdmin={!!isDean}
-                        embedded={true}
-                    />
-                </div>
-                {/* Title pill top-center */}
-                <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-                    <span className="bg-black/60 backdrop-blur text-white text-sm font-black px-4 py-1.5 rounded-full">
-                        🗺️ خريطة المطاعم
-                    </span>
+            <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700 flex items-center justify-center">
+                <MapPin className="absolute opacity-10 w-[500px] h-[500px] text-white" />
+                <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                    <p className="text-2xl font-bold mb-1 drop-shadow-2xl">🗺️ آخر مطاعم زرناها</p>
+                    <p className="text-xs text-white/80 mb-4">من أحدث طلعة</p>
+                    {recentRestaurants.length === 0 ? (
+                        <p className="text-white/85 text-sm">ما فيه طلعات سابقة</p>
+                    ) : (
+                        <div className="space-y-2 text-right">
+                            {recentRestaurants.map((r, i) => (
+                                <div key={`${r.name}-${i}`} className="rounded-2xl px-4 py-3 bg-white/15 backdrop-blur">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-2xl">📍</span>
+                                        <div className="flex-1 text-right mr-3">
+                                            <p className="font-bold text-base line-clamp-1">{r.name}</p>
+                                            <p className="text-[11px] opacity-80">
+                                                أسبوع {r.week} · ملك: {r.king || "—"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {onNavigate && (
+                        <button
+                            onClick={() => onNavigate("map")}
+                            className="mt-4 bg-white text-emerald-700 font-black px-5 py-2 rounded-full text-sm hover:scale-105 active:scale-95 transition-transform shadow-2xl"
+                        >
+                            افتح الخريطة التفاعلية 🗺️
+                        </button>
+                    )}
                 </div>
                 <CaptionOverlay
-                    username="restaurant_map"
-                    caption={`${recentRestaurants.length > 0 ? `آخرها: ${recentRestaurants[0].name}` : "اضغط أي علامة للتفاصيل"} 📍`}
+                    username="map_memories"
+                    caption="ذكريات في كل مطعم 🍽️📍"
                     music={tracks[9]?.title}
                     artist={tracks[9]?.artist}
                 />
-                <ActionRail profile="🗺️" playing={!muted && audioReady} artwork={tracks[activeIdx % tracks.length]?.artwork} />
+                <ActionRail profile="🗺️" playing={!muted && audioReady} {...railProps("map")} />
             </div>
         ),
     });
