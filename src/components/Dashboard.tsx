@@ -1444,6 +1444,21 @@ export default function Dashboard() {
             ) : (
                 <div className="pb-24">
 
+                    {/* TikTok theme: single-page vertical feed covering ALL site sections */}
+                    {selectedTheme === "tiktok" && !tiktokFullView && (
+                        <TikTokFeedView
+                            currentWeek={currentWeek}
+                            pastWeek={pastWeek}
+                            userName={user?.name || ""}
+                            topMember={null}
+                            onSwitchToFullView={() => setTiktokFullView(true)}
+                            onNavigate={(tab) => {
+                                setActiveTab(tab);
+                                setTiktokFullView(true);
+                            }}
+                        />
+                    )}
+
                     {/* ===== TAB: الأسبوع الحالي ===== */}
                     {activeTab === "week" && selectedTheme === "bento" && !bentoFullView && (
                         <BentoWeekView
@@ -1451,16 +1466,6 @@ export default function Dashboard() {
                             pastWeek={pastWeek}
                             userName={user?.name || ""}
                             onSwitchToFullView={() => setBentoFullView(true)}
-                        />
-                    )}
-
-                    {activeTab === "week" && selectedTheme === "tiktok" && !tiktokFullView && (
-                        <TikTokFeedView
-                            currentWeek={currentWeek}
-                            pastWeek={pastWeek}
-                            userName={user?.name || ""}
-                            topMember={null}
-                            onSwitchToFullView={() => setTiktokFullView(true)}
                         />
                     )}
 
@@ -1813,7 +1818,7 @@ export default function Dashboard() {
                     )}
 
                     {/* ===== TAB: لوحة المتصدرين ===== */}
-                    {activeTab === "leaderboard" && (
+                    {activeTab === "leaderboard" && !(selectedTheme === "tiktok" && !tiktokFullView) && (
                         <div className="space-y-4 max-w-2xl mx-auto">
                             <KingsLeaderboard />
                             <Leaderboard
@@ -1832,7 +1837,7 @@ export default function Dashboard() {
                     )}
 
                     {/* ===== TAB: تقييم الحمامات ===== */}
-                    {activeTab === "bathroom" && (
+                    {activeTab === "bathroom" && !(selectedTheme === "tiktok" && !tiktokFullView) && (
                         <div className="space-y-4 max-w-2xl mx-auto">
                             <h2 className="text-2xl font-bold text-sky-400 flex items-center justify-center gap-2">
                                 <Bath className="w-6 h-6" />
@@ -1855,7 +1860,7 @@ export default function Dashboard() {
                     )}
 
                     {/* ===== TAB: خريطة المطاعم ===== */}
-                    {activeTab === "map" && user?.name && (
+                    {activeTab === "map" && user?.name && !(selectedTheme === "tiktok" && !tiktokFullView) && (
                         <RestaurantMapPanel
                             isOpen={true}
                             embedded={true}
@@ -1865,7 +1870,7 @@ export default function Dashboard() {
                     )}
 
                     {/* ===== TAB: المزيد ===== */}
-                    {activeTab === "more" && (
+                    {activeTab === "more" && !(selectedTheme === "tiktok" && !tiktokFullView) && (
                         <div className="space-y-4 max-w-2xl mx-auto">
 
                             {/* Theme Selector */}
@@ -2211,8 +2216,8 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* ===== BOTTOM TAB BAR ===== */}
-            {!loading && (
+            {/* ===== BOTTOM TAB BAR (hidden in TikTok feed mode — it has its own nav) ===== */}
+            {!loading && !(selectedTheme === "tiktok" && !tiktokFullView) && (
                 <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 pb-safe">
                     <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-2">
                         {[

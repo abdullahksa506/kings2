@@ -1,9 +1,29 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Crown, MapPin, Calendar, Heart, Share2, Star, Music, ChevronUp, Vote, Users, Check, X, Trophy, Rewind, MessageCircle, Bookmark, Plus, Search, Home } from "lucide-react";
+import { Crown, MapPin, Calendar, Heart, Share2, Star, Music, ChevronUp, Vote, Users, Check, X, Trophy, Rewind, MessageCircle, Bookmark, Plus, Search, Home, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
 import { WeekSession, VALID_NAMES, services } from "@/lib/services";
+
+/**
+ * Royalty-free background music tracks from SoundHelix.com
+ * (Tim Sanderson, freely usable for any purpose including commercial demos)
+ * Each card cycles through these so the feed feels alive.
+ */
+const TRACKS: Array<{ url: string; title: string }> = [
+    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", title: "King's Anthem · Electronic" },
+    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", title: "Restaurant Vibes · Chill" },
+    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", title: "Vote Beat · Trap" },
+    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", title: "Attendance Mood · Lo-fi" },
+    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", title: "Hype Restaurant · House" },
+    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", title: "Champion · Epic" },
+    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", title: "Memories · Ambient" },
+    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", title: "Leaderboard Banger · EDM" },
+    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", title: "Bathroom Royalty · Funk" },
+    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", title: "Map Quest · Synthwave" },
+    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", title: "Chat Lounge · Jazz" },
+    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", title: "Suggestions · Drum & Bass" },
+];
 
 interface TikTokFeedViewProps {
     currentWeek: WeekSession | null;
@@ -11,6 +31,7 @@ interface TikTokFeedViewProps {
     userName: string;
     topMember?: { name: string; score: number } | null;
     onSwitchToFullView: () => void;
+    onNavigate?: (tab: "leaderboard" | "bathroom" | "map" | "more") => void;
 }
 
 interface ActionRailItem {
@@ -156,16 +177,61 @@ export default function TikTokFeedView({
     userName,
     topMember,
     onSwitchToFullView,
+    onNavigate,
 }: TikTokFeedViewProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
+    const audioRef = useRef<HTMLAudioElement>(null);
     const [activeIdx, setActiveIdx] = useState(0);
     const [busy, setBusy] = useState<string | null>(null);
     const [likedCards, setLikedCards] = useState<Record<string, boolean>>({});
     const [bookmarkedCards, setBookmarkedCards] = useState<Record<string, boolean>>({});
     const [feedTab, setFeedTab] = useState<"following" | "foryou">("foryou");
+    const [muted, setMuted] = useState(true);
+    const [audioReady, setAudioReady] = useState(false);
 
     const toggleLike = (id: string) => setLikedCards((s) => ({ ...s, [id]: !s[id] }));
     const toggleBookmark = (id: string) => setBookmarkedCards((s) => ({ ...s, [id]: !s[id] }));
+
+    // Swap music per-card. Cards are rendered in order so we index TRACKS by activeIdx.
+    const currentTrack = TRACKS[activeIdx % TRACKS.length];
+
+    // Update audio source when card changes
+    useEffect(() => {
+        const a = audioRef.current;
+        if (!a) return;
+        if (a.src !== currentTrack.url) {
+            const wasPlaying = !a.paused;
+            a.src = currentTrack.url;
+            a.load();
+            if (wasPlaying && !muted) {
+                a.play().catch(() => {});
+            }
+        }
+    }, [currentTrack.url, muted]);
+
+    // First user interaction → enable audio (browser autoplay policy)
+    const enableAudio = () => {
+        const a = audioRef.current;
+        if (!a) return;
+        setMuted(false);
+        a.muted = false;
+        a.volume = 0.35;
+        a.play().then(() => setAudioReady(true)).catch(() => {
+            toast.error("ما قدرنا نشغل الموسيقى");
+        });
+    };
+
+    const toggleMute = () => {
+        const a = audioRef.current;
+        if (!a) return;
+        if (muted) {
+            enableAudio();
+        } else {
+            setMuted(true);
+            a.muted = true;
+            a.pause();
+        }
+    };
 
     // Track which card is currently in view
     useEffect(() => {
@@ -299,7 +365,7 @@ export default function TikTokFeedView({
                 <CaptionOverlay
                     username="king_of_thursday"
                     caption={`الملك ${kingName} بنفسه 👑 الكل يحضّر! 🔥`}
-                    music="عرش الخميس - النشيد الملكي"
+                    music={TRACKS[0].title}
                 />
                 <ActionRail
                     profile="👑"
@@ -329,7 +395,7 @@ export default function TikTokFeedView({
                 <CaptionOverlay
                     username="restaurant_pick"
                     caption={`الطلعة في ${restaurant} 🤤 يا حلو الأكل!`}
-                    music="معدة فاضية - كلاسيك"
+                    music={TRACKS[1].title}
                 />
                 <ActionRail
                     profile="🍔"
@@ -398,7 +464,7 @@ export default function TikTokFeedView({
                 <CaptionOverlay
                     username="day_vote"
                     caption={day ? "محسوم ✅" : "اسحب يمين أو صوّت ↑"}
-                    music="الخميس أحلى من الجمعة"
+                    music={TRACKS[2].title}
                 />
                 <ActionRail
                     profile="📅"
@@ -437,7 +503,7 @@ export default function TikTokFeedView({
                 <CaptionOverlay
                     username="attendance"
                     caption={`${attendingCount} حاضر من ٦ 🔥`}
-                    music="جاي ولا لا - ريمكس"
+                    music={TRACKS[3].title}
                 />
                 <ActionRail
                     profile={myAttendance === "present" ? "✅" : myAttendance === "absent" ? "❌" : "🤔"}
@@ -507,7 +573,7 @@ export default function TikTokFeedView({
                     <CaptionOverlay
                         username="resto_vote"
                         caption="مين راح يكسب؟ 🥁"
-                        music="ميل الميزان"
+                        music={TRACKS[4].title}
                     />
                     <ActionRail
                         profile="🗳️"
@@ -537,7 +603,7 @@ export default function TikTokFeedView({
                     <CaptionOverlay
                         username="leaderboard"
                         caption={`${topMember.name} يحكم اللوحة 👑`}
-                        music="بطل دورة"
+                        music={TRACKS[5].title}
                     />
                     <ActionRail
                         profile="🏆"
@@ -567,7 +633,7 @@ export default function TikTokFeedView({
                     <CaptionOverlay
                         username="last_week"
                         caption={`ذكريات أسبوع ${pastWeek.weekNumber} 📸`}
-                        music="ذكريات الطلعة"
+                        music={TRACKS[6].title}
                     />
                     <ActionRail
                         profile="🎞️"
@@ -582,8 +648,122 @@ export default function TikTokFeedView({
         });
     }
 
+    // ── Section cards (full-app navigation in the same feed) ──
+    const sectionCard = (
+        id: string,
+        gradient: string,
+        emoji: string,
+        title: string,
+        subtitle: string,
+        ctaLabel: string,
+        username: string,
+        caption: string,
+        trackIdx: number,
+        targetTab: "leaderboard" | "bathroom" | "map" | "more",
+    ) => ({
+        id,
+        render: () => (
+            <div className={`relative h-full w-full overflow-hidden ${gradient} flex items-center justify-center`}>
+                <span className="absolute opacity-10 text-[400px] select-none">{emoji}</span>
+                <div className="relative text-center text-white px-6 z-20">
+                    <p className="text-2xl font-bold mb-2 drop-shadow-2xl">{title}</p>
+                    <h1 className="text-5xl font-black drop-shadow-2xl px-4 mb-3">{subtitle}</h1>
+                    <button
+                        onClick={() => onNavigate?.(targetTab)}
+                        className="mt-4 bg-white text-black font-black px-6 py-3 rounded-full text-base hover:scale-105 active:scale-95 transition-transform shadow-2xl"
+                    >
+                        {ctaLabel} ←
+                    </button>
+                </div>
+                <CaptionOverlay username={username} caption={caption} music={TRACKS[trackIdx]?.title} />
+                <ActionRail
+                    profile={emoji}
+                    likes={`${(trackIdx + 1) * 137}`}
+                    comments={`${trackIdx * 8}`}
+                    shares={`${trackIdx * 3}`}
+                    liked={likedCards[id]}
+                    bookmarked={bookmarkedCards[id]}
+                    onLike={() => toggleLike(id)}
+                    onBookmark={() => toggleBookmark(id)}
+                />
+            </div>
+        ),
+    });
+
+    cards.push(
+        sectionCard(
+            "leader",
+            "bg-gradient-to-br from-yellow-500 via-amber-600 to-orange-700",
+            "🏆",
+            "🏆 لوحة الترتيب",
+            "مين الأقوى؟",
+            "افتح اللوحة",
+            "leaderboard_legend",
+            "اعرف وش ترتيبك بين الستة 📊",
+            7,
+            "leaderboard",
+        ),
+        sectionCard(
+            "bath",
+            "bg-gradient-to-br from-cyan-500 via-teal-600 to-blue-700",
+            "🚽",
+            "🚽 تقييمات الحمّامات",
+            "الحمّام المفضّل؟",
+            "افتح القسم",
+            "bathroom_critic",
+            "كل حمام له ملك خاص 👑🧻",
+            8,
+            "bathroom",
+        ),
+        sectionCard(
+            "map",
+            "bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700",
+            "🗺️",
+            "🗺️ خريطة المطاعم",
+            "وين المطاعم؟",
+            "افتح الخريطة",
+            "map_explorer",
+            "كل مطاعمنا على الخريطة 📍",
+            9,
+            "map",
+        ),
+        sectionCard(
+            "more",
+            "bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-700",
+            "✨",
+            "✨ المزيد",
+            "شات + اقتراحات",
+            "اكتشف",
+            "more_section",
+            "كل شي ثاني هنا 💬🎁",
+            10,
+            "more",
+        ),
+    );
+
     return (
-        <div className="fixed inset-0 z-30 bg-black" style={{ touchAction: "pan-y" }}>
+        <div className="fixed inset-0 z-50 bg-black" style={{ touchAction: "pan-y" }}>
+            {/* Hidden audio element — cycles per card */}
+            <audio
+                ref={audioRef}
+                loop
+                muted={muted}
+                preload="auto"
+                playsInline
+                onCanPlay={() => {
+                    if (!muted) audioRef.current?.play().catch(() => {});
+                }}
+            />
+
+            {/* Mute / play toggle — top left */}
+            <button
+                onClick={toggleMute}
+                className="absolute top-3 left-3 z-50 w-9 h-9 rounded-full bg-black/50 backdrop-blur flex items-center justify-center active:scale-90 transition-transform"
+                aria-label={muted ? "تشغيل الصوت" : "كتم"}
+            >
+                {muted ? <VolumeX className="w-4 h-4 text-white" /> : <Volume2 className="w-4 h-4 text-pink-400" />}
+            </button>
+
             {/* TikTok top tabs: Following | For You */}
             <div className="absolute top-3 left-0 right-0 z-40 flex items-center justify-center px-4 pt-2">
                 <button
