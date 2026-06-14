@@ -1462,6 +1462,10 @@ export default function Dashboard() {
                             userName={user?.name || ""}
                             topMember={null}
                             isDean={user?.role === "dean"}
+                            hasRatedPastWeek={hasRatedPastWeek}
+                            hasRatedBathroomPastWeek={hasRatedBathroomPastWeek}
+                            onRatedPast={() => setHasRatedPastWeek(true)}
+                            onRatedBathroomPast={() => setHasRatedBathroomPastWeek(true)}
                             onSwitchToFullView={() => setTiktokFullView(true)}
                             onNavigate={(tab) => {
                                 setActiveTab(tab);

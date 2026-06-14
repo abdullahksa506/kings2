@@ -67,27 +67,69 @@ const SEARCH_TERMS: Array<{ q: string; country: string }> = [
     { q: "كاظم الساهر",        country: "SA" },
     { q: "عمرو دياب نور العين", country: "SA" },
 
-    // ── American Pop (20) ─────────────────────────────────
+    // ── More Saudi & Khaleeji (35) — مجموع ٧٥ ──────────────
+    { q: "محمد عبده فوق هام السحب",        country: "SA" },
+    { q: "محمد عبده ابعاد",                  country: "SA" },
+    { q: "محمد عبده الرسايل",                country: "SA" },
+    { q: "محمد عبده يا غايب",                country: "SA" },
+    { q: "طلال مداح فوق هام السحب",         country: "SA" },
+    { q: "طلال مداح زمان الصمت",             country: "SA" },
+    { q: "طلال مداح وردك يا زارع الورد",     country: "SA" },
+    { q: "عبدالمجيد عبدالله بحبك إنت",       country: "SA" },
+    { q: "عبدالمجيد عبدالله حلم",            country: "SA" },
+    { q: "عبدالمجيد عبدالله بداية",          country: "SA" },
+    { q: "راشد الماجد إستاهل",               country: "SA" },
+    { q: "راشد الماجد سايبني",                country: "SA" },
+    { q: "خالد عبدالرحمن جرحي قديم",         country: "SA" },
+    { q: "خالد عبدالرحمن لا يا قلبي",        country: "SA" },
+    { q: "ماجد المهندس قولوا لها",           country: "SA" },
+    { q: "ماجد المهندس حياة",                 country: "SA" },
+    { q: "حسين الجسمي بقلبي",                country: "SA" },
+    { q: "حسين الجسمي إذا ودك",              country: "SA" },
+    { q: "وليد الشامي رمشة عين",              country: "SA" },
+    { q: "فؤاد عبدالواحد",                    country: "SA" },
+    { q: "أصالة عقول",                       country: "SA" },
+    { q: "أصالة شخصية عنيدة",                country: "SA" },
+    { q: "أحلام الشامسي",                    country: "SA" },
+    { q: "كاظم الساهر الحب المستحيل",         country: "SA" },
+    { q: "كاظم الساهر زيديني عشقاً",         country: "SA" },
+    { q: "عمرو دياب تمللي معاك",              country: "SA" },
+    { q: "عمرو دياب وماله",                  country: "SA" },
+    { q: "عمرو دياب أحلى",                    country: "SA" },
+    { q: "محمد منير شبابيك",                 country: "SA" },
+    { q: "نانسي عجرم لمس إيدي",               country: "SA" },
+    { q: "إليسا تعبت منك",                    country: "SA" },
+    { q: "إليسا عيشالك",                     country: "SA" },
+    { q: "تامر حسني نقول إيه",               country: "SA" },
+    { q: "تامر حسني يا بنت الإيه",            country: "SA" },
+    { q: "محمد حماقي ما تخافيش",              country: "SA" },
+
+    // ── American Pop & Global (25) — مجموع ٢٥ ──────────────
     { q: "Taylor Swift Shake It Off",          country: "US" },
+    { q: "Taylor Swift Blank Space",           country: "US" },
+    { q: "Taylor Swift Anti Hero",             country: "US" },
     { q: "Bruno Mars Uptown Funk",             country: "US" },
+    { q: "Bruno Mars 24K Magic",               country: "US" },
     { q: "Ed Sheeran Shape of You",            country: "US" },
+    { q: "Ed Sheeran Perfect",                 country: "US" },
     { q: "The Weeknd Blinding Lights",         country: "US" },
+    { q: "The Weeknd Save Your Tears",         country: "US" },
     { q: "Dua Lipa Levitating",                country: "US" },
+    { q: "Dua Lipa Don't Start Now",           country: "US" },
     { q: "Billie Eilish Bad Guy",              country: "US" },
     { q: "Olivia Rodrigo Drivers License",     country: "US" },
+    { q: "Olivia Rodrigo Vampire",             country: "US" },
     { q: "Justin Bieber Peaches",              country: "US" },
     { q: "Ariana Grande 7 Rings",              country: "US" },
     { q: "Harry Styles Watermelon Sugar",      country: "US" },
+    { q: "Harry Styles As It Was",             country: "US" },
     { q: "Post Malone Sunflower",              country: "US" },
     { q: "Doja Cat Say So",                    country: "US" },
     { q: "Lady Gaga Bad Romance",              country: "US" },
     { q: "Beyonce Halo",                       country: "US" },
     { q: "Adele Rolling in the Deep",          country: "US" },
+    { q: "Adele Hello",                        country: "US" },
     { q: "Maroon 5 Sugar",                     country: "US" },
-    { q: "Imagine Dragons Believer",           country: "US" },
-    { q: "Coldplay Yellow",                    country: "US" },
-    { q: "OneRepublic Counting Stars",         country: "US" },
-    { q: "Sam Smith Stay With Me",             country: "US" },
 ];
 
 function shuffle<T>(arr: T[]): T[] {
@@ -133,6 +175,10 @@ interface TikTokFeedViewProps {
     userName: string;
     topMember?: { name: string; score: number } | null;
     isDean?: boolean;
+    hasRatedPastWeek?: boolean;
+    hasRatedBathroomPastWeek?: boolean;
+    onRatedPast?: () => void;
+    onRatedBathroomPast?: () => void;
     onSwitchToFullView: () => void;
     onNavigate?: (tab: "leaderboard" | "bathroom" | "map" | "more") => void;
     // Modal openers — modals overlay on top of the feed (not navigation to a tab)
@@ -243,6 +289,10 @@ export default function TikTokFeedView({
     userName,
     topMember,
     isDean,
+    hasRatedPastWeek,
+    hasRatedBathroomPastWeek,
+    onRatedPast,
+    onRatedBathroomPast,
     onSwitchToFullView,
     onNavigate,
     onOpenStats,
@@ -297,6 +347,11 @@ export default function TikTokFeedView({
         mostKing?: { name: string; count: number } | null;
         highestRatedKing?: { name: string; score: number } | null;
     } | null>(null);
+    // Best & worst weeks for the global leaderboard card
+    const [topWeeks, setTopWeeks] = useState<{ kingName: string; restaurant: string; weekNumber: number; avg: number }[]>([]);
+    // Inline rating state per card
+    const [pastWeekScore, setPastWeekScore] = useState(0);
+    const [pastBathroomScore, setPastBathroomScore] = useState(0);
 
     useEffect(() => {
         // Leaderboard: avg score per king across completed weeks
@@ -325,6 +380,19 @@ export default function TikTokFeedView({
                     week: r.week.weekNumber,
                 }));
             setRecentRestaurants(sortedRecent);
+
+            // Top-rated weeks (week-level leaderboard)
+            const tops = rows
+                .filter((r) => r.averageScore > 0)
+                .sort((a, b) => b.averageScore - a.averageScore)
+                .slice(0, 5)
+                .map((r) => ({
+                    kingName: r.week.king || "—",
+                    restaurant: r.week.restaurant || "—",
+                    weekNumber: r.week.weekNumber,
+                    avg: r.averageScore,
+                }));
+            setTopWeeks(tops);
         }).catch(() => {});
 
         // Bathroom top
@@ -370,6 +438,46 @@ export default function TikTokFeedView({
 
         return () => { try { unsub(); } catch {} };
     }, []);
+
+    const submitPastRating = async () => {
+        if (!pastWeek || busy || pastWeekScore < 1) return;
+        setBusy("rate");
+        try {
+            await services.submitRating({
+                weekId: pastWeek.id,
+                rating: pastWeekScore,
+                restaurantName: pastWeek.restaurant ?? undefined,
+            });
+            toast.success(`تقييمك ⭐ × ${pastWeekScore} وصل!`);
+            onRatedPast?.();
+        } catch (e) {
+            toast.error("ما قدرنا نسجل التقييم");
+            console.error(e);
+        } finally {
+            setBusy(null);
+        }
+    };
+
+    const submitBathroomRating = async () => {
+        if (!pastWeek || busy || pastBathroomScore < 1) return;
+        setBusy("brate");
+        try {
+            await services.submitBathroomRating(
+                pastWeek.id,
+                userName,
+                pastBathroomScore,
+                undefined,
+                pastWeek.restaurant ?? undefined,
+            );
+            toast.success(`قيمت الحمّام ⭐ × ${pastBathroomScore}`);
+            onRatedBathroomPast?.();
+        } catch (e) {
+            toast.error("ما قدرنا نسجل تقييم الحمّام");
+            console.error(e);
+        } finally {
+            setBusy(null);
+        }
+    };
 
     const sendSuggestion = async () => {
         const text = suggestionText.trim();
@@ -968,6 +1076,248 @@ export default function TikTokFeedView({
             </div>
         ),
     });
+
+    // ── Rate past meal card (RatingForm inline) ──
+    if (pastWeek && pastWeek.restaurant && pastWeek.ratingEnabled !== false && isMember && currentWeek?.king !== userName) {
+        cards.push({
+            id: "rate-past",
+            render: () => (
+                <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-yellow-400 via-amber-500 to-red-600 flex items-center justify-center">
+                    <span className="absolute opacity-10 text-[400px] select-none">⭐</span>
+                    <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                        <p className="text-2xl font-bold mb-1 drop-shadow-2xl">⭐ قيّم آخر طلعة</p>
+                        <p className="text-xs text-white/85 mb-3">{pastWeek.restaurant} · أسبوع {pastWeek.weekNumber}</p>
+                        {hasRatedPastWeek ? (
+                            <div className="bg-white/15 backdrop-blur rounded-2xl py-5 px-4">
+                                <p className="text-4xl mb-2">🎉</p>
+                                <p className="text-base font-bold">قيّمت هالطلعة — مشكور!</p>
+                            </div>
+                        ) : (
+                            <div className="bg-white/15 backdrop-blur rounded-3xl p-5">
+                                <div className="flex justify-center gap-1.5 mb-4">
+                                    {[1, 2, 3, 4, 5].map((s) => (
+                                        <button
+                                            key={s}
+                                            onClick={() => setPastWeekScore(s)}
+                                            className="text-4xl active:scale-90 transition-transform"
+                                        >
+                                            {pastWeekScore >= s ? "⭐" : "☆"}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-white/85 mb-3">
+                                    {pastWeekScore === 0 ? "اختر نجوم" :
+                                     pastWeekScore <= 2 ? "ما عجبني 😬" :
+                                     pastWeekScore === 3 ? "عادي 😐" :
+                                     pastWeekScore === 4 ? "حلو 🤤" : "ممتاز! 🤩"}
+                                </p>
+                                <button
+                                    onClick={submitPastRating}
+                                    disabled={pastWeekScore < 1 || busy !== null}
+                                    className="bg-white text-orange-700 font-black px-6 py-2.5 rounded-full text-sm disabled:opacity-50 active:scale-95"
+                                >
+                                    أرسل التقييم
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    <CaptionOverlay
+                        username="rate_the_meal"
+                        caption={`${pastWeek.restaurant} ${hasRatedPastWeek ? "✅" : "⭐"}`}
+                        music={tracks[8]?.title}
+                        artist={tracks[8]?.artist}
+                    />
+                    <ActionRail profile="⭐" playing={!muted && audioReady} />
+                </div>
+            ),
+        });
+    }
+
+    // ── Rate bathroom card ──
+    if (pastWeek && pastWeek.restaurant && isMember && currentWeek?.king !== userName) {
+        cards.push({
+            id: "rate-bath",
+            render: () => (
+                <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-sky-400 via-cyan-500 to-blue-700 flex items-center justify-center">
+                    <span className="absolute opacity-10 text-[400px] select-none">🚽</span>
+                    <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                        <p className="text-2xl font-bold mb-1 drop-shadow-2xl">🚽 قيّم الحمّام</p>
+                        <p className="text-xs text-white/85 mb-3">حمّام {pastWeek.restaurant}</p>
+                        {hasRatedBathroomPastWeek ? (
+                            <div className="bg-white/15 backdrop-blur rounded-2xl py-5 px-4">
+                                <p className="text-4xl mb-2">🚽✨</p>
+                                <p className="text-base font-bold">قيّمت الحمّام — برافو!</p>
+                            </div>
+                        ) : (
+                            <div className="bg-white/15 backdrop-blur rounded-3xl p-5">
+                                <div className="flex justify-center gap-1.5 mb-4">
+                                    {[1, 2, 3, 4, 5].map((s) => (
+                                        <button
+                                            key={s}
+                                            onClick={() => setPastBathroomScore(s)}
+                                            className="text-4xl active:scale-90 transition-transform"
+                                        >
+                                            {pastBathroomScore >= s ? "⭐" : "☆"}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-white/85 mb-3">
+                                    {pastBathroomScore === 0 ? "كيف كان الحمّام؟" :
+                                     pastBathroomScore <= 2 ? "وسخ 🤢" :
+                                     pastBathroomScore === 3 ? "عادي" :
+                                     pastBathroomScore === 4 ? "نضيف 👌" : "5 نجوم نضافة 🤩"}
+                                </p>
+                                <button
+                                    onClick={submitBathroomRating}
+                                    disabled={pastBathroomScore < 1 || busy !== null}
+                                    className="bg-white text-cyan-700 font-black px-6 py-2.5 rounded-full text-sm disabled:opacity-50 active:scale-95"
+                                >
+                                    أرسل تقييم الحمّام
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    <CaptionOverlay
+                        username="bathroom_judge"
+                        caption="نضيف ولا لا؟ 🧻"
+                        music={tracks[9]?.title}
+                        artist={tracks[9]?.artist}
+                    />
+                    <ActionRail profile="🚽" playing={!muted && audioReady} />
+                </div>
+            ),
+        });
+    }
+
+    // ── Member status grid (current week) ──
+    cards.push({
+        id: "members",
+        render: () => (
+            <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-slate-700 via-purple-700 to-fuchsia-800 flex items-center justify-center">
+                <span className="absolute opacity-10 text-[400px] select-none">👥</span>
+                <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                    <p className="text-2xl font-bold mb-1 drop-shadow-2xl">👥 الستة الكبار</p>
+                    <p className="text-xs text-white/85 mb-4">حالة الحضور لأسبوع {currentWeek?.weekNumber ?? "-"}</p>
+                    {currentWeek ? (
+                        <div className="grid grid-cols-2 gap-2">
+                            {VALID_NAMES.map((n) => {
+                                const isKing = currentWeek.king === n;
+                                const present = (currentWeek.responded || []).includes(n) && !(currentWeek.absentees || []).includes(n);
+                                const absent = (currentWeek.absentees || []).includes(n);
+                                const bg = isKing
+                                    ? "bg-amber-400 text-amber-900"
+                                    : present
+                                    ? "bg-emerald-500 text-white"
+                                    : absent
+                                    ? "bg-rose-500 text-white"
+                                    : "bg-white/15 text-white/80";
+                                const icon = isKing ? "👑" : present ? "✅" : absent ? "❌" : "⌛";
+                                const label = isKing ? "الملك" : present ? "حاضر" : absent ? "معذور" : "ما رد";
+                                return (
+                                    <div key={n} className={`rounded-2xl px-3 py-3 backdrop-blur ${bg}`}>
+                                        <div className="text-3xl">{icon}</div>
+                                        <p className="font-black text-base mt-1">{n}</p>
+                                        <p className="text-[10px] opacity-85">{label}</p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <p className="text-white/85 text-sm">لا توجد جلسة</p>
+                    )}
+                </div>
+                <CaptionOverlay
+                    username="the_six"
+                    caption="مين جاي ومين هرب 🏃‍♂️"
+                    music={tracks[10]?.title}
+                    artist={tracks[10]?.artist}
+                />
+                <ActionRail profile="👥" playing={!muted && audioReady} />
+            </div>
+        ),
+    });
+
+    // ── Best Weeks Leaderboard (week-level avg score) ──
+    cards.push({
+        id: "best-weeks",
+        render: () => (
+            <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-rose-500 via-pink-600 to-purple-700 flex items-center justify-center">
+                <span className="absolute opacity-10 text-[400px] select-none">🌟</span>
+                <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                    <p className="text-2xl font-bold mb-1 drop-shadow-2xl">🌟 أحسن طلعات</p>
+                    <p className="text-xs text-white/85 mb-4">معدّل تقييم الطلعة</p>
+                    {topWeeks.length === 0 ? (
+                        <p className="text-white/85 text-sm">ما فيه تقييمات بعد</p>
+                    ) : (
+                        <div className="space-y-2 text-right">
+                            {topWeeks.map((w, i) => (
+                                <div
+                                    key={`${w.weekNumber}-${i}`}
+                                    className={`rounded-2xl px-4 py-3 flex items-center justify-between backdrop-blur ${
+                                        i === 0 ? "bg-white text-pink-700" : "bg-white/15"
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-2xl">{["🥇", "🥈", "🥉", "4️⃣", "5️⃣"][i]}</span>
+                                        <div>
+                                            <p className="font-bold text-sm line-clamp-1">{w.restaurant}</p>
+                                            <p className="text-[10px] opacity-80">👑 {w.kingName} · أسبوع {w.weekNumber}</p>
+                                        </div>
+                                    </div>
+                                    <p className="font-black text-lg">⭐ {w.avg.toFixed(1)}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <CaptionOverlay
+                    username="best_outings"
+                    caption="أحسن طلعاتنا — وثّقوها 📸"
+                    music={tracks[11]?.title}
+                    artist={tracks[11]?.artist}
+                />
+                <ActionRail profile="🌟" playing={!muted && audioReady} />
+            </div>
+        ),
+    });
+
+    // ── Admin tools card (DEAN ONLY) ──
+    if (isDean) {
+        cards.push({
+            id: "admin-tools",
+            render: () => (
+                <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-zinc-800 via-stone-900 to-black flex items-center justify-center">
+                    <span className="absolute opacity-10 text-[400px] select-none">🛠️</span>
+                    <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                        <p className="text-2xl font-bold mb-1 drop-shadow-2xl">🛠️ أدوات الإدارة</p>
+                        <p className="text-xs text-white/80 mb-4">صلاحياتك المتقدمة</p>
+                        <div className="space-y-2 text-right">
+                            <div className="rounded-2xl px-4 py-3 bg-white/10 backdrop-blur border border-amber-500/30">
+                                <p className="font-bold text-sm">📥 استيراد بيانات تاريخية</p>
+                                <p className="text-[10px] text-white/70">ضع JSON من الأسابيع القديمة</p>
+                            </div>
+                            <div className="rounded-2xl px-4 py-3 bg-white/10 backdrop-blur border border-violet-500/30">
+                                <p className="font-bold text-sm">🧹 تنظيف أسماء المطاعم</p>
+                                <p className="text-[10px] text-white/70">ادمج المكرّرات وأصلح الإملاء</p>
+                            </div>
+                            <div className="rounded-2xl px-4 py-3 bg-white/10 backdrop-blur border border-rose-500/30">
+                                <p className="font-bold text-sm">⚙️ إدارة الدورة</p>
+                                <p className="text-[10px] text-white/70">إعادة تعيين، تغيير الملك</p>
+                            </div>
+                        </div>
+                        <p className="text-[10px] text-white/60 mt-3">افتح تبويب "المزيد" للوصول الفعلي 👇</p>
+                    </div>
+                    <CaptionOverlay
+                        username="admin_panel"
+                        caption="صلاحيات العميد الكاملة 🗝️"
+                        music={tracks[12]?.title}
+                        artist={tracks[12]?.artist}
+                    />
+                    <ActionRail profile="🛠️" playing={!muted && audioReady} />
+                </div>
+            ),
+        });
+    }
 
     // ── Statistics card ──
     cards.push({
