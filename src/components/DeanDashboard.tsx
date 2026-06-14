@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, Rating, VALID_NAMES } from "@/lib/services";
-import { Star, ShieldAlert, BarChart3, KeyRound, Users, CheckCircle2, Bell, Lock } from "lucide-react";
+import { Star, ShieldAlert, BarChart3, KeyRound, Users, CheckCircle2, Bell, Lock, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import Link from "next/link";
 import ExportDataButton from "./ExportDataButton";
 import RestaurantNameCleanup from "./RestaurantNameCleanup";
@@ -18,6 +19,9 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
     const [registeredNames, setRegisteredNames] = useState<string[]>([]);
     const [usersData, setUsersData] = useState<any[]>([]);
     const [showPwaList, setShowPwaList] = useState(false);
+    // Recovery: weeks that got marked completed but are missing day/restaurant
+    const [recoverableWeeks, setRecoverableWeeks] = useState<WeekSession[]>([]);
+    const [reopeningId, setReopeningId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -40,6 +44,20 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
                 const allUsers = await services.getAllUsers();
                 setRegisteredNames(allUsers.map((u: any) => u.name || u.id));
                 setUsersData(allUsers);
+
+                // Find completed weeks that have no day OR no restaurant — these
+                // were finalized by mistake (likely random week with no selection)
+                try {
+                    const rows = await services.getAllCompletedWeeks();
+                    const broken = rows
+                        .map((r) => r.week)
+                        .filter((w) => !w.day || !w.restaurant)
+                        .sort((a, b) => b.weekNumber - a.weekNumber)
+                        .slice(0, 5);
+                    setRecoverableWeeks(broken);
+                } catch (e) {
+                    console.error("recovery scan failed", e);
+                }
             } catch (err) {
                 console.error(err);
             }
@@ -56,8 +74,61 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
 
     const average = ratings.length > 0 ? ratings.reduce((acc, curr) => acc + curr.score, 0) / ratings.length : 0;
 
+    const reopenWeek = async (w: WeekSession) => {
+        if (reopeningId) return;
+        if (!confirm(`فعلاً تبي تعيد فتح أسبوع ${w.weekNumber}؟ يرجع 'قيد التنفيذ' وتقدر تحدد المطعم/اليوم.`)) return;
+        setReopeningId(w.id);
+        try {
+            await services.uncompleteWeek(w.id);
+            toast.success(`📂 أسبوع ${w.weekNumber} فُتح من جديد`);
+            setRecoverableWeeks((list) => list.filter((x) => x.id !== w.id));
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "خطأ");
+            console.error(e);
+        } finally {
+            setReopeningId(null);
+        }
+    };
+
     return (
         <div className="mt-6 pt-6 border-t border-amber-900/50">
+            {recoverableWeeks.length > 0 && (
+                <div className="mb-6 bg-gradient-to-br from-amber-900/30 to-orange-900/30 border-2 border-amber-500/40 rounded-2xl p-5">
+                    <div className="flex items-start gap-3 mb-3">
+                        <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-500/40">
+                            <ShieldAlert className="w-5 h-5 text-amber-400" />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-base font-bold text-amber-300">⚠️ أسابيع اعتُمدت بدون تفاصيل</h3>
+                            <p className="text-xs text-amber-200/80 mt-0.5">
+                                هالأسابيع وضعها &quot;اكتمل&quot; لكنها بدون مطعم أو يوم. اضغط &quot;أعد فتح&quot; ترجع &quot;قيد التنفيذ&quot; وتقدر تحدد القرارات.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        {recoverableWeeks.map((w) => (
+                            <div key={w.id} className="bg-slate-900/80 border border-slate-700 rounded-xl p-3 flex items-center justify-between gap-3">
+                                <div className="text-right">
+                                    <p className="font-bold text-white text-sm">
+                                        أسبوع {w.weekNumber} · دورة {w.cycleNumber}
+                                    </p>
+                                    <p className="text-[11px] text-slate-400 mt-0.5">
+                                        ملك: {w.king || "عشوائي 🎲"} · {w.day || "بدون يوم"} · {w.restaurant || "بدون مطعم"}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => reopenWeek(w)}
+                                    disabled={reopeningId === w.id}
+                                    className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold text-xs px-3 py-2 rounded-lg active:scale-95 transition-transform disabled:opacity-50"
+                                >
+                                    <RefreshCw className={`w-3.5 h-3.5 ${reopeningId === w.id ? "animate-spin" : ""}`} />
+                                    {reopeningId === w.id ? "يفتح..." : "أعد فتح"}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-amber-500 flex items-center gap-2">
                     <BarChart3 className="w-5 h-5" />

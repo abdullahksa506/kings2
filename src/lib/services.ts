@@ -357,6 +357,10 @@ export const services = {
         return invokeRpc("completeWeek", { weekId });
     },
 
+    async uncompleteWeek(weekId: string) {
+        return invokeRpc("uncompleteWeek", { weekId });
+    },
+
     // Get previous week to check for consecutive restaurant rule
     async getPreviousWeek(): Promise<WeekSession | null> {
         const q = query(
