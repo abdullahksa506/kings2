@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Crown, MapPin, Calendar, Share2, Music, ChevronUp, Vote, Users, Check, X, Trophy, Rewind, Volume2, VolumeX, Settings } from "lucide-react";
+import { Crown, MapPin, Calendar, Share2, Music, ChevronUp, Vote, Users, Check, X, Trophy, Rewind, Volume2, VolumeX, Settings, Heart } from "lucide-react";
 import { toast } from "sonner";
 import { WeekSession, VALID_NAMES, services, ChatMessage } from "@/lib/services";
 
@@ -57,16 +57,18 @@ function ActionRail({
     items,
     profile,
     onShare,
+    playing,
 }: {
     items?: ActionRailItem[];
     profile?: string;
     onShare?: () => void;
+    playing?: boolean;
 }) {
     return (
         <div className="absolute bottom-12 right-2 z-30 flex flex-col items-center gap-4">
             {/* Profile circle (decorative — but kept as visual anchor like real TikTok) */}
             {profile && (
-                <div className="w-12 h-12 rounded-full overflow-hidden border-[2.5px] border-white bg-gradient-to-br from-pink-500 via-fuchsia-500 to-cyan-500 flex items-center justify-center text-2xl mb-1">
+                <div className={`w-12 h-12 rounded-full overflow-hidden border-[2.5px] border-white bg-gradient-to-br from-pink-500 via-fuchsia-500 to-cyan-500 flex items-center justify-center text-2xl mb-1 ${playing ? "animate-glow" : ""}`}>
                     {profile}
                 </div>
             )}
@@ -103,8 +105,8 @@ function ActionRail({
             )}
 
             {/* Rotating music disc — purely visual (matches the music caption) */}
-            <div className="mt-1 w-10 h-10 rounded-full border-2 border-white/30 bg-gradient-to-br from-pink-600 via-fuchsia-700 to-black flex items-center justify-center animate-spin-slow">
-                <div className="w-3 h-3 rounded-full bg-black border-2 border-white/40" />
+            <div className={`mt-1 w-10 h-10 rounded-full border-2 border-white/30 bg-gradient-to-br from-pink-600 via-fuchsia-700 to-black flex items-center justify-center ${playing ? "animate-spin-slow" : ""}`}>
+                <div className={`w-3 h-3 rounded-full bg-black border-2 ${playing ? "border-pink-300" : "border-white/40"}`} />
             </div>
         </div>
     );
@@ -152,6 +154,23 @@ export default function TikTokFeedView({
     const [busy, setBusy] = useState<string | null>(null);
     const [muted, setMuted] = useState(true);
     const [audioReady, setAudioReady] = useState(false);
+    const [likedCards, setLikedCards] = useState<Record<string, boolean>>({});
+    const [doubleTapHeart, setDoubleTapHeart] = useState<{ id: number; x: number; y: number } | null>(null);
+    const lastTapRef = useRef<{ time: number; cardId: string }>({ time: 0, cardId: "" });
+
+    // TikTok signature: double-tap anywhere on a card → animated heart + like
+    const handleCardTap = (cardId: string, e: React.MouseEvent | React.TouchEvent) => {
+        const now = Date.now();
+        const last = lastTapRef.current;
+        const isDouble = last.cardId === cardId && now - last.time < 320;
+        lastTapRef.current = { time: now, cardId };
+        if (!isDouble) return;
+        // Capture tap coords for floating heart
+        const ev = "touches" in e && e.touches[0] ? e.touches[0] : (e as React.MouseEvent);
+        setDoubleTapHeart({ id: now, x: ev.clientX, y: ev.clientY });
+        setLikedCards((s) => ({ ...s, [cardId]: true }));
+        setTimeout(() => setDoubleTapHeart((h) => (h?.id === now ? null : h)), 900);
+    };
 
     // ── Live data for inline sections (no buttons, just content) ──
     const [leaderboard, setLeaderboard] = useState<{ name: string; avg: number; weeks: number }[]>([]);
@@ -389,7 +408,7 @@ export default function TikTokFeedView({
                     music={TRACKS[0].title}
                     artist={TRACKS[0].artist}
                 />
-                <ActionRail profile="👑" onShare={shareKing} />
+                <ActionRail profile="👑" onShare={shareKing} playing={!muted && audioReady} />
             </div>
         ),
     });
@@ -412,6 +431,7 @@ export default function TikTokFeedView({
                 />
                 <ActionRail
                     profile="🍔"
+                    playing={!muted && audioReady}
                     onShare={() => {
                         const url = `https://wa.me/?text=${encodeURIComponent(`🍽️ مطعم الطلعة: ${restaurant}`)}`;
                         window.open(url, "_blank");
@@ -471,6 +491,7 @@ export default function TikTokFeedView({
                 />
                 <ActionRail
                     profile="📅"
+                    playing={!muted && audioReady}
                     onShare={() => {
                         const url = `https://wa.me/?text=${encodeURIComponent("📅 صوّت ليوم الطلعة!")}`;
                         window.open(url, "_blank");
@@ -504,6 +525,7 @@ export default function TikTokFeedView({
                 />
                 <ActionRail
                     profile={myAttendance === "present" ? "✅" : myAttendance === "absent" ? "❌" : "🤔"}
+                    playing={!muted && audioReady}
                     onShare={() => {
                         const url = `https://wa.me/?text=${encodeURIComponent(`✅ ${attendingCount} حاضر للطلعة`)}`;
                         window.open(url, "_blank");
@@ -566,7 +588,7 @@ export default function TikTokFeedView({
                         music={TRACKS[4].title}
                     artist={TRACKS[4].artist}
                     />
-                    <ActionRail profile="🗳️" />
+                    <ActionRail profile="🗳️" playing={!muted && audioReady} />
                 </div>
             ),
         });
@@ -590,7 +612,7 @@ export default function TikTokFeedView({
                         music={TRACKS[5].title}
                     artist={TRACKS[5].artist}
                     />
-                    <ActionRail profile="🏆" />
+                    <ActionRail profile="🏆" playing={!muted && audioReady} />
                 </div>
             ),
         });
@@ -614,7 +636,7 @@ export default function TikTokFeedView({
                         music={TRACKS[6].title}
                     artist={TRACKS[6].artist}
                     />
-                    <ActionRail profile="🎞️" />
+                    <ActionRail profile="🎞️" playing={!muted && audioReady} />
                 </div>
             ),
         });
@@ -665,7 +687,7 @@ export default function TikTokFeedView({
                     music={TRACKS[7].title}
                     artist={TRACKS[7].artist}
                 />
-                <ActionRail profile="🏆" />
+                <ActionRail profile="🏆" playing={!muted && audioReady} />
             </div>
         ),
     });
@@ -709,7 +731,7 @@ export default function TikTokFeedView({
                     music={TRACKS[8].title}
                     artist={TRACKS[8].artist}
                 />
-                <ActionRail profile="🚽" />
+                <ActionRail profile="🚽" playing={!muted && audioReady} />
             </div>
         ),
     });
@@ -749,7 +771,7 @@ export default function TikTokFeedView({
                     music={TRACKS[9].title}
                     artist={TRACKS[9].artist}
                 />
-                <ActionRail profile="🗺️" />
+                <ActionRail profile="🗺️" playing={!muted && audioReady} />
             </div>
         ),
     });
@@ -787,7 +809,7 @@ export default function TikTokFeedView({
                     music={TRACKS[10].title}
                     artist={TRACKS[10].artist}
                 />
-                <ActionRail profile="💬" />
+                <ActionRail profile="💬" playing={!muted && audioReady} />
             </div>
         ),
     });
@@ -852,13 +874,35 @@ export default function TikTokFeedView({
                 {cards.map((c) => (
                     <section
                         key={c.id}
+                        onClick={(e) => handleCardTap(c.id, e)}
+                        onTouchStart={(e) => handleCardTap(c.id, e)}
                         className="h-full w-full snap-start snap-always relative"
                         style={{ scrollSnapAlign: "start", height: "100dvh" }}
                     >
                         {c.render()}
+                        {/* Persistent like indicator (corner) — appears once a card is liked */}
+                        {likedCards[c.id] && (
+                            <div className="absolute top-16 right-3 z-40 pointer-events-none animate-pulse">
+                                <Heart className="w-7 h-7 text-red-500 fill-current drop-shadow-2xl" />
+                            </div>
+                        )}
                     </section>
                 ))}
             </div>
+
+            {/* Floating heart on double-tap */}
+            {doubleTapHeart && (
+                <div
+                    className="absolute z-[60] pointer-events-none"
+                    style={{
+                        left: doubleTapHeart.x - 48,
+                        top: doubleTapHeart.y - 48,
+                        animation: "tt-heart-pop 900ms ease-out forwards",
+                    }}
+                >
+                    <Heart className="w-24 h-24 text-red-500 fill-current drop-shadow-2xl" />
+                </div>
+            )}
 
             {/* Swipe-up hint on first card */}
             {activeIdx === 0 && cards.length > 1 && (
