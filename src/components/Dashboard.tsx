@@ -1451,11 +1451,16 @@ export default function Dashboard() {
                             pastWeek={pastWeek}
                             userName={user?.name || ""}
                             topMember={null}
+                            isDean={user?.role === "dean"}
                             onSwitchToFullView={() => setTiktokFullView(true)}
                             onNavigate={(tab) => {
                                 setActiveTab(tab);
                                 setTiktokFullView(true);
                             }}
+                            onOpenStats={() => setIsStatsOpen(true)}
+                            onOpenProfile={() => setIsMemberProfileOpen(true)}
+                            onOpenConstitution={() => setIsConstitutionOpen(true)}
+                            onOpenPlanner={() => setIsPlannerOpen(true)}
                         />
                     )}
 

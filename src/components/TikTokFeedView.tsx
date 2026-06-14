@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Crown, MapPin, Calendar, Share2, Music, ChevronUp, Vote, Users, Check, X, Trophy, Rewind, Volume2, VolumeX, Settings, Heart } from "lucide-react";
 import { toast } from "sonner";
-import { WeekSession, VALID_NAMES, services, ChatMessage } from "@/lib/services";
+import { WeekSession, VALID_NAMES, services, ChatMessage, Suggestion, FUTURE_FEATURE_SEEDS } from "@/lib/services";
 
 /**
  * Track type — fetched dynamically from iTunes Preview API.
@@ -132,8 +132,14 @@ interface TikTokFeedViewProps {
     pastWeek: WeekSession | null;
     userName: string;
     topMember?: { name: string; score: number } | null;
+    isDean?: boolean;
     onSwitchToFullView: () => void;
     onNavigate?: (tab: "leaderboard" | "bathroom" | "map" | "more") => void;
+    // Modal openers — modals overlay on top of the feed (not navigation to a tab)
+    onOpenStats?: () => void;
+    onOpenProfile?: () => void;
+    onOpenConstitution?: () => void;
+    onOpenPlanner?: () => void;
 }
 
 interface ActionRailItem {
@@ -236,8 +242,13 @@ export default function TikTokFeedView({
     pastWeek,
     userName,
     topMember,
+    isDean,
     onSwitchToFullView,
     onNavigate,
+    onOpenStats,
+    onOpenProfile,
+    onOpenConstitution,
+    onOpenPlanner,
 }: TikTokFeedViewProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const audioRef = useRef<HTMLAudioElement>(null);
@@ -276,6 +287,16 @@ export default function TikTokFeedView({
     const [bathroomTop, setBathroomTop] = useState<{ restaurant: string; avg: number; count: number }[]>([]);
     const [recentRestaurants, setRecentRestaurants] = useState<{ name: string; king: string | null; week: number }[]>([]);
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+    const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+    const [suggestionText, setSuggestionText] = useState("");
+    const [stats, setStats] = useState<{
+        totalOutings: number;
+        uniqueRestaurants: number;
+        suggestionsCount: number;
+        avgAttendance: number;
+        mostKing?: { name: string; count: number } | null;
+        highestRatedKing?: { name: string; score: number } | null;
+    } | null>(null);
 
     useEffect(() => {
         // Leaderboard: avg score per king across completed weeks
@@ -328,8 +349,43 @@ export default function TikTokFeedView({
         const unsub = services.listenToChatMessages((msgs) => {
             setChatMessages(msgs.slice(-5).reverse());
         });
+
+        // Suggestions list (just last few for preview)
+        services.getAllSuggestions().then((rows) => {
+            const sorted = [...rows].sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+            setSuggestions(sorted.slice(0, 5));
+        }).catch(() => {});
+
+        // Statistics totals
+        services.getStatistics().then((s) => {
+            setStats({
+                totalOutings: s?.totalOutings ?? 0,
+                uniqueRestaurants: s?.uniqueRestaurants ?? 0,
+                suggestionsCount: s?.suggestionsCount ?? 0,
+                avgAttendance: s?.avgAttendancePerWeek ?? 0,
+                mostKing: s?.funFacts?.mostKing ?? null,
+                highestRatedKing: s?.funFacts?.highestRatedKing ?? null,
+            });
+        }).catch(() => {});
+
         return () => { try { unsub(); } catch {} };
     }, []);
+
+    const sendSuggestion = async () => {
+        const text = suggestionText.trim();
+        if (!text || busy) return;
+        setBusy("suggest");
+        try {
+            await services.submitSuggestion(text);
+            setSuggestionText("");
+            toast.success("شكراً! اقتراحك وصل للعميد ✨");
+        } catch (e) {
+            toast.error("ما قدرنا نرسل");
+            console.error(e);
+        } finally {
+            setBusy(null);
+        }
+    };
 
     // Swap music per-card. Use dynamic fetched tracks (real songs from iTunes).
     const currentTrack: Track | undefined = tracks.length > 0 ? tracks[activeIdx % tracks.length] : undefined;
@@ -912,6 +968,306 @@ export default function TikTokFeedView({
             </div>
         ),
     });
+
+    // ── Statistics card ──
+    cards.push({
+        id: "stats",
+        render: () => (
+            <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-700 to-purple-800 flex items-center justify-center">
+                <span className="absolute opacity-10 text-[400px] select-none">📊</span>
+                <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                    <p className="text-2xl font-bold mb-1 drop-shadow-2xl">📊 إحصائيات الجلسة</p>
+                    <p className="text-xs text-white/80 mb-4">عبر كل الدورات</p>
+                    {stats ? (
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="rounded-2xl px-3 py-4 bg-white/15 backdrop-blur">
+                                <p className="text-4xl font-black">{stats.totalOutings}</p>
+                                <p className="text-xs text-white/85 mt-1">طلعة كاملة</p>
+                            </div>
+                            <div className="rounded-2xl px-3 py-4 bg-white/15 backdrop-blur">
+                                <p className="text-4xl font-black">{stats.uniqueRestaurants}</p>
+                                <p className="text-xs text-white/85 mt-1">مطعم مختلف</p>
+                            </div>
+                            <div className="rounded-2xl px-3 py-4 bg-white/15 backdrop-blur">
+                                <p className="text-4xl font-black">{stats.avgAttendance}</p>
+                                <p className="text-xs text-white/85 mt-1">معدل الحضور</p>
+                            </div>
+                            <div className="rounded-2xl px-3 py-4 bg-white/15 backdrop-blur">
+                                <p className="text-4xl font-black">{stats.suggestionsCount}</p>
+                                <p className="text-xs text-white/85 mt-1">اقتراح</p>
+                            </div>
+                            {stats.mostKing && (
+                                <div className="rounded-2xl px-3 py-3 bg-white/15 backdrop-blur col-span-2">
+                                    <p className="text-xs text-white/70">👑 أكثر واحد كان ملك</p>
+                                    <p className="text-lg font-bold">{stats.mostKing.name} <span className="text-sm opacity-80">({stats.mostKing.count} مرة)</span></p>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <p className="text-white/85 text-sm">يحمّل...</p>
+                    )}
+                    {onOpenStats && (
+                        <button
+                            onClick={onOpenStats}
+                            className="mt-4 bg-white text-violet-700 font-black px-5 py-2 rounded-full text-sm hover:scale-105 active:scale-95 transition-transform shadow-2xl"
+                        >
+                            افتح الإحصائيات الكاملة ↗
+                        </button>
+                    )}
+                </div>
+                <CaptionOverlay
+                    username="stats_genius"
+                    caption="أرقام تكلّم بنفسها 📈"
+                    music={tracks[3]?.title}
+                    artist={tracks[3]?.artist}
+                />
+                <ActionRail profile="📊" playing={!muted && audioReady} />
+            </div>
+        ),
+    });
+
+    // ── Suggestions card (inline input) ──
+    cards.push({
+        id: "suggest",
+        render: () => (
+            <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-pink-500 via-rose-600 to-red-700 flex items-center justify-center">
+                <span className="absolute opacity-10 text-[400px] select-none">💡</span>
+                <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                    <p className="text-2xl font-bold mb-1 drop-shadow-2xl">💡 صندوق الاقتراحات</p>
+                    <p className="text-xs text-white/80 mb-4">للعميد فقط (مجهول)</p>
+                    {suggestions.length > 0 && (
+                        <div className="space-y-1.5 text-right mb-3">
+                            {suggestions.slice(0, 3).map((s) => (
+                                <div key={s.id} className="rounded-xl px-3 py-2 bg-white/15 backdrop-blur text-sm line-clamp-2">
+                                    {s.text}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <div className="flex gap-2">
+                        <input
+                            value={suggestionText}
+                            onChange={(e) => setSuggestionText(e.target.value)}
+                            placeholder="اكتب اقتراحك..."
+                            className="flex-1 bg-white/15 backdrop-blur border border-white/30 rounded-full px-4 py-2 text-white text-sm outline-none placeholder:text-white/60"
+                            dir="rtl"
+                        />
+                        <button
+                            onClick={sendSuggestion}
+                            disabled={busy !== null || !suggestionText.trim()}
+                            className="bg-white text-rose-700 font-black px-4 py-2 rounded-full text-sm disabled:opacity-50"
+                        >
+                            أرسل
+                        </button>
+                    </div>
+                </div>
+                <CaptionOverlay
+                    username="suggestion_box"
+                    caption="عندك فكرة؟ ارمها هنا 📝"
+                    music={tracks[7]?.title}
+                    artist={tracks[7]?.artist}
+                />
+                <ActionRail profile="💡" playing={!muted && audioReady} />
+            </div>
+        ),
+    });
+
+    // ── Future Features Voting card ──
+    cards.push({
+        id: "future",
+        render: () => (
+            <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-cyan-500 via-blue-600 to-violet-700 flex items-center justify-center">
+                <span className="absolute opacity-10 text-[400px] select-none">🔮</span>
+                <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                    <p className="text-2xl font-bold mb-1 drop-shadow-2xl">🔮 ميزات المستقبل</p>
+                    <p className="text-xs text-white/80 mb-4">صوّت لأي ميزة تبيها</p>
+                    <div className="space-y-2 text-right">
+                        {FUTURE_FEATURE_SEEDS.slice(0, 4).map((f) => (
+                            <div key={f.id} className="rounded-2xl px-4 py-3 bg-white/15 backdrop-blur flex items-start gap-3">
+                                <span className="text-2xl">{f.icon}</span>
+                                <div className="flex-1 text-right">
+                                    <p className="font-bold text-sm">{f.title}</p>
+                                    <p className="text-[11px] text-white/75 line-clamp-2">{f.description}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <p className="text-[10px] text-white/70 mt-3">افتح "المزيد" للتصويت الفعلي 👇</p>
+                </div>
+                <CaptionOverlay
+                    username="future_features"
+                    caption="وش تبي يصير في الموقع؟ 🔮"
+                    music={tracks[2]?.title}
+                    artist={tracks[2]?.artist}
+                />
+                <ActionRail profile="🔮" playing={!muted && audioReady} />
+            </div>
+        ),
+    });
+
+    // ── Impromptu meetup card (status) ──
+    cards.push({
+        id: "impromptu",
+        render: () => (
+            <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-orange-500 via-red-600 to-pink-700 flex items-center justify-center">
+                <span className="absolute opacity-10 text-[400px] select-none">🚨</span>
+                <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                    <p className="text-2xl font-bold mb-1 drop-shadow-2xl">🚨 أنا فاضي!</p>
+                    <p className="text-xs text-white/80 mb-4">لقاء مفاجئ — اضغط لو تبي تطلع الحين</p>
+                    <p className="text-base text-white/95 leading-relaxed bg-white/10 backdrop-blur rounded-2xl p-4">
+                        لو فيه أكثر من ٢ ضغطوا "أنا فاضي" خلال ربع ساعة، إشعار يطلع للكل لتنسيق طلعة فجائية.
+                    </p>
+                    <p className="text-[11px] text-white/70 mt-4">افتح تبويب "الأسبوع" لتفعّل لقاء مفاجئ 👇</p>
+                </div>
+                <CaptionOverlay
+                    username="impromptu_meet"
+                    caption="مين فاضي ينطّ نطلع؟ 🏃‍♂️💨"
+                    music={tracks[4]?.title}
+                    artist={tracks[4]?.artist}
+                />
+                <ActionRail profile="🚨" playing={!muted && audioReady} />
+            </div>
+        ),
+    });
+
+    // ── Outing Planner card (CTA opens modal) ──
+    if (onOpenPlanner) {
+        cards.push({
+            id: "planner",
+            render: () => (
+                <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-amber-500 via-yellow-600 to-orange-700 flex items-center justify-center">
+                    <span className="absolute opacity-10 text-[400px] select-none">🤖</span>
+                    <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                        <p className="text-2xl font-bold mb-1 drop-shadow-2xl">🤖 المخطّط الذكي</p>
+                        <p className="text-xs text-white/80 mb-4">ذكاء اصطناعي يقترح لك مطعم</p>
+                        <p className="text-base bg-white/10 backdrop-blur rounded-2xl p-4 leading-relaxed">
+                            ١١,٣٨٤ مطعم في الرياض بالـ AI 🍔🍣🥙<br />
+                            قول لي مود الجلسة وكم الميزانية، أعطيك أحسن ٣ خيارات.
+                        </p>
+                        <button
+                            onClick={onOpenPlanner}
+                            className="mt-4 bg-white text-orange-700 font-black px-5 py-2 rounded-full text-sm hover:scale-105 active:scale-95 transition-transform shadow-2xl"
+                        >
+                            افتح المخطّط ✨
+                        </button>
+                    </div>
+                    <CaptionOverlay
+                        username="ai_planner"
+                        caption="محتار وين تطلع؟ خلني اقترح 🤖"
+                        music={tracks[5]?.title}
+                        artist={tracks[5]?.artist}
+                    />
+                    <ActionRail profile="🤖" playing={!muted && audioReady} />
+                </div>
+            ),
+        });
+    }
+
+    // ── Member Profile card (CTA opens modal) ──
+    if (onOpenProfile) {
+        cards.push({
+            id: "profile",
+            render: () => (
+                <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-cyan-600 via-teal-700 to-emerald-800 flex items-center justify-center">
+                    <span className="absolute opacity-10 text-[400px] select-none">👤</span>
+                    <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                        <p className="text-2xl font-bold mb-1 drop-shadow-2xl">👤 ملفك الشخصي</p>
+                        <p className="text-xs text-white/80 mb-4">تاريخك، أرقامك، إنجازاتك</p>
+                        <div className="bg-white/15 backdrop-blur rounded-3xl p-5">
+                            <p className="text-3xl font-black mb-2">{userName || "—"}</p>
+                            <p className="text-xs text-white/80">شوف كل تفاصيل حضورك وتقييماتك ومواقفك كملك</p>
+                        </div>
+                        <button
+                            onClick={onOpenProfile}
+                            className="mt-4 bg-white text-teal-700 font-black px-5 py-2 rounded-full text-sm hover:scale-105 active:scale-95 transition-transform shadow-2xl"
+                        >
+                            افتح ملفك 👤
+                        </button>
+                    </div>
+                    <CaptionOverlay
+                        username="my_profile"
+                        caption="كل أرقامك في مكان واحد 📊"
+                        music={tracks[1]?.title}
+                        artist={tracks[1]?.artist}
+                    />
+                    <ActionRail profile="👤" playing={!muted && audioReady} />
+                </div>
+            ),
+        });
+    }
+
+    // ── Constitution card (CTA opens modal) ──
+    if (onOpenConstitution) {
+        cards.push({
+            id: "constitution",
+            render: () => (
+                <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-stone-700 via-stone-800 to-stone-900 flex items-center justify-center">
+                    <span className="absolute opacity-10 text-[400px] select-none">📜</span>
+                    <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                        <p className="text-2xl font-bold mb-1 drop-shadow-2xl">📜 دستور الجلسة</p>
+                        <p className="text-xs text-white/80 mb-4">القوانين الذهبية</p>
+                        <div className="bg-white/10 backdrop-blur border border-amber-400/30 rounded-3xl p-5 text-right">
+                            <p className="text-sm leading-relaxed text-amber-100">
+                                ١. الملك يدور كل أسبوع 👑<br />
+                                ٢. التصويت اختياري<br />
+                                ٣. الميزانية ١٧٥ ريال للشخص<br />
+                                ٤. الخميس مقدّس<br />
+                                ٥. لا اعتذار بدون عذر شرعي
+                            </p>
+                        </div>
+                        <button
+                            onClick={onOpenConstitution}
+                            className="mt-4 bg-amber-400 text-stone-900 font-black px-5 py-2 rounded-full text-sm hover:scale-105 active:scale-95 transition-transform shadow-2xl"
+                        >
+                            افتح الدستور الكامل 📜
+                        </button>
+                    </div>
+                    <CaptionOverlay
+                        username="constitution"
+                        caption="قوانين الجلسة الذهبية 👑"
+                        music={tracks[6]?.title}
+                        artist={tracks[6]?.artist}
+                    />
+                    <ActionRail profile="📜" playing={!muted && audioReady} />
+                </div>
+            ),
+        });
+    }
+
+    // ── Dean Dashboard card (DEAN ONLY) ──
+    if (isDean) {
+        cards.push({
+            id: "dean",
+            render: () => (
+                <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-purple-700 via-fuchsia-700 to-pink-800 flex items-center justify-center">
+                    <span className="absolute opacity-10 text-[400px] select-none">👔</span>
+                    <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                        <p className="text-2xl font-bold mb-1 drop-shadow-2xl">👔 لوحة العميد</p>
+                        <p className="text-xs text-white/80 mb-4">صلاحياتك المخفية</p>
+                        <div className="bg-white/15 backdrop-blur rounded-3xl p-5 text-right">
+                            <p className="text-sm leading-relaxed">
+                                ⚙️ إدارة الدورة والأسابيع<br />
+                                👑 تعيين/تغيير الملك سرّاً<br />
+                                📊 إدارة التقييمات والإحصائيات<br />
+                                📥 استيراد بيانات تاريخية<br />
+                                🔧 أدوات صيانة الجلسة
+                            </p>
+                        </div>
+                        <p className="text-[10px] text-white/70 mt-3">
+                            افتح تبويب "المزيد" لكل أدوات العميد 👇
+                        </p>
+                    </div>
+                    <CaptionOverlay
+                        username="the_dean"
+                        caption="أنت العميد — معاك المفاتيح 🗝️"
+                        music={tracks[0]?.title}
+                        artist={tracks[0]?.artist}
+                    />
+                    <ActionRail profile="👔" playing={!muted && audioReady} />
+                </div>
+            ),
+        });
+    }
 
     return (
         <div className="fixed inset-0 z-50 bg-black" style={{ touchAction: "pan-y" }}>
