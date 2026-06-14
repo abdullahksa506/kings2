@@ -3,26 +3,37 @@
 import { useEffect, useRef, useState } from "react";
 import { Crown, MapPin, Calendar, Share2, Music, ChevronUp, Vote, Users, Check, X, Trophy, Rewind, Search, Volume2, VolumeX, Settings } from "lucide-react";
 import { toast } from "sonner";
-import { WeekSession, VALID_NAMES, services } from "@/lib/services";
+import { WeekSession, VALID_NAMES, services, ChatMessage } from "@/lib/services";
 
 /**
- * Royalty-free background music tracks from SoundHelix.com
- * (Tim Sanderson, freely usable for any purpose including commercial demos)
- * Each card cycles through these so the feed feels alive.
+ * Real music — Kevin MacLeod (incompetech.com) — Creative Commons BY 4.0.
+ * Each track is a full composition (not algorithmic). Track moods are picked
+ * to match each card vibe. Attribution is shown on each music caption.
  */
-const TRACKS: Array<{ url: string; title: string }> = [
-    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", title: "King's Anthem · Electronic" },
-    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", title: "Restaurant Vibes · Chill" },
-    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", title: "Vote Beat · Trap" },
-    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", title: "Attendance Mood · Lo-fi" },
-    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", title: "Hype Restaurant · House" },
-    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", title: "Champion · Epic" },
-    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", title: "Memories · Ambient" },
-    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", title: "Leaderboard Banger · EDM" },
-    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", title: "Bathroom Royalty · Funk" },
-    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", title: "Map Quest · Synthwave" },
-    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", title: "Chat Lounge · Jazz" },
-    { url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", title: "Suggestions · Drum & Bass" },
+const TRACKS: Array<{ url: string; title: string; artist: string }> = [
+    // King — heroic fanfare
+    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Mining%20by%20Moonlight.mp3", title: "Mining by Moonlight", artist: "Kevin MacLeod" },
+    // Restaurant — chill jazz
+    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Carefree.mp3", title: "Carefree", artist: "Kevin MacLeod" },
+    // Day vote — sneaky comedy
+    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Sneaky%20Snitch.mp3", title: "Sneaky Snitch", artist: "Kevin MacLeod" },
+    // Attendance — funky upbeat
+    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Funky%20Chunk.mp3", title: "Funky Chunk", artist: "Kevin MacLeod" },
+    // Restaurant vote — competitive build
+    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/The%20Builder.mp3", title: "The Builder", artist: "Kevin MacLeod" },
+    // Past week — nostalgic mellow
+    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Wallpaper.mp3", title: "Wallpaper", artist: "Kevin MacLeod" },
+    // Leaderboard — serious jazzy
+    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Lobby%20Time.mp3", title: "Lobby Time", artist: "Kevin MacLeod" },
+    // Bathroom — silly playful
+    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Monkeys%20Spinning%20Monkeys.mp3", title: "Monkeys Spinning Monkeys", artist: "Kevin MacLeod" },
+    // Map / recent — adventurous epic
+    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Pamgaea.mp3", title: "Pamgaea", artist: "Kevin MacLeod" },
+    // Chat — upbeat happy
+    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Hyperfun.mp3", title: "Hyperfun", artist: "Kevin MacLeod" },
+    // Bonus — relaxed mood music
+    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Local%20Forecast%20-%20Elevator.mp3", title: "Local Forecast", artist: "Kevin MacLeod" },
+    { url: "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Wholesome.mp3", title: "Wholesome", artist: "Kevin MacLeod" },
 ];
 
 interface TikTokFeedViewProps {
@@ -103,20 +114,23 @@ function CaptionOverlay({
     username,
     caption,
     music,
+    artist,
 }: {
     username: string;
     caption: string;
     music?: string;
+    artist?: string;
 }) {
+    const musicLine = music && artist ? `${music} — ${artist}` : music || "";
     return (
-        <div className="absolute bottom-24 left-4 right-24 z-30 text-white">
+        <div className="absolute bottom-12 left-4 right-24 z-30 text-white">
             <p className="font-black text-base mb-1 drop-shadow-lg">@{username}</p>
             <p className="text-sm leading-relaxed drop-shadow-lg mb-2">{caption}</p>
             {music && (
                 <div className="flex items-center gap-1.5 text-xs">
                     <Music className="w-3 h-3" />
                     <div className="overflow-hidden whitespace-nowrap">
-                        <span className="inline-block animate-marquee">♪ {music} ♪ {music} ♪</span>
+                        <span className="inline-block animate-marquee">♪ {musicLine} ♪ {musicLine} ♪</span>
                     </div>
                 </div>
             )}
@@ -138,6 +152,66 @@ export default function TikTokFeedView({
     const [busy, setBusy] = useState<string | null>(null);
     const [muted, setMuted] = useState(true);
     const [audioReady, setAudioReady] = useState(false);
+
+    // ── Live data for inline sections (no buttons, just content) ──
+    const [leaderboard, setLeaderboard] = useState<{ name: string; avg: number; weeks: number }[]>([]);
+    const [bathroomTop, setBathroomTop] = useState<{ restaurant: string; avg: number; count: number }[]>([]);
+    const [recentRestaurants, setRecentRestaurants] = useState<{ name: string; king: string | null; week: number }[]>([]);
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+
+    useEffect(() => {
+        // Leaderboard: avg score per king across completed weeks
+        services.getAllCompletedWeeks().then((rows) => {
+            const stats: Record<string, { sum: number; n: number }> = {};
+            for (const r of rows) {
+                const k = r.week.king;
+                if (!k || r.averageScore <= 0) continue;
+                if (!stats[k]) stats[k] = { sum: 0, n: 0 };
+                stats[k].sum += r.averageScore;
+                stats[k].n += 1;
+            }
+            const list = Object.entries(stats)
+                .map(([name, { sum, n }]) => ({ name, avg: sum / n, weeks: n }))
+                .sort((a, b) => b.avg - a.avg);
+            setLeaderboard(list);
+
+            // Recent restaurants (last 5 visited)
+            const sortedRecent = rows
+                .filter((r) => r.week.restaurant)
+                .sort((a, b) => b.week.createdAt.toMillis() - a.week.createdAt.toMillis())
+                .slice(0, 5)
+                .map((r) => ({
+                    name: r.week.restaurant as string,
+                    king: r.week.king,
+                    week: r.week.weekNumber,
+                }));
+            setRecentRestaurants(sortedRecent);
+        }).catch(() => {});
+
+        // Bathroom top
+        services.getAllBathroomRatings().then((rows) => {
+            const byRest: Record<string, { sum: number; n: number }> = {};
+            for (const r of rows) {
+                const key = (r.restaurantName || r.bathroomName || "").trim();
+                if (!key) continue;
+                if (!byRest[key]) byRest[key] = { sum: 0, n: 0 };
+                byRest[key].sum += r.score;
+                byRest[key].n += 1;
+            }
+            const list = Object.entries(byRest)
+                .filter(([, v]) => v.n >= 1)
+                .map(([restaurant, { sum, n }]) => ({ restaurant, avg: sum / n, count: n }))
+                .sort((a, b) => b.avg - a.avg)
+                .slice(0, 5);
+            setBathroomTop(list);
+        }).catch(() => {});
+
+        // Live chat
+        const unsub = services.listenToChatMessages((msgs) => {
+            setChatMessages(msgs.slice(-5).reverse());
+        });
+        return () => { try { unsub(); } catch {} };
+    }, []);
 
     // Swap music per-card. Cards are rendered in order so we index TRACKS by activeIdx.
     const currentTrack = TRACKS[activeIdx % TRACKS.length];
@@ -313,6 +387,7 @@ export default function TikTokFeedView({
                     username="king_of_thursday"
                     caption={`الملك ${kingName} بنفسه 👑 الكل يحضّر! 🔥`}
                     music={TRACKS[0].title}
+                    artist={TRACKS[0].artist}
                 />
                 <ActionRail profile="👑" onShare={shareKing} />
             </div>
@@ -333,6 +408,7 @@ export default function TikTokFeedView({
                     username="restaurant_pick"
                     caption={`الطلعة في ${restaurant} 🤤 يا حلو الأكل!`}
                     music={TRACKS[1].title}
+                    artist={TRACKS[1].artist}
                 />
                 <ActionRail
                     profile="🍔"
@@ -398,6 +474,7 @@ export default function TikTokFeedView({
                     username="day_vote"
                     caption={day ? "محسوم ✅" : "اسحب يمين أو صوّت ↑"}
                     music={TRACKS[2].title}
+                    artist={TRACKS[2].artist}
                 />
                 <ActionRail
                     profile="📅"
@@ -430,6 +507,7 @@ export default function TikTokFeedView({
                     username="attendance"
                     caption={`${attendingCount} حاضر من ٦ 🔥`}
                     music={TRACKS[3].title}
+                    artist={TRACKS[3].artist}
                 />
                 <ActionRail
                     profile={myAttendance === "present" ? "✅" : myAttendance === "absent" ? "❌" : "🤔"}
@@ -493,6 +571,7 @@ export default function TikTokFeedView({
                         username="resto_vote"
                         caption="مين راح يكسب؟ 🥁"
                         music={TRACKS[4].title}
+                    artist={TRACKS[4].artist}
                     />
                     <ActionRail profile="🗳️" />
                 </div>
@@ -516,6 +595,7 @@ export default function TikTokFeedView({
                         username="leaderboard"
                         caption={`${topMember.name} يحكم اللوحة 👑`}
                         music={TRACKS[5].title}
+                    artist={TRACKS[5].artist}
                     />
                     <ActionRail profile="🏆" />
                 </div>
@@ -539,6 +619,7 @@ export default function TikTokFeedView({
                         username="last_week"
                         caption={`ذكريات أسبوع ${pastWeek.weekNumber} 📸`}
                         music={TRACKS[6].title}
+                    artist={TRACKS[6].artist}
                     />
                     <ActionRail profile="🎞️" />
                 </div>
@@ -546,89 +627,177 @@ export default function TikTokFeedView({
         });
     }
 
-    // ── Section cards (full-app navigation in the same feed) ──
-    const sectionCard = (
-        id: string,
-        gradient: string,
-        emoji: string,
-        title: string,
-        subtitle: string,
-        ctaLabel: string,
-        username: string,
-        caption: string,
-        trackIdx: number,
-        targetTab: "leaderboard" | "bathroom" | "map" | "more",
-    ) => ({
-        id,
+    // ── Leaderboard card: real podium with avg scores ──
+    cards.push({
+        id: "leader",
         render: () => (
-            <div className={`relative h-full w-full overflow-hidden ${gradient} flex items-center justify-center`}>
-                <span className="absolute opacity-10 text-[400px] select-none">{emoji}</span>
-                <div className="relative text-center text-white px-6 z-20">
-                    <p className="text-2xl font-bold mb-2 drop-shadow-2xl">{title}</p>
-                    <h1 className="text-5xl font-black drop-shadow-2xl px-4 mb-3">{subtitle}</h1>
-                    <button
-                        onClick={() => onNavigate?.(targetTab)}
-                        className="mt-4 bg-white text-black font-black px-6 py-3 rounded-full text-base hover:scale-105 active:scale-95 transition-transform shadow-2xl"
-                    >
-                        {ctaLabel} ←
-                    </button>
+            <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-yellow-500 via-amber-600 to-orange-700 flex items-center justify-center">
+                <Trophy className="absolute opacity-10 w-[500px] h-[500px] text-white" />
+                <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                    <p className="text-2xl font-bold mb-1 drop-shadow-2xl">🏆 لوحة الترتيب</p>
+                    <p className="text-xs text-white/80 mb-4">معدل التقييم كملك</p>
+                    {leaderboard.length === 0 ? (
+                        <p className="text-white/85 text-sm">لا توجد بيانات بعد</p>
+                    ) : (
+                        <div className="space-y-2 text-right">
+                            {leaderboard.slice(0, 6).map((m, i) => (
+                                <div
+                                    key={m.name}
+                                    className={`rounded-2xl px-4 py-3 flex items-center justify-between backdrop-blur ${
+                                        i === 0
+                                            ? "bg-white text-orange-700"
+                                            : i === 1
+                                            ? "bg-white/85 text-orange-700"
+                                            : i === 2
+                                            ? "bg-white/70 text-orange-700"
+                                            : "bg-white/15"
+                                    } ${m.name === userName ? "ring-2 ring-cyan-300" : ""}`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-2xl">{["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣"][i]}</span>
+                                        <div>
+                                            <p className="font-black text-lg">{m.name}</p>
+                                            <p className="text-[10px] opacity-70">{m.weeks} أسابيع كملك</p>
+                                        </div>
+                                    </div>
+                                    <p className="font-black text-xl">⭐ {m.avg.toFixed(1)}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
-                <CaptionOverlay username={username} caption={caption} music={TRACKS[trackIdx]?.title} />
-                <ActionRail profile={emoji} />
+                <CaptionOverlay
+                    username="leaderboard_legend"
+                    caption="مين أحسن ملك من ناحية التقييم؟ 👑📊"
+                    music={TRACKS[7].title}
+                    artist={TRACKS[7].artist}
+                />
+                <ActionRail profile="🏆" />
             </div>
         ),
     });
 
-    cards.push(
-        sectionCard(
-            "leader",
-            "bg-gradient-to-br from-yellow-500 via-amber-600 to-orange-700",
-            "🏆",
-            "🏆 لوحة الترتيب",
-            "مين الأقوى؟",
-            "افتح اللوحة",
-            "leaderboard_legend",
-            "اعرف وش ترتيبك بين الستة 📊",
-            7,
-            "leaderboard",
+    // ── Bathroom top card: real top-rated bathrooms ──
+    cards.push({
+        id: "bath",
+        render: () => (
+            <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-cyan-500 via-teal-600 to-blue-700 flex items-center justify-center">
+                <span className="absolute opacity-10 text-[400px] select-none">🚽</span>
+                <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                    <p className="text-2xl font-bold mb-1 drop-shadow-2xl">🚽 أفضل الحمّامات</p>
+                    <p className="text-xs text-white/80 mb-4">حسب تقييماتنا</p>
+                    {bathroomTop.length === 0 ? (
+                        <p className="text-white/85 text-sm">ما فيه تقييمات بعد</p>
+                    ) : (
+                        <div className="space-y-2 text-right">
+                            {bathroomTop.slice(0, 5).map((b, i) => (
+                                <div
+                                    key={b.restaurant}
+                                    className={`rounded-2xl px-4 py-3 flex items-center justify-between backdrop-blur ${
+                                        i === 0 ? "bg-white text-teal-700" : "bg-white/15"
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-2xl">{["🥇", "🥈", "🥉", "4️⃣", "5️⃣"][i]}</span>
+                                        <div>
+                                            <p className="font-bold text-base line-clamp-1">{b.restaurant}</p>
+                                            <p className="text-[10px] opacity-70">{b.count} تقييم</p>
+                                        </div>
+                                    </div>
+                                    <p className="font-black text-lg">⭐ {b.avg.toFixed(1)}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <CaptionOverlay
+                    username="bathroom_critic"
+                    caption="ما تنسى الحمّام الزين 🧻✨"
+                    music={TRACKS[8].title}
+                    artist={TRACKS[8].artist}
+                />
+                <ActionRail profile="🚽" />
+            </div>
         ),
-        sectionCard(
-            "bath",
-            "bg-gradient-to-br from-cyan-500 via-teal-600 to-blue-700",
-            "🚽",
-            "🚽 تقييمات الحمّامات",
-            "الحمّام المفضّل؟",
-            "افتح القسم",
-            "bathroom_critic",
-            "كل حمام له ملك خاص 👑🧻",
-            8,
-            "bathroom",
+    });
+
+    // ── Recent restaurants card (alternative to map) ──
+    cards.push({
+        id: "recent",
+        render: () => (
+            <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700 flex items-center justify-center">
+                <MapPin className="absolute opacity-10 w-[500px] h-[500px] text-white" />
+                <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                    <p className="text-2xl font-bold mb-1 drop-shadow-2xl">🗺️ آخر مطاعم زرناها</p>
+                    <p className="text-xs text-white/80 mb-4">من أحدث طلعة</p>
+                    {recentRestaurants.length === 0 ? (
+                        <p className="text-white/85 text-sm">ما فيه طلعات سابقة</p>
+                    ) : (
+                        <div className="space-y-2 text-right">
+                            {recentRestaurants.map((r, i) => (
+                                <div key={`${r.name}-${i}`} className="rounded-2xl px-4 py-3 bg-white/15 backdrop-blur">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-2xl">📍</span>
+                                        <div className="flex-1 text-right mr-3">
+                                            <p className="font-bold text-base line-clamp-1">{r.name}</p>
+                                            <p className="text-[11px] opacity-80">
+                                                أسبوع {r.week} · ملك: {r.king || "—"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <CaptionOverlay
+                    username="map_memories"
+                    caption="ذكريات في كل مطعم 🍽️📍"
+                    music={TRACKS[9].title}
+                    artist={TRACKS[9].artist}
+                />
+                <ActionRail profile="🗺️" />
+            </div>
         ),
-        sectionCard(
-            "map",
-            "bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700",
-            "🗺️",
-            "🗺️ خريطة المطاعم",
-            "وين المطاعم؟",
-            "افتح الخريطة",
-            "map_explorer",
-            "كل مطاعمنا على الخريطة 📍",
-            9,
-            "map",
+    });
+
+    // ── Live chat card ──
+    cards.push({
+        id: "chat",
+        render: () => (
+            <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-700 flex items-center justify-center">
+                <span className="absolute opacity-10 text-[400px] select-none">💬</span>
+                <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
+                    <p className="text-2xl font-bold mb-1 drop-shadow-2xl">💬 آخر الرسائل</p>
+                    <p className="text-xs text-white/80 mb-4">من شات الجلسة</p>
+                    {chatMessages.length === 0 ? (
+                        <p className="text-white/85 text-sm">ما فيه رسائل بعد</p>
+                    ) : (
+                        <div className="space-y-2 text-right">
+                            {chatMessages.map((m) => (
+                                <div key={m.id} className="rounded-2xl px-4 py-3 bg-white/15 backdrop-blur">
+                                    <div className="flex items-start gap-3">
+                                        <span className="text-2xl">💬</span>
+                                        <div className="flex-1 text-right">
+                                            <p className="font-bold text-sm text-pink-200">{m.nickName || m.userName}</p>
+                                            <p className="text-sm line-clamp-2">{m.text}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <CaptionOverlay
+                    username="group_chat"
+                    caption="كلام الجلسة هنا 🗨️"
+                    music={TRACKS[10].title}
+                    artist={TRACKS[10].artist}
+                />
+                <ActionRail profile="💬" />
+            </div>
         ),
-        sectionCard(
-            "more",
-            "bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-700",
-            "✨",
-            "✨ المزيد",
-            "شات + اقتراحات",
-            "اكتشف",
-            "more_section",
-            "كل شي ثاني هنا 💬🎁",
-            10,
-            "more",
-        ),
-    );
+    });
 
     return (
         <div className="fixed inset-0 z-50 bg-black" style={{ touchAction: "pan-y" }}>
