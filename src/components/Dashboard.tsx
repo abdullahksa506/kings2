@@ -42,6 +42,7 @@ const FutureFeaturesVoting = dynamic(() => import("./FutureFeaturesVoting"), { s
 const BentoWeekView = dynamic(() => import("./BentoWeekView"), { ssr: false });
 const TikTokFeedView = dynamic(() => import("./TikTokFeedView"), { ssr: false });
 const TikTokSettings = dynamic(() => import("./TikTokSettings"), { ssr: false });
+const WhatsNewPopup = dynamic(() => import("./WhatsNewPopup"), { ssr: false });
 import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
 import { Gamepad2, Bath, UploadCloud, BarChart3, Swords, Sparkles } from "lucide-react";
 const RatingsExplorer = dynamic(() => import("./RatingsExplorer"), { ssr: false });
@@ -1024,6 +1025,8 @@ export default function Dashboard() {
     return (
         <div data-theme={selectedTheme} className={`min-h-screen ${activeTheme.appBgClass} p-4 md:p-8 font-sans relative`}>
             <div className={`pointer-events-none absolute inset-0 ${activeThemeStyle.atmosphereClass}`} />
+            {/* What's New popup — shows up to 4 times per member per VERSION */}
+            <WhatsNewPopup userName={user?.name || ""} />
             {/* Version Badge & Secret Import */}
             <div className="fixed top-2 left-2 z-50 flex items-center gap-2">
                 <span className="text-[10px] text-slate-600 font-mono select-none">v13</span>
