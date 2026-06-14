@@ -19,45 +19,112 @@ interface Track {
 }
 
 /**
- * Search queries per card vibe. We use real Arab + global artists so each
- * card gets a song that fits the mood. Limit=1 → use the top match.
- * country=SA gives the Saudi storefront which prioritizes Arab catalog.
+ * 60 song queries — 40 Saudi/Khaleeji + 20 American pop. Order is shuffled
+ * client-side on each load so the feed feels fresh. Each search returns the
+ * top match from iTunes Preview API (real 30-sec snippet).
+ * country=SA → Saudi storefront (best for Arab catalog); US queries use US.
  */
-const SEARCH_TERMS: Array<{ vibe: string; q: string; country: string }> = [
-    { vibe: "king",         q: "تامر حسني وحشتيني",  country: "SA" }, // King card
-    { vibe: "restaurant",   q: "محمد حماقي نفسي",     country: "SA" }, // Restaurant
-    { vibe: "day-vote",     q: "Amr Diab Tamally",    country: "SA" }, // Day vote
-    { vibe: "attendance",   q: "عمرو دياب نور العين", country: "SA" }, // Attendance
-    { vibe: "rest-vote",    q: "حسين الجسمي",          country: "SA" }, // Restaurant vote
-    { vibe: "past",         q: "كاظم الساهر",          country: "SA" }, // Past week
-    { vibe: "leader",       q: "نانسي عجرم سلمولي",    country: "SA" }, // Leaderboard
-    { vibe: "bathroom",     q: "ميامي مغرور",          country: "SA" }, // Bathroom
-    { vibe: "map",          q: "محمد عبده",            country: "SA" }, // Map
-    { vibe: "chat",         q: "إليسا حالة حب",         country: "SA" }, // Chat
+const SEARCH_TERMS: Array<{ q: string; country: string }> = [
+    // ── Saudi & Khaleeji (40) ─────────────────────────────
+    { q: "محمد عبده",          country: "SA" },
+    { q: "محمد عبده الأماكن",    country: "SA" },
+    { q: "محمد عبده ابعاد",      country: "SA" },
+    { q: "طلال مداح",          country: "SA" },
+    { q: "طلال مداح مقادير",    country: "SA" },
+    { q: "عبدالمجيد عبدالله",   country: "SA" },
+    { q: "عبدالمجيد عبدالله أسأل عليك", country: "SA" },
+    { q: "راشد الماجد",        country: "SA" },
+    { q: "راشد الماجد كلمة",    country: "SA" },
+    { q: "رابح صقر",            country: "SA" },
+    { q: "رابح صقر آه يا قلبي", country: "SA" },
+    { q: "خالد عبدالرحمن",     country: "SA" },
+    { q: "خالد عبدالرحمن جرحي قديم", country: "SA" },
+    { q: "عبدالله الرويشد",    country: "SA" },
+    { q: "نوال الكويتية",       country: "SA" },
+    { q: "أصالة",               country: "SA" },
+    { q: "حسين الجسمي",        country: "SA" },
+    { q: "حسين الجسمي بشرة خير", country: "SA" },
+    { q: "حسين الجسمي بشرة الخير", country: "SA" },
+    { q: "ماجد المهندس",       country: "SA" },
+    { q: "ماجد المهندس ولاني",  country: "SA" },
+    { q: "وليد الشامي",         country: "SA" },
+    { q: "فؤاد عبدالواحد",     country: "SA" },
+    { q: "أصيل أبو بكر",        country: "SA" },
+    { q: "أبو بكر سالم",        country: "SA" },
+    { q: "محمد السالم",         country: "SA" },
+    { q: "أيوب طارش",          country: "SA" },
+    { q: "ميامي بند",           country: "SA" },
+    { q: "ميامي مغرور",        country: "SA" },
+    { q: "ميامي بليلة الصيف",  country: "SA" },
+    { q: "فايز السعيد",        country: "SA" },
+    { q: "نبيل شعيل",          country: "SA" },
+    { q: "عبادي الجوهر",       country: "SA" },
+    { q: "محمد الشحي",         country: "SA" },
+    { q: "عيضة المنهالي",      country: "SA" },
+    { q: "بدر الشعيبي",        country: "SA" },
+    { q: "أحلام",               country: "SA" },
+    { q: "أحلام تعالي",         country: "SA" },
+    { q: "كاظم الساهر",        country: "SA" },
+    { q: "عمرو دياب نور العين", country: "SA" },
+
+    // ── American Pop (20) ─────────────────────────────────
+    { q: "Taylor Swift Shake It Off",          country: "US" },
+    { q: "Bruno Mars Uptown Funk",             country: "US" },
+    { q: "Ed Sheeran Shape of You",            country: "US" },
+    { q: "The Weeknd Blinding Lights",         country: "US" },
+    { q: "Dua Lipa Levitating",                country: "US" },
+    { q: "Billie Eilish Bad Guy",              country: "US" },
+    { q: "Olivia Rodrigo Drivers License",     country: "US" },
+    { q: "Justin Bieber Peaches",              country: "US" },
+    { q: "Ariana Grande 7 Rings",              country: "US" },
+    { q: "Harry Styles Watermelon Sugar",      country: "US" },
+    { q: "Post Malone Sunflower",              country: "US" },
+    { q: "Doja Cat Say So",                    country: "US" },
+    { q: "Lady Gaga Bad Romance",              country: "US" },
+    { q: "Beyonce Halo",                       country: "US" },
+    { q: "Adele Rolling in the Deep",          country: "US" },
+    { q: "Maroon 5 Sugar",                     country: "US" },
+    { q: "Imagine Dragons Believer",           country: "US" },
+    { q: "Coldplay Yellow",                    country: "US" },
+    { q: "OneRepublic Counting Stars",         country: "US" },
+    { q: "Sam Smith Stay With Me",             country: "US" },
 ];
 
-async function fetchTracks(): Promise<Track[]> {
-    const out: Track[] = [];
-    for (const { q, country } of SEARCH_TERMS) {
-        try {
-            const res = await fetch(
-                `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=song&limit=1&country=${country}`,
-            );
-            const json = await res.json();
-            const r = json?.results?.[0];
-            if (r?.previewUrl) {
-                out.push({
-                    url: r.previewUrl,
-                    title: r.trackName || "غير معروف",
-                    artist: r.artistName || "غير معروف",
-                    artwork: (r.artworkUrl100 || "").replace("100x100", "600x600"),
-                });
-            }
-        } catch {
-            // ignore — we'll just use fewer tracks if a query fails
-        }
+function shuffle<T>(arr: T[]): T[] {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
     }
-    return out;
+    return a;
+}
+
+async function fetchTracks(): Promise<Track[]> {
+    // Parallel fetch all 60 searches; shuffle order client-side
+    const queries = shuffle(SEARCH_TERMS);
+    const results = await Promise.all(
+        queries.map(async ({ q, country }) => {
+            try {
+                const res = await fetch(
+                    `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=song&limit=1&country=${country}`,
+                );
+                const json = await res.json();
+                const r = json?.results?.[0];
+                if (r?.previewUrl) {
+                    return {
+                        url: r.previewUrl,
+                        title: r.trackName || "غير معروف",
+                        artist: r.artistName || "غير معروف",
+                        artwork: (r.artworkUrl100 || "").replace("100x100", "600x600"),
+                    } as Track;
+                }
+            } catch {
+                /* swallow */
+            }
+            return null;
+        }),
+    );
+    return results.filter((t): t is Track => t !== null);
 }
 
 interface TikTokFeedViewProps {
