@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Crown, MapPin, Calendar, Share2, Music, ChevronUp, Vote, Users, Check, X, Trophy, Rewind, Search, Volume2, VolumeX, Settings } from "lucide-react";
+import { Crown, MapPin, Calendar, Share2, Music, ChevronUp, Vote, Users, Check, X, Trophy, Rewind, Volume2, VolumeX, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { WeekSession, VALID_NAMES, services, ChatMessage } from "@/lib/services";
 
@@ -416,13 +416,6 @@ export default function TikTokFeedView({
                         const url = `https://wa.me/?text=${encodeURIComponent(`🍽️ مطعم الطلعة: ${restaurant}`)}`;
                         window.open(url, "_blank");
                     }}
-                    items={[
-                        {
-                            icon: <MapPin className="w-5 h-5 text-white" />,
-                            label: "خريطة",
-                            onClick: () => onNavigate?.("map"),
-                        },
-                    ]}
                 />
             </div>
         ),
@@ -824,23 +817,14 @@ export default function TikTokFeedView({
 
             {/* TikTok top tabs: Following | For You */}
             <div className="absolute top-3 left-0 right-0 z-40 flex items-center justify-center px-4 pt-2">
-                {/* Top-right action stack: settings (gear) + search */}
-                <div className="absolute right-3 top-1 flex items-center gap-3">
-                    <button
-                        onClick={() => onNavigate?.("more")}
-                        className="text-white/90 active:scale-90 w-9 h-9 rounded-full bg-black/40 backdrop-blur flex items-center justify-center"
-                        aria-label="إعدادات / غيّر الثيم"
-                    >
-                        <Settings className="w-5 h-5 drop-shadow-lg" />
-                    </button>
-                    <button
-                        onClick={onSwitchToFullView}
-                        className="text-white/90 active:scale-90"
-                        aria-label="بحث / خروج"
-                    >
-                        <Search className="w-6 h-6 drop-shadow-lg" />
-                    </button>
-                </div>
+                {/* Top-right: ONLY settings gear (user-approved exception to navigate to theme picker) */}
+                <button
+                    onClick={() => onNavigate?.("more")}
+                    className="absolute right-3 top-1 text-white/90 active:scale-90 w-9 h-9 rounded-full bg-black/40 backdrop-blur flex items-center justify-center"
+                    aria-label="إعدادات / غيّر الثيم"
+                >
+                    <Settings className="w-5 h-5 drop-shadow-lg" />
+                </button>
                 <div className="text-base font-black text-white drop-shadow-lg relative pb-1">
                     لك
                     <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-7 h-0.5 bg-white rounded-full" />
