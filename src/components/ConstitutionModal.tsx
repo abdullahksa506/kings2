@@ -17,7 +17,7 @@ export default function ConstitutionModal({
                 <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-800 bg-slate-900/50">
                     <h2 className="text-xl sm:text-2xl font-bold text-amber-500 flex items-center gap-3">
                         <ScrollText className="w-6 h-6 sm:w-8 sm:h-8" />
-                        دستور عرش الخميس لسنة 2026
+                        دستور عرش الخميس لسنة 2026 (v2)
                     </h2>
                     <button
                         onClick={onClose}
@@ -50,7 +50,7 @@ export default function ConstitutionModal({
                             </li>
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-amber-500 mt-2 shrink-0"></div>
-                                <p><strong className="text-amber-200">صلاحية "المصلحة العليا":</strong> يملك العميد وحده حق "ثني" أي قانون أو منح استثناءات طارئة، بشرط الحصول على تأييد شخصين إضافيين من الأعضاء الستة لضمان العدالة.</p>
+                                <p><strong className="text-amber-200">صلاحية "المصلحة العليا":</strong> يملك العميد وحده حق "ثني" أي قانون عادي أو منح استثناءات طارئة. أما تعديل بنود الدستور نفسها فيتطلب موافقة شخصين إضافيين من الأعضاء الستة.</p>
                             </li>
                         </ul>
                     </div>
@@ -149,7 +149,7 @@ export default function ConstitutionModal({
                         <ul className="space-y-3 list-none pl-0 pr-2 sm:pr-8">
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500 mt-2 shrink-0"></div>
-                                <p>عميد الدستور هو المسؤول عن جمع الأصوات مجهولة المصدر عبر الواتساب وتحديث "الگوگل شيت" بشكل مؤتمت.</p>
+                                <p>يتم التصويت داخل تطبيق "عرش الخميس" بشكل آمن وفوري؛ كل عضو شارك في "التذوق" يدخل تقييمه (من ١ إلى ٥) مباشرة في التطبيق، والمعدّل يُحسب تلقائياً ويظهر في لوحة الترتيب.</p>
                             </li>
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500 mt-2 shrink-0"></div>
@@ -157,7 +157,7 @@ export default function ConstitutionModal({
                             </li>
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500 mt-2 shrink-0"></div>
-                                <p>تظل الأصوات التفصيلية سرية لدى العميد حتى نهاية السنة، حيث تُكشف الحقائق للجميع عند احتساب الفائز.</p>
+                                <p>المعدّلات تظهر للجميع في لوحة الترتيب أثناء الدورة، لكن **هوية المُصوِّت** عن كل تقييم تبقى سرية ولا تُكشف إلا للعميد. الترتيب النهائي السنوي يُعلن مع نهاية العام.</p>
                             </li>
                         </ul>
                     </div>
@@ -175,7 +175,7 @@ export default function ConstitutionModal({
                             </li>
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-fuchsia-500 mt-2 shrink-0"></div>
-                                <p>صاحب أعلى تقييم في الدورة السابقة يُكافأ بـ "صوتين" في تصويت الأسبوع العشوائي.</p>
+                                <p><strong className="text-fuchsia-300">التنسيق الذاتي:</strong> في الأسبوع العشوائي، أي عضو يقدر يبدأ التصويت داخل التطبيق. يُحسم اليوم تلقائياً لما يصوّت <strong>٤ أو أكثر</strong> من الحاضرين بدون تعادل، دون الحاجة لتدخل ملك.</p>
                             </li>
                         </ul>
                     </div>
@@ -214,6 +214,54 @@ export default function ConstitutionModal({
                                 <p><strong className="text-yellow-300">شرط التتويج:</strong> لا تتم عزيمة الفائز إلا في طلعة يكون فيها الحضور مكتملاً.</p>
                             </li>
                         </ul>
+                    </div>
+
+                    {/* v11 — features supported by the app */}
+                    <div className="bg-pink-900/10 border border-pink-500/30 p-4 sm:p-5 rounded-xl space-y-3">
+                        <h3 className="font-bold text-pink-300 flex items-start gap-2 sm:gap-3 text-base sm:text-lg">
+                            <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-pink-400 shrink-0 mt-0.5" />
+                            <span className="leading-snug">v11: التطبيق وأدواته (مكمّلة للدستور)</span>
+                        </h3>
+                        <p className="text-slate-300 pr-0 sm:pr-8 text-sm">
+                            الدستور يحكم القرارات الجوهرية، أما الأدوات التالية الموجودة في تطبيق "عرش الخميس" فهي وسائل تيسير لا قوانين بحد ذاتها:
+                        </p>
+                        <ul className="space-y-2 list-none pl-0 pr-2 sm:pr-8 text-sm">
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-pink-500 mt-2 shrink-0"></div>
+                                <p>⭐ <strong className="text-pink-200">التقييم بالنجوم</strong> (١-٥) لكل عضو حضر، يُحدّد ترتيب الملك في الدورة.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-pink-500 mt-2 shrink-0"></div>
+                                <p>🚽 <strong className="text-pink-200">تقييم الحمّامات</strong> لكل مطعم — مكافأة إضافية لأصحاب النضافة.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-pink-500 mt-2 shrink-0"></div>
+                                <p>🗳️ <strong className="text-pink-200">التصويت على اليوم/المطعم</strong>: ديموقراطي (إذا اختاره الملك) أو دكتاتوري (الافتراضي).</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-pink-500 mt-2 shrink-0"></div>
+                                <p>🚨 <strong className="text-pink-200">"أنا فاضي"</strong>: أي عضو يقدر يبدأ لقاء مفاجئ خلال ١٥ دقيقة. لو ٢+ ردّوا &quot;أنا معك&quot; → يُعلن اللقاء.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-pink-500 mt-2 shrink-0"></div>
+                                <p>🗺️ <strong className="text-pink-200">خريطة المطاعم</strong>: مواقع كل المطاعم التي زرناها، مع روابط قوقل.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-pink-500 mt-2 shrink-0"></div>
+                                <p>🤖 <strong className="text-pink-200">المخطّط الذكي</strong>: ذكاء اصطناعي يقترح مطعم من ١١ ألف مطعم في الرياض حسب الميزانية والمزاج.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-pink-500 mt-2 shrink-0"></div>
+                                <p>📜 <strong className="text-pink-200">الذمّة الرقمية</strong>: العميد يقدر يفتح أي أسبوع اعتُمد بالغلط ويعيد تحديد المطعم/اليوم.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-pink-500 mt-2 shrink-0"></div>
+                                <p>🎨 <strong className="text-pink-200">الثيمات الشخصية</strong>: كل عضو يختار ثيمه (١٦ ثيم متاح، منها TikTok وبنتو وكوميك).</p>
+                            </li>
+                        </ul>
+                        <p className="text-amber-300/80 text-xs pr-0 sm:pr-8 italic">
+                            أدوات التطبيق مرنة ومتطورة باستمرار، ولا تُلزم الدستور. لو تعارضت مع روح الدستور، الدستور أعلى.
+                        </p>
                     </div>
 
                     {/* v10 */}
