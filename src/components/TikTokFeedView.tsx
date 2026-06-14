@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Crown, MapPin, Calendar, Heart, Share2, Star, Music, ChevronUp, Vote, Users, Check, X, Trophy, Rewind, MessageCircle, Bookmark, Plus, Search, Home, Volume2, VolumeX } from "lucide-react";
+import { Crown, MapPin, Calendar, Share2, Music, ChevronUp, Vote, Users, Check, X, Trophy, Rewind, Search, Volume2, VolumeX, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { WeekSession, VALID_NAMES, services } from "@/lib/services";
 
@@ -45,76 +45,19 @@ interface ActionRailItem {
 function ActionRail({
     items,
     profile,
-    likes,
-    comments,
-    shares,
-    liked,
-    bookmarked,
-    onLike,
-    onBookmark,
     onShare,
 }: {
     items?: ActionRailItem[];
     profile?: string;
-    likes?: string;
-    comments?: string;
-    shares?: string;
-    liked?: boolean;
-    bookmarked?: boolean;
-    onLike?: () => void;
-    onBookmark?: () => void;
     onShare?: () => void;
 }) {
     return (
-        <div className="absolute bottom-24 right-2 z-30 flex flex-col items-center gap-4">
-            {/* Profile circle with + follow badge — top of rail */}
+        <div className="absolute bottom-12 right-2 z-30 flex flex-col items-center gap-4">
+            {/* Profile circle (decorative — but kept as visual anchor like real TikTok) */}
             {profile && (
-                <div className="relative mb-2">
-                    <div className="w-12 h-12 rounded-full overflow-hidden border-[2.5px] border-white bg-gradient-to-br from-pink-500 via-fuchsia-500 to-cyan-500 flex items-center justify-center text-2xl">
-                        {profile}
-                    </div>
-                    <button className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-red-500 border-2 border-black flex items-center justify-center">
-                        <Plus className="w-3 h-3 text-white" strokeWidth={3} />
-                    </button>
+                <div className="w-12 h-12 rounded-full overflow-hidden border-[2.5px] border-white bg-gradient-to-br from-pink-500 via-fuchsia-500 to-cyan-500 flex items-center justify-center text-2xl mb-1">
+                    {profile}
                 </div>
-            )}
-
-            {/* Heart / like */}
-            {onLike && (
-                <button onClick={onLike} className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform">
-                    <Heart
-                        className={`w-9 h-9 ${liked ? "text-red-500 fill-current" : "text-white"} drop-shadow-lg`}
-                        strokeWidth={liked ? 0 : 2}
-                    />
-                    <span className="text-[11px] text-white font-bold drop-shadow-lg">{likes || "0"}</span>
-                </button>
-            )}
-
-            {/* Comments */}
-            {comments !== undefined && (
-                <button className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform">
-                    <MessageCircle className="w-9 h-9 text-white drop-shadow-lg" />
-                    <span className="text-[11px] text-white font-bold drop-shadow-lg">{comments}</span>
-                </button>
-            )}
-
-            {/* Bookmark */}
-            {onBookmark && (
-                <button onClick={onBookmark} className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform">
-                    <Bookmark
-                        className={`w-9 h-9 ${bookmarked ? "text-yellow-300 fill-current" : "text-white"} drop-shadow-lg`}
-                        strokeWidth={bookmarked ? 0 : 2}
-                    />
-                    <span className="text-[11px] text-white font-bold drop-shadow-lg">حفظ</span>
-                </button>
-            )}
-
-            {/* Share */}
-            {onShare && (
-                <button onClick={onShare} className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform">
-                    <Share2 className="w-9 h-9 text-white drop-shadow-lg" />
-                    <span className="text-[11px] text-white font-bold drop-shadow-lg">{shares || "شارك"}</span>
-                </button>
             )}
 
             {/* Custom items (interactive buttons specific to card) */}
@@ -138,8 +81,18 @@ function ActionRail({
                 </button>
             ))}
 
-            {/* Rotating music disc — bottom of rail (TikTok signature) */}
-            <div className="mt-2 w-10 h-10 rounded-full border-2 border-white/30 bg-gradient-to-br from-pink-600 via-fuchsia-700 to-black flex items-center justify-center animate-spin-slow">
+            {/* Share — opens WhatsApp with prefilled text */}
+            {onShare && (
+                <button onClick={onShare} className="flex flex-col items-center gap-0.5 active:scale-90 transition-transform">
+                    <div className="w-12 h-12 rounded-full bg-black/45 backdrop-blur flex items-center justify-center">
+                        <Share2 className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-[11px] text-white font-bold drop-shadow-lg">شارك</span>
+                </button>
+            )}
+
+            {/* Rotating music disc — purely visual (matches the music caption) */}
+            <div className="mt-1 w-10 h-10 rounded-full border-2 border-white/30 bg-gradient-to-br from-pink-600 via-fuchsia-700 to-black flex items-center justify-center animate-spin-slow">
                 <div className="w-3 h-3 rounded-full bg-black border-2 border-white/40" />
             </div>
         </div>
@@ -183,14 +136,8 @@ export default function TikTokFeedView({
     const audioRef = useRef<HTMLAudioElement>(null);
     const [activeIdx, setActiveIdx] = useState(0);
     const [busy, setBusy] = useState<string | null>(null);
-    const [likedCards, setLikedCards] = useState<Record<string, boolean>>({});
-    const [bookmarkedCards, setBookmarkedCards] = useState<Record<string, boolean>>({});
-    const [feedTab, setFeedTab] = useState<"following" | "foryou">("foryou");
     const [muted, setMuted] = useState(true);
     const [audioReady, setAudioReady] = useState(false);
-
-    const toggleLike = (id: string) => setLikedCards((s) => ({ ...s, [id]: !s[id] }));
-    const toggleBookmark = (id: string) => setBookmarkedCards((s) => ({ ...s, [id]: !s[id] }));
 
     // Swap music per-card. Cards are rendered in order so we index TRACKS by activeIdx.
     const currentTrack = TRACKS[activeIdx % TRACKS.length];
@@ -367,17 +314,7 @@ export default function TikTokFeedView({
                     caption={`الملك ${kingName} بنفسه 👑 الكل يحضّر! 🔥`}
                     music={TRACKS[0].title}
                 />
-                <ActionRail
-                    profile="👑"
-                    likes={`${1200 + (kingName.length * 37)}`}
-                    comments="89"
-                    shares="42"
-                    liked={likedCards["king"]}
-                    bookmarked={bookmarkedCards["king"]}
-                    onLike={() => toggleLike("king")}
-                    onBookmark={() => toggleBookmark("king")}
-                    onShare={shareKing}
-                />
+                <ActionRail profile="👑" onShare={shareKing} />
             </div>
         ),
     });
@@ -399,20 +336,16 @@ export default function TikTokFeedView({
                 />
                 <ActionRail
                     profile="🍔"
-                    likes="3.4K"
-                    comments="124"
-                    shares="58"
-                    liked={likedCards["rest"]}
-                    bookmarked={bookmarkedCards["rest"]}
-                    onLike={() => toggleLike("rest")}
-                    onBookmark={() => toggleBookmark("rest")}
                     onShare={() => {
                         const url = `https://wa.me/?text=${encodeURIComponent(`🍽️ مطعم الطلعة: ${restaurant}`)}`;
                         window.open(url, "_blank");
                     }}
                     items={[
-                        { icon: <Star className="w-5 h-5 text-white" />, label: "قيّم" },
-                        { icon: <MapPin className="w-5 h-5 text-white" />, label: "موقع" },
+                        {
+                            icon: <MapPin className="w-5 h-5 text-white" />,
+                            label: "خريطة",
+                            onClick: () => onNavigate?.("map"),
+                        },
                     ]}
                 />
             </div>
@@ -468,13 +401,6 @@ export default function TikTokFeedView({
                 />
                 <ActionRail
                     profile="📅"
-                    likes={`${thuCount + friCount + bothCount}`}
-                    comments="0"
-                    shares="12"
-                    liked={likedCards["day"]}
-                    bookmarked={bookmarkedCards["day"]}
-                    onLike={() => toggleLike("day")}
-                    onBookmark={() => toggleBookmark("day")}
                     onShare={() => {
                         const url = `https://wa.me/?text=${encodeURIComponent("📅 صوّت ليوم الطلعة!")}`;
                         window.open(url, "_blank");
@@ -507,13 +433,6 @@ export default function TikTokFeedView({
                 />
                 <ActionRail
                     profile={myAttendance === "present" ? "✅" : myAttendance === "absent" ? "❌" : "🤔"}
-                    likes={`${attendingCount}`}
-                    comments="6"
-                    shares="3"
-                    liked={likedCards["att"]}
-                    bookmarked={bookmarkedCards["att"]}
-                    onLike={() => toggleLike("att")}
-                    onBookmark={() => toggleBookmark("att")}
                     onShare={() => {
                         const url = `https://wa.me/?text=${encodeURIComponent(`✅ ${attendingCount} حاضر للطلعة`)}`;
                         window.open(url, "_blank");
@@ -575,14 +494,7 @@ export default function TikTokFeedView({
                         caption="مين راح يكسب؟ 🥁"
                         music={TRACKS[4].title}
                     />
-                    <ActionRail
-                        profile="🗳️"
-                        likes={`${Object.keys(restaurantVotes).length}`}
-                        comments="0"
-                        shares="0"
-                        liked={likedCards["rvote"]}
-                        onLike={() => toggleLike("rvote")}
-                    />
+                    <ActionRail profile="🗳️" />
                 </div>
             ),
         });
@@ -605,14 +517,7 @@ export default function TikTokFeedView({
                         caption={`${topMember.name} يحكم اللوحة 👑`}
                         music={TRACKS[5].title}
                     />
-                    <ActionRail
-                        profile="🏆"
-                        likes={`${topMember.score}`}
-                        comments="0"
-                        shares="0"
-                        liked={likedCards["top"]}
-                        onLike={() => toggleLike("top")}
-                    />
+                    <ActionRail profile="🏆" />
                 </div>
             ),
         });
@@ -635,14 +540,7 @@ export default function TikTokFeedView({
                         caption={`ذكريات أسبوع ${pastWeek.weekNumber} 📸`}
                         music={TRACKS[6].title}
                     />
-                    <ActionRail
-                        profile="🎞️"
-                        likes="248"
-                        comments="0"
-                        shares="0"
-                        liked={likedCards["past"]}
-                        onLike={() => toggleLike("past")}
-                    />
+                    <ActionRail profile="🎞️" />
                 </div>
             ),
         });
@@ -676,16 +574,7 @@ export default function TikTokFeedView({
                     </button>
                 </div>
                 <CaptionOverlay username={username} caption={caption} music={TRACKS[trackIdx]?.title} />
-                <ActionRail
-                    profile={emoji}
-                    likes={`${(trackIdx + 1) * 137}`}
-                    comments={`${trackIdx * 8}`}
-                    shares={`${trackIdx * 3}`}
-                    liked={likedCards[id]}
-                    bookmarked={bookmarkedCards[id]}
-                    onLike={() => toggleLike(id)}
-                    onBookmark={() => toggleBookmark(id)}
-                />
+                <ActionRail profile={emoji} />
             </div>
         ),
     });
@@ -766,34 +655,26 @@ export default function TikTokFeedView({
 
             {/* TikTok top tabs: Following | For You */}
             <div className="absolute top-3 left-0 right-0 z-40 flex items-center justify-center px-4 pt-2">
-                <button
-                    onClick={onSwitchToFullView}
-                    className="absolute right-3 top-2 text-white/90 active:scale-90"
-                    aria-label="بحث / خروج"
-                >
-                    <Search className="w-6 h-6 drop-shadow-lg" />
-                </button>
-                <div className="flex items-center gap-6">
+                {/* Top-right action stack: settings (gear) + search */}
+                <div className="absolute right-3 top-1 flex items-center gap-3">
                     <button
-                        onClick={() => setFeedTab("following")}
-                        className={`text-base font-bold transition-all ${
-                            feedTab === "following" ? "text-white" : "text-white/55"
-                        }`}
+                        onClick={() => onNavigate?.("more")}
+                        className="text-white/90 active:scale-90 w-9 h-9 rounded-full bg-black/40 backdrop-blur flex items-center justify-center"
+                        aria-label="إعدادات / غيّر الثيم"
                     >
-                        متابَع
+                        <Settings className="w-5 h-5 drop-shadow-lg" />
                     </button>
-                    <div className="w-px h-4 bg-white/30" />
                     <button
-                        onClick={() => setFeedTab("foryou")}
-                        className={`text-base font-bold transition-all relative ${
-                            feedTab === "foryou" ? "text-white" : "text-white/55"
-                        }`}
+                        onClick={onSwitchToFullView}
+                        className="text-white/90 active:scale-90"
+                        aria-label="بحث / خروج"
                     >
-                        لك
-                        {feedTab === "foryou" && (
-                            <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-7 h-0.5 bg-white rounded-full" />
-                        )}
+                        <Search className="w-6 h-6 drop-shadow-lg" />
                     </button>
+                </div>
+                <div className="text-base font-black text-white drop-shadow-lg relative pb-1">
+                    لك
+                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-7 h-0.5 bg-white rounded-full" />
                 </div>
             </div>
 
@@ -826,57 +707,9 @@ export default function TikTokFeedView({
                 ))}
             </div>
 
-            {/* TikTok bottom: comment input + nav */}
-            <div className="absolute bottom-0 left-0 right-0 z-40">
-                {/* Comment input bar */}
-                <div className="px-3 pb-2">
-                    <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2">
-                        <input
-                            disabled
-                            placeholder="ضف تعليق..."
-                            className="flex-1 bg-transparent text-white/70 text-sm outline-none placeholder:text-white/50"
-                        />
-                        <span className="text-white/60 text-lg">@</span>
-                        <span className="text-white/60 text-lg">😊</span>
-                        <span className="text-white/60 text-lg">🔖</span>
-                    </div>
-                </div>
-
-                {/* Nav bar */}
-                <div className="bg-black border-t border-white/10 px-2 py-1.5 flex items-center justify-around">
-                    <button className="flex flex-col items-center gap-0.5 py-1.5">
-                        <Home className="w-6 h-6 text-white" fill="currentColor" />
-                        <span className="text-[10px] text-white font-semibold">الرئيسية</span>
-                    </button>
-                    <button className="flex flex-col items-center gap-0.5 py-1.5">
-                        <Users className="w-6 h-6 text-white/70" />
-                        <span className="text-[10px] text-white/70 font-semibold">الأصدقاء</span>
-                    </button>
-                    <button className="flex items-center justify-center">
-                        <div className="relative">
-                            <div className="absolute -inset-0.5 bg-cyan-400 rounded-md" />
-                            <div className="absolute -inset-0.5 bg-pink-500 rounded-md translate-x-1" />
-                            <div className="relative bg-white rounded-md w-11 h-7 flex items-center justify-center">
-                                <Plus className="w-5 h-5 text-black" strokeWidth={3} />
-                            </div>
-                        </div>
-                    </button>
-                    <button className="flex flex-col items-center gap-0.5 py-1.5">
-                        <MessageCircle className="w-6 h-6 text-white/70" />
-                        <span className="text-[10px] text-white/70 font-semibold">إنبوكس</span>
-                    </button>
-                    <button onClick={onSwitchToFullView} className="flex flex-col items-center gap-0.5 py-1.5">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-xs">
-                            👤
-                        </div>
-                        <span className="text-[10px] text-white/70 font-semibold">أنا</span>
-                    </button>
-                </div>
-            </div>
-
             {/* Swipe-up hint on first card */}
             {activeIdx === 0 && cards.length > 1 && (
-                <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-30 text-white/80 flex flex-col items-center gap-1 animate-bounce pointer-events-none">
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 text-white/80 flex flex-col items-center gap-1 animate-bounce pointer-events-none">
                     <ChevronUp className="w-6 h-6" />
                     <span className="text-[10px]">اسحب فوق</span>
                 </div>
