@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { services, VALID_NAMES, MemberActivityStat } from "@/lib/services";
 import {
-    BarChart3, Eye, Castle, Users, UtensilsCrossed,
+    BarChart3, Castle, Users, UtensilsCrossed,
     Flame, TrendingUp, X,
     Award, Clock, LineChart as LineChartIcon, Timer
 } from "lucide-react";
@@ -70,6 +70,9 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                 ) : stats ? (
                     <div className="space-y-4">
 
+                        {/* ═══ HERO STATS (الأرقام الكبيرة الجذابة) ═══ */}
+                        <HeroStats stats={stats} />
+
                         {/* Visual Charts */}
                         {stats.weeklyTrend && stats.weeklyTrend.length > 0 && (
                             <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-indigo-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
@@ -87,21 +90,6 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                                 </div>
                             </div>
                         )}
-
-                        {/* Visit Stats */}
-                        <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-violet-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
-                            <div className="absolute -right-8 -top-8 w-28 h-28 bg-violet-500/10 rounded-full blur-2xl" />
-                            <div className="flex items-center gap-2 mb-4 relative z-10">
-                                <Eye className="w-5 h-5 text-violet-400" />
-                                <h3 className="font-bold text-violet-300 text-lg">زيارات الموقع</h3>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10">
-                                <StatBox label="إجمالي الزيارات" value={stats.visitStats.total} color="violet" icon="📊" />
-                                <StatBox label="زيارات اليوم" value={stats.visitStats.today} color="purple" icon="📅" />
-                                <StatBox label="هذا الأسبوع" value={stats.visitStats.thisWeek} color="fuchsia" icon="📆" />
-                                <StatBox label="هذا الشهر" value={stats.visitStats.thisMonth} color="pink" icon="🗓️" />
-                            </div>
-                        </div>
 
                         {/* Member Activity (feature suggested by هشام) */}
                         <MemberActivitySection activityStats={activityStats} />
@@ -243,51 +231,6 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                             )}
                         </div>
 
-                        {/* Time Windows */}
-                        <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-cyan-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
-                            <div className="absolute -left-8 -bottom-8 w-28 h-28 bg-cyan-500/10 rounded-full blur-2xl" />
-                            <div className="flex items-center gap-2 mb-4 relative z-10">
-                                <TrendingUp className="w-5 h-5 text-cyan-400" />
-                                <h3 className="font-bold text-cyan-300 text-lg">مقارنة زمنية</h3>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 relative z-10">
-                                <StatBox label="آخر 4 أسابيع (حضور)" value={stats.timeWindows.last4.avgAttendance} color="cyan" icon="4️⃣" />
-                                <StatBox label="آخر 8 أسابيع (حضور)" value={stats.timeWindows.last8.avgAttendance} color="sky" icon="8️⃣" />
-                                <StatBox label="الموسم كامل (حضور)" value={stats.timeWindows.season.avgAttendance} color="emerald" icon="🏁" />
-                                <StatBox label="آخر 4 أسابيع (تقييم)" value={`${stats.timeWindows.last4.avgRating} ⭐`} color="violet" icon="⭐" />
-                                <StatBox label="آخر 8 أسابيع (تقييم)" value={`${stats.timeWindows.last8.avgRating} ⭐`} color="purple" icon="📈" />
-                                <StatBox label="الموسم كامل (تقييم)" value={`${stats.timeWindows.season.avgRating} ⭐`} color="amber" icon="📊" />
-                            </div>
-                        </div>
-
-                        {/* Member Trends */}
-                        <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-emerald-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
-                            <div className="absolute -right-8 -top-8 w-28 h-28 bg-emerald-500/10 rounded-full blur-2xl" />
-                            <div className="flex items-center gap-2 mb-4 relative z-10">
-                                <Users className="w-5 h-5 text-emerald-400" />
-                                <h3 className="font-bold text-emerald-300 text-lg">تطور أداء الأعضاء (آخر 4 مقابل اللي قبلها)</h3>
-                            </div>
-                            <div className="space-y-2 relative z-10">
-                                {VALID_NAMES.map((name) => {
-                                    const t = stats.memberTrends[name];
-                                    if (!t) return null;
-                                    const up = t.attendanceDelta >= 0;
-                                    return (
-                                        <div key={name} className="bg-slate-950/60 border border-slate-800/50 rounded-xl p-3 flex items-center justify-between gap-3">
-                                            <div>
-                                                <p className="text-sm text-white font-semibold">{name}</p>
-                                                <p className="text-[11px] text-slate-500">الحضور: {t.recentAttendanceRate}% (قبلها {t.previousAttendanceRate}%)</p>
-                                                <p className="text-[11px] text-slate-500">متوسط تقييماته: {t.recentGivenRating}⭐ (قبلها {t.previousGivenRating}⭐)</p>
-                                            </div>
-                                            <div className={`text-sm font-bold ${up ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                {up ? '+' : ''}{t.attendanceDelta}%
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
                         {/* King Decision Analytics */}
                         <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-amber-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
                             <div className="absolute -left-8 -top-8 w-28 h-28 bg-amber-500/10 rounded-full blur-2xl" />
@@ -307,33 +250,6 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                                     </div>
                                 ))}
                             </div>
-                        </div>
-
-                        {/* Cycle Health + Comparisons */}
-                        <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-orange-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
-                            <div className="absolute -right-8 -bottom-8 w-28 h-28 bg-orange-500/10 rounded-full blur-2xl" />
-                            <div className="flex items-center gap-2 mb-4 relative z-10">
-                                <Clock className="w-5 h-5 text-orange-400" />
-                                <h3 className="font-bold text-orange-300 text-lg">صحة الدورة والمقارنات</h3>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 relative z-10">
-                                <StatBox label="اكتمال الردود" value={`${stats.cycleHealth.averageResponseCompletion}%`} color="orange" icon="✅" />
-                                <StatBox label="أسابيع بردود كاملة" value={`${stats.cycleHealth.fullyRespondedWeeks}/${stats.cycleHealth.totalCompletedWeeks}`} color="amber" icon="📬" />
-                            </div>
-                            {stats.comparisons.lastWeekVsPrevious && (
-                                <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-3 mb-2 relative z-10">
-                                    <p className="text-xs text-slate-500">آخر أسبوع مقابل اللي قبله</p>
-                                    <p className="text-sm text-white">فرق الحضور: {stats.comparisons.lastWeekVsPrevious.attendanceDelta >= 0 ? '+' : ''}{stats.comparisons.lastWeekVsPrevious.attendanceDelta}</p>
-                                    <p className="text-sm text-white">فرق التقييم: {stats.comparisons.lastWeekVsPrevious.ratingDelta >= 0 ? '+' : ''}{stats.comparisons.lastWeekVsPrevious.ratingDelta}⭐</p>
-                                </div>
-                            )}
-                            {stats.comparisons.currentVsPreviousCycle && (
-                                <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-3 relative z-10">
-                                    <p className="text-xs text-slate-500">الدورة الحالية مقابل السابقة</p>
-                                    <p className="text-sm text-white">فرق الحضور: {stats.comparisons.currentVsPreviousCycle.attendanceDelta >= 0 ? '+' : ''}{stats.comparisons.currentVsPreviousCycle.attendanceDelta}</p>
-                                    <p className="text-sm text-white">فرق التقييم: {stats.comparisons.currentVsPreviousCycle.ratingDelta >= 0 ? '+' : ''}{stats.comparisons.currentVsPreviousCycle.ratingDelta}⭐</p>
-                                </div>
-                            )}
                         </div>
 
                         {/* Fun Facts */}
@@ -392,30 +308,12 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                                 <h3 className="font-bold text-fuchsia-300 text-lg">ذكاء المطاعم + التوقعات</h3>
                             </div>
 
-                            <div className="space-y-2 mb-3 relative z-10">
+                            <div className="space-y-2 relative z-10">
                                 {stats.restaurantIntelligence.retryCandidates.map((r: any) => (
                                     <FunFactRow key={`retry-${r.restaurant}`} icon="🥇" label="إعادة التجربة المقترحة" value={`${r.restaurant} (${r.avgScore}⭐)`} />
                                 ))}
                                 {stats.restaurantIntelligence.avoidCandidates.map((r: any) => (
                                     <FunFactRow key={`avoid-${r.restaurant}`} icon="⚠️" label="مطعم يحتاج مراجعة" value={`${r.restaurant} (${r.avgScore}⭐)`} />
-                                ))}
-                            </div>
-
-                            {stats.prediction && (
-                                <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-3 mb-3 relative z-10">
-                                    <p className="text-xs text-slate-500">توقع الأسبوع الحالي</p>
-                                    <p className="text-sm text-white">الحضور المتوقع: {stats.prediction.expectedAttendance} أشخاص</p>
-                                    <p className="text-sm text-white">التقييم المتوقع: {stats.prediction.expectedRating}⭐</p>
-                                    <p className="text-[11px] text-slate-400">الثقة: {stats.prediction.confidence}</p>
-                                </div>
-                            )}
-
-                            <div className="space-y-2 relative z-10">
-                                <p className="text-xs text-slate-500 font-medium">Insights تلقائية:</p>
-                                {stats.insights.map((line: string, idx: number) => (
-                                    <div key={`insight-${idx}`} className="bg-slate-950/40 border border-slate-800/40 rounded-lg p-2.5 text-sm text-slate-200">
-                                        • {line}
-                                    </div>
                                 ))}
                             </div>
                         </div>
@@ -446,6 +344,112 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
 }
 
 // --- Helper Components ---
+
+/**
+ * HeroStats — big, beautiful numbers at the top of the panel. Replaces the
+ * useless site-visits/time-window/trend noise with the actual "wow" stats.
+ */
+function HeroStats({ stats }: { stats: any }) {
+    // Estimated total spent: 175 SAR per attendee per outing
+    const totalAttendees = VALID_NAMES.reduce((sum, n) => sum + (stats.memberStats?.[n]?.attended || 0), 0);
+    const estimatedSpend = totalAttendees * 175;
+    const fmt = (n: number) => n.toLocaleString("ar-EG");
+
+    const bestKing = stats.funFacts?.highestRatedKing;
+    const bestRestaurant = stats.restaurantIntelligence?.ranked?.[0];
+    const longestStreak = stats.funFacts?.longestStreak;
+
+    return (
+        <div className="space-y-3">
+            {/* Hero #1: Total outings + days since first — massive numbers */}
+            <div className="bg-gradient-to-br from-amber-600 via-orange-700 to-red-800 rounded-3xl p-6 shadow-2xl border border-amber-400/30 relative overflow-hidden">
+                <div className="absolute -right-12 -top-12 w-48 h-48 bg-amber-300/20 rounded-full blur-3xl" />
+                <div className="absolute -left-12 -bottom-12 w-48 h-48 bg-red-500/20 rounded-full blur-3xl" />
+                <div className="relative z-10 text-center text-white">
+                    <p className="text-sm font-bold text-amber-100/90 mb-1">إنجاز الجلسة</p>
+                    <p
+                        className="text-7xl sm:text-8xl font-black leading-none drop-shadow-2xl"
+                        style={{ textShadow: "0 4px 24px rgba(0,0,0,0.4)" }}
+                    >
+                        {fmt(stats.totalOutings)}
+                    </p>
+                    <p className="text-lg font-bold mt-1">طلعة</p>
+                    {stats.daysSinceFirst > 0 && (
+                        <p className="text-sm text-amber-100/85 mt-3">
+                            خلال <span className="font-black text-white">{fmt(stats.daysSinceFirst)}</span> يوم من أول طلعة
+                        </p>
+                    )}
+                    <div className="grid grid-cols-3 gap-2 mt-5">
+                        <div className="bg-black/25 backdrop-blur rounded-2xl py-2 px-1">
+                            <p className="text-2xl font-black">{fmt(stats.uniqueRestaurants)}</p>
+                            <p className="text-[10px] text-amber-100/80 mt-0.5">مطعم</p>
+                        </div>
+                        <div className="bg-black/25 backdrop-blur rounded-2xl py-2 px-1">
+                            <p className="text-2xl font-black">{fmt(stats.totalCycles)}</p>
+                            <p className="text-[10px] text-amber-100/80 mt-0.5">دورة</p>
+                        </div>
+                        <div className="bg-black/25 backdrop-blur rounded-2xl py-2 px-1">
+                            <p className="text-2xl font-black">{stats.avgAttendancePerWeek}</p>
+                            <p className="text-[10px] text-amber-100/80 mt-0.5">معدّل حضور</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Hero #2: Estimated spend (HUGE psychology number) */}
+            <div className="bg-gradient-to-br from-emerald-600 via-teal-700 to-cyan-800 rounded-3xl p-6 shadow-2xl border border-emerald-400/30 relative overflow-hidden">
+                <div className="absolute -left-12 -top-12 w-48 h-48 bg-emerald-300/20 rounded-full blur-3xl" />
+                <div className="relative z-10 text-center text-white">
+                    <p className="text-sm font-bold text-emerald-100/90 mb-1">💸 المُنفَق التقريبي</p>
+                    <p className="text-5xl sm:text-6xl font-black leading-none drop-shadow-2xl">
+                        ≈ {fmt(estimatedSpend)}
+                    </p>
+                    <p className="text-base font-bold mt-2">ريال سعودي</p>
+                    <p className="text-xs text-emerald-100/75 mt-2">
+                        ({fmt(totalAttendees)} حضور × ١٧٥ ر.س — حسب سقف الميزانية)
+                    </p>
+                </div>
+            </div>
+
+            {/* Hero #3: Best king + best restaurant + streak (3 trophy cards) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {bestKing && (
+                    <div className="bg-gradient-to-br from-yellow-500 to-amber-700 rounded-2xl p-4 shadow-xl border border-yellow-300/30 relative overflow-hidden">
+                        <div className="absolute -right-6 -top-6 w-20 h-20 bg-yellow-200/20 rounded-full blur-xl" />
+                        <div className="relative z-10 text-white">
+                            <p className="text-3xl">👑</p>
+                            <p className="text-[11px] font-bold text-yellow-100/90 mt-1">الملك الأفضل</p>
+                            <p className="text-2xl font-black mt-0.5">{bestKing.name}</p>
+                            <p className="text-base font-bold text-yellow-100">{bestKing.score} ⭐</p>
+                        </div>
+                    </div>
+                )}
+                {bestRestaurant && bestRestaurant.avgScore > 0 && (
+                    <div className="bg-gradient-to-br from-fuchsia-500 to-purple-700 rounded-2xl p-4 shadow-xl border border-fuchsia-300/30 relative overflow-hidden">
+                        <div className="absolute -right-6 -top-6 w-20 h-20 bg-fuchsia-200/20 rounded-full blur-xl" />
+                        <div className="relative z-10 text-white">
+                            <p className="text-3xl">🍽️</p>
+                            <p className="text-[11px] font-bold text-fuchsia-100/90 mt-1">مطعم الموسم</p>
+                            <p className="text-base font-black mt-0.5 line-clamp-1">{bestRestaurant.restaurant}</p>
+                            <p className="text-base font-bold text-fuchsia-100">{bestRestaurant.avgScore} ⭐</p>
+                        </div>
+                    </div>
+                )}
+                {longestStreak && longestStreak.streak > 0 && (
+                    <div className="bg-gradient-to-br from-orange-500 to-red-700 rounded-2xl p-4 shadow-xl border border-orange-300/30 relative overflow-hidden">
+                        <div className="absolute -right-6 -top-6 w-20 h-20 bg-orange-200/20 rounded-full blur-xl" />
+                        <div className="relative z-10 text-white">
+                            <p className="text-3xl">🔥</p>
+                            <p className="text-[11px] font-bold text-orange-100/90 mt-1">أطول سلسلة حضور</p>
+                            <p className="text-2xl font-black mt-0.5">{longestStreak.name}</p>
+                            <p className="text-base font-bold text-orange-100">{longestStreak.streak} متواصلة</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 function StatBox({ label, value, color, icon }: { label: string; value: number | string; color: string; icon: string }) {
     const colorMap: Record<string, string> = {
