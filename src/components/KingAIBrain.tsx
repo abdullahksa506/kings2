@@ -35,7 +35,6 @@ export default function KingAIBrain({ userName, getAuthHeaders }: KingAIBrainPro
     const bottomRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
-    // Auto-scroll to latest message
     useEffect(() => {
         const t = setTimeout(() => {
             bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -43,12 +42,11 @@ export default function KingAIBrain({ userName, getAuthHeaders }: KingAIBrainPro
         return () => clearTimeout(t);
     }, [messages.length, busy]);
 
-    // Auto-grow textarea
     useEffect(() => {
         const el = inputRef.current;
         if (!el) return;
         el.style.height = "auto";
-        el.style.height = Math.min(el.scrollHeight, 120) + "px";
+        el.style.height = Math.min(el.scrollHeight, 140) + "px";
     }, [input]);
 
     const send = async (text?: string) => {
@@ -104,31 +102,27 @@ export default function KingAIBrain({ userName, getAuthHeaders }: KingAIBrainPro
 
     const clearChat = () => {
         if (messages.length === 0) return;
-        if (confirm("مسح المحادثة كاملة؟")) {
-            setMessages([]);
-        }
+        if (confirm("مسح المحادثة كاملة؟")) setMessages([]);
     };
 
     return (
         <div className="max-w-3xl mx-auto pb-32" dir="rtl">
-            {/* Compact page header */}
-            <div className="flex items-center justify-between mb-5 px-1">
-                <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 flex items-center justify-center shadow-lg shadow-fuchsia-500/30">
-                        <Brain className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-black text-white leading-tight">King AI Brain</h1>
-                        <p className="text-xs text-slate-400">
-                            دماغ ذكي يعرف كل تاريخ الجلسة
-                            {usage && <span className="text-violet-400 mr-2">· {usage.used}/{usage.limit} اليوم</span>}
-                        </p>
-                    </div>
+            {/* Hero card */}
+            <div className="bg-gradient-to-br from-violet-950/40 via-fuchsia-950/30 to-pink-950/30 border border-violet-500/20 rounded-3xl p-5 mb-5 flex items-center gap-4">
+                <div className="shrink-0 w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 flex items-center justify-center shadow-lg shadow-fuchsia-500/40">
+                    <Brain className="w-7 h-7 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-white font-black text-lg leading-tight">دماغ ذكي لجلستكم</p>
+                    <p className="text-slate-300 text-xs mt-1">
+                        يعرف كل تاريخكم ويقدر يبحث في قوقل عن مطاعم جديدة.
+                        {usage && <span className="text-violet-300 mr-2">· {usage.used}/{usage.limit} اليوم</span>}
+                    </p>
                 </div>
                 {messages.length > 0 && (
                     <button
                         onClick={clearChat}
-                        className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800/50 transition-colors"
+                        className="shrink-0 p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800/50 transition-colors"
                         aria-label="مسح المحادثة"
                     >
                         <Trash2 className="w-4 h-4" />
@@ -136,37 +130,24 @@ export default function KingAIBrain({ userName, getAuthHeaders }: KingAIBrainPro
                 )}
             </div>
 
-            {/* Empty state with welcome + quick prompts */}
+            {/* Empty state or messages */}
             {messages.length === 0 ? (
-                <div className="space-y-6">
-                    <div className="bg-gradient-to-br from-violet-950/40 to-fuchsia-950/40 border border-violet-500/20 rounded-3xl p-6 text-center">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-fuchsia-500/40">
-                            <Brain className="w-9 h-9 text-white" />
-                        </div>
-                        <p className="text-white font-bold text-lg">مرحباً {userName} 👋</p>
-                        <p className="text-slate-300 text-sm mt-2 leading-relaxed max-w-md mx-auto">
-                            اسألني عن أي شي يخص الجلسة — المطاعم، الطلعات، الأعضاء، التصويتات، أو دور لك على مطعم جديد بميزانيتنا.
-                        </p>
-                    </div>
-
-                    <div>
-                        <p className="text-slate-400 text-xs font-bold mb-3 px-1">جرّب سؤال:</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {QUICK_PROMPTS.map((q) => (
-                                <button
-                                    key={q}
-                                    onClick={() => send(q)}
-                                    disabled={busy}
-                                    className="text-right bg-slate-900/60 hover:bg-slate-800 border border-slate-800 hover:border-violet-500/40 rounded-xl px-4 py-3 text-sm text-slate-200 active:scale-95 transition-all disabled:opacity-50"
-                                >
-                                    {q}
-                                </button>
-                            ))}
-                        </div>
+                <div>
+                    <p className="text-slate-400 text-xs font-bold mb-3 px-1">جرّب سؤال:</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {QUICK_PROMPTS.map((q) => (
+                            <button
+                                key={q}
+                                onClick={() => send(q)}
+                                disabled={busy}
+                                className="text-right bg-slate-900/60 hover:bg-slate-800 border border-slate-800 hover:border-violet-500/40 rounded-xl px-4 py-3 text-sm text-slate-200 active:scale-95 transition-all disabled:opacity-50"
+                            >
+                                {q}
+                            </button>
+                        ))}
                     </div>
                 </div>
             ) : (
-                /* Messages list — natural flowing layout */
                 <div className="space-y-4">
                     {messages.map((m, i) => (
                         <MessageBubble key={i} msg={m} userName={userName} />
@@ -182,9 +163,10 @@ export default function KingAIBrain({ userName, getAuthHeaders }: KingAIBrainPro
                 </div>
             )}
 
-            {/* Fixed bottom input bar */}
-            <div className="fixed bottom-16 left-0 right-0 z-30 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800 pb-safe">
-                <div className="max-w-3xl mx-auto px-3 py-3">
+            {/* Fixed input — pinned to bottom of viewport. The standalone page
+                has no tab bar so this sits flush at the bottom. */}
+            <div className="fixed bottom-0 left-0 right-0 z-30 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800 pb-safe">
+                <div className="max-w-3xl mx-auto px-4 py-3">
                     <div className="flex items-end gap-2 bg-slate-900 border border-slate-800 focus-within:border-violet-500/50 rounded-2xl px-3 py-2 transition-colors">
                         <textarea
                             ref={inputRef}
@@ -197,7 +179,7 @@ export default function KingAIBrain({ userName, getAuthHeaders }: KingAIBrainPro
                             disabled={busy}
                             dir="rtl"
                             className="flex-1 bg-transparent text-white text-sm outline-none resize-none py-2 placeholder:text-slate-500"
-                            style={{ maxHeight: 120 }}
+                            style={{ maxHeight: 140 }}
                         />
                         <button
                             onClick={() => send()}
