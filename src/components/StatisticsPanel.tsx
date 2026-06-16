@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { services, VALID_NAMES, MemberActivityStat } from "@/lib/services";
 import {
-    BarChart3, Castle, Users, UtensilsCrossed,
+    BarChart3, Eye, Castle, Users, UtensilsCrossed,
     Flame, TrendingUp, X,
     Award, Clock, LineChart as LineChartIcon, Timer
 } from "lucide-react";
@@ -90,6 +90,23 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                                 </div>
                             </div>
                         )}
+
+                        {/* Visit Stats — رجّعتها بطلب المستخدم. الرقم نفسه القديم
+                            لأن العداد مخزّن في Firestore (services.recordVisit)،
+                            ما أُعيد تصفيره أبداً مع إزالة الـ UI. */}
+                        <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-violet-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+                            <div className="absolute -right-8 -top-8 w-28 h-28 bg-violet-500/10 rounded-full blur-2xl" />
+                            <div className="flex items-center gap-2 mb-4 relative z-10">
+                                <Eye className="w-5 h-5 text-violet-400" />
+                                <h3 className="font-bold text-violet-300 text-lg">زيارات الموقع</h3>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10">
+                                <StatBox label="إجمالي الزيارات" value={stats.visitStats.total} color="violet" icon="📊" />
+                                <StatBox label="زيارات اليوم" value={stats.visitStats.today} color="purple" icon="📅" />
+                                <StatBox label="هذا الأسبوع" value={stats.visitStats.thisWeek} color="fuchsia" icon="📆" />
+                                <StatBox label="هذا الشهر" value={stats.visitStats.thisMonth} color="pink" icon="🗓️" />
+                            </div>
+                        </div>
 
                         {/* Member Activity (feature suggested by هشام) */}
                         <MemberActivitySection activityStats={activityStats} />
