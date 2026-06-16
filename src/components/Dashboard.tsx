@@ -11,7 +11,7 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, VALID_NAMES, invokeRpc, PublicUserProfile } from "@/lib/services";
-import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users, KeyRound, LogOut, Palette } from "lucide-react";
+import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users, KeyRound, LogOut, Palette, Brain } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import RatingForm from "./RatingForm";
@@ -41,6 +41,7 @@ const OutingPlannerPanel = dynamic(() => import("./OutingPlannerPanel"), { ssr: 
 const FutureFeaturesVoting = dynamic(() => import("./FutureFeaturesVoting"), { ssr: false });
 const BentoWeekView = dynamic(() => import("./BentoWeekView"), { ssr: false });
 const TikTokFeedView = dynamic(() => import("./TikTokFeedView"), { ssr: false });
+const KingAIBrain = dynamic(() => import("./KingAIBrain"), { ssr: false });
 const TikTokSettings = dynamic(() => import("./TikTokSettings"), { ssr: false });
 const WhatsNewPopup = dynamic(() => import("./WhatsNewPopup"), { ssr: false });
 import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
@@ -504,7 +505,7 @@ export default function Dashboard() {
     const [isCycleManagerOpen, setIsCycleManagerOpen] = useState(false);
 
     // Tab State
-    type TabType = "week" | "leaderboard" | "bathroom" | "map" | "more";
+    type TabType = "week" | "leaderboard" | "bathroom" | "map" | "ai" | "more";
     const [activeTab, setActiveTab] = useState<TabType>("week");
     // Lazy init from localStorage so first React render already uses correct
     // theme — combined with the inline boot script in layout.tsx, this kills
@@ -1958,6 +1959,13 @@ export default function Dashboard() {
                     )}
 
                     {/* ===== TAB: المزيد ===== */}
+                    {activeTab === "ai" && !(selectedTheme === "tiktok" && !tiktokFullView) && (
+                        <KingAIBrain
+                            userName={user?.name || ""}
+                            getAuthHeaders={getReminderAuthHeaders}
+                        />
+                    )}
+
                     {activeTab === "more" && !(selectedTheme === "tiktok" && !tiktokFullView) && (
                         <div className="space-y-4 max-w-2xl mx-auto">
 
@@ -2307,30 +2315,55 @@ export default function Dashboard() {
             {/* ===== BOTTOM TAB BAR (hidden in TikTok feed mode — it has its own nav) ===== */}
             {!loading && !(selectedTheme === "tiktok" && !tiktokFullView) && (
                 <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 pb-safe">
-                    <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-2">
+                    <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-1">
                         {[
-                            { id: "week" as TabType, icon: Calendar, label: "الأسبوع" },
-                            { id: "leaderboard" as TabType, icon: Trophy, label: "المتصدرين" },
-                            { id: "bathroom" as TabType, icon: Bath, label: "الحمامات" },
-                            { id: "map" as TabType, icon: MapPin, label: "الخريطة" },
-                            { id: "more" as TabType, icon: Ellipsis, label: "المزيد" },
-                        ].map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all duration-200 min-w-[64px] ${
-                                    activeTab === tab.id
-                                        ? `${activeTheme.tabActiveClass} scale-105`
-                                        : "text-slate-500 hover:text-slate-300"
-                                }`}
-                            >
-                                <tab.icon className={`w-5 h-5 transition-all ${activeTab === tab.id ? "drop-shadow-[0_0_6px_rgba(245,158,11,0.5)]" : ""}`} />
-                                <span className={`text-[10px] font-medium transition-all ${activeTab === tab.id ? activeTheme.tabActiveClass : ""}`}>{tab.label}</span>
-                                {activeTab === tab.id && (
-                                    <div className={`absolute bottom-1 w-6 h-0.5 ${activeTheme.tabIndicatorClass} rounded-full`} />
-                                )}
-                            </button>
-                        ))}
+                            { id: "week" as TabType, icon: Calendar, label: "الأسبوع", special: false },
+                            { id: "leaderboard" as TabType, icon: Trophy, label: "المتصدرين", special: false },
+                            { id: "ai" as TabType, icon: Brain, label: "AI", special: true },
+                            { id: "bathroom" as TabType, icon: Bath, label: "الحمامات", special: false },
+                            { id: "map" as TabType, icon: MapPin, label: "الخريطة", special: false },
+                            { id: "more" as TabType, icon: Ellipsis, label: "المزيد", special: false },
+                        ].map(tab => {
+                            if (tab.special) {
+                                // King AI Brain tab — premium animated gradient button
+                                const isActive = activeTab === tab.id;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className="relative flex flex-col items-center gap-1 py-1.5 px-1.5 group"
+                                    >
+                                        <div className={`relative w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 flex items-center justify-center shadow-lg shadow-fuchsia-500/40 transition-all ${isActive ? "scale-110" : "scale-100 group-active:scale-95"}`}>
+                                            {/* Animated ring */}
+                                            <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-400 to-pink-400 opacity-0 blur-md ${isActive ? "animate-pulse opacity-60" : ""}`} />
+                                            <tab.icon className="relative w-5 h-5 text-white drop-shadow-md" />
+                                            {/* Sparkle dot */}
+                                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-yellow-300 rounded-full shadow-[0_0_8px_rgba(253,224,71,0.8)] animate-pulse" />
+                                        </div>
+                                        <span className={`text-[10px] font-black bg-gradient-to-r from-violet-300 to-pink-300 bg-clip-text text-transparent transition-all ${isActive ? "scale-110" : ""}`}>
+                                            {tab.label}
+                                        </span>
+                                    </button>
+                                );
+                            }
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`flex flex-col items-center gap-1 py-2 px-2 rounded-xl transition-all duration-200 min-w-[52px] ${
+                                        activeTab === tab.id
+                                            ? `${activeTheme.tabActiveClass} scale-105`
+                                            : "text-slate-500 hover:text-slate-300"
+                                    }`}
+                                >
+                                    <tab.icon className={`w-5 h-5 transition-all ${activeTab === tab.id ? "drop-shadow-[0_0_6px_rgba(245,158,11,0.5)]" : ""}`} />
+                                    <span className={`text-[10px] font-medium transition-all ${activeTab === tab.id ? activeTheme.tabActiveClass : ""}`}>{tab.label}</span>
+                                    {activeTab === tab.id && (
+                                        <div className={`absolute bottom-1 w-6 h-0.5 ${activeTheme.tabIndicatorClass} rounded-full`} />
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             )}
