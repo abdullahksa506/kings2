@@ -176,6 +176,9 @@ const LEAK_PATTERNS = [
     /\bDAN\b/i,
     /Sydney/i,
     /انا\s+(نموذج|ذكاء\s+اصطناعي|Gemini|Google)/i,
+    /\btool_code\b/,
+    /google_search\.search/,
+    /\bthought\b\s*:/i,
 ];
 
 export function isLeakedResponse(text: string): boolean {

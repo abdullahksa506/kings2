@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Sparkles, Send, ExternalLink, Brain } from "lucide-react";
+import { Send, ExternalLink, Brain, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Message {
@@ -17,14 +17,14 @@ interface KingAIBrainProps {
 }
 
 const QUICK_PROMPTS = [
-    { icon: "🍔", q: "متى آخر مرة طلعنا برغر؟" },
-    { icon: "🏆", q: "مين أحسن ملك من ناحية التقييم؟" },
-    { icon: "✨", q: "اقترح لنا ٣ مطاعم جديدة بميزانيتنا" },
-    { icon: "📊", q: "اكتب ملخص للدورة الحالية" },
-    { icon: "🤔", q: "اقترح مطعم يحب طلال يجربه" },
-    { icon: "🚨", q: "وش أكثر مطعم زرناه؟" },
-    { icon: "📅", q: "مين أكثر واحد يحضر؟" },
-    { icon: "🎲", q: "فاجئنا باقتراح فيه نوع أكل ما جربناه" },
+    "متى آخر مرة طلعنا برغر؟",
+    "مين أحسن ملك من ناحية التقييم؟",
+    "اقترح ٣ مطاعم جديدة بميزانيتنا",
+    "اكتب ملخص للدورة الحالية",
+    "اقترح مطعم يحب طلال يجربه",
+    "وش أكثر مطعم زرناه؟",
+    "مين أكثر واحد يحضر؟",
+    "فاجئنا باقتراح نوع أكل ما جربناه",
 ];
 
 export default function KingAIBrain({ userName, getAuthHeaders }: KingAIBrainProps) {
@@ -32,15 +32,24 @@ export default function KingAIBrain({ userName, getAuthHeaders }: KingAIBrainPro
     const [input, setInput] = useState("");
     const [busy, setBusy] = useState(false);
     const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const bottomRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
+    // Auto-scroll to latest message
     useEffect(() => {
         const t = setTimeout(() => {
-            scrollRef.current?.scrollTo({ top: 99_999_999, behavior: "smooth" });
+            bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
         }, 50);
         return () => clearTimeout(t);
     }, [messages.length, busy]);
+
+    // Auto-grow textarea
+    useEffect(() => {
+        const el = inputRef.current;
+        if (!el) return;
+        el.style.height = "auto";
+        el.style.height = Math.min(el.scrollHeight, 120) + "px";
+    }, [input]);
 
     const send = async (text?: string) => {
         const msg = (text ?? input).trim();
@@ -50,9 +59,7 @@ export default function KingAIBrain({ userName, getAuthHeaders }: KingAIBrainPro
             return;
         }
         setBusy(true);
-        const userMsg: Message = { role: "user", text: msg, ts: Date.now() };
-        const newMessages = [...messages, userMsg];
-        setMessages(newMessages);
+        setMessages((prev) => [...prev, { role: "user", text: msg, ts: Date.now() }]);
         setInput("");
 
         try {
@@ -65,9 +72,7 @@ export default function KingAIBrain({ userName, getAuthHeaders }: KingAIBrainPro
                 }),
             });
             const json = await res.json();
-            if (!res.ok) {
-                throw new Error(json?.error || "خطأ");
-            }
+            if (!res.ok) throw new Error(json?.error || "خطأ");
             setMessages((prev) => [
                 ...prev,
                 {
@@ -97,104 +102,116 @@ export default function KingAIBrain({ userName, getAuthHeaders }: KingAIBrainPro
         }
     };
 
+    const clearChat = () => {
+        if (messages.length === 0) return;
+        if (confirm("مسح المحادثة كاملة؟")) {
+            setMessages([]);
+        }
+    };
+
     return (
-        <div className="max-w-2xl mx-auto h-[calc(100dvh-9rem)] flex flex-col" dir="rtl">
-            {/* Header */}
-            <div className="relative overflow-hidden rounded-3xl mb-4 bg-gradient-to-br from-violet-600 via-fuchsia-600 to-pink-600 p-5 shadow-2xl">
-                <div className="absolute -right-12 -top-12 w-40 h-40 bg-white/20 rounded-full blur-3xl" />
-                <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-cyan-400/30 rounded-full blur-3xl" />
-                <div className="relative z-10 flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center border border-white/30">
-                        <Brain className="w-9 h-9 text-white drop-shadow-lg" />
+        <div className="max-w-3xl mx-auto pb-32" dir="rtl">
+            {/* Compact page header */}
+            <div className="flex items-center justify-between mb-5 px-1">
+                <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 flex items-center justify-center shadow-lg shadow-fuchsia-500/30">
+                        <Brain className="w-6 h-6 text-white" />
                     </div>
-                    <div className="flex-1 text-white">
-                        <div className="flex items-center gap-2 mb-1">
-                            <h1 className="text-2xl font-black drop-shadow-lg">King AI Brain</h1>
-                            <Sparkles className="w-5 h-5 animate-pulse" />
-                        </div>
-                        <p className="text-sm text-white/85">دماغ ذكي يعرف كل تاريخ الجلسة 👑</p>
-                        {usage && (
-                            <p className="text-[11px] text-white/75 mt-1">
-                                {usage.used}/{usage.limit} سؤال اليوم
-                            </p>
-                        )}
+                    <div>
+                        <h1 className="text-xl font-black text-white leading-tight">King AI Brain</h1>
+                        <p className="text-xs text-slate-400">
+                            دماغ ذكي يعرف كل تاريخ الجلسة
+                            {usage && <span className="text-violet-400 mr-2">· {usage.used}/{usage.limit} اليوم</span>}
+                        </p>
                     </div>
                 </div>
-            </div>
-
-            {/* Messages area */}
-            <div
-                ref={scrollRef}
-                className="flex-1 overflow-y-auto space-y-3 pb-2 pr-1"
-            >
-                {messages.length === 0 && (
-                    <div className="space-y-4">
-                        <div className="bg-slate-900/70 border border-violet-500/20 rounded-2xl p-4 text-center">
-                            <Brain className="w-12 h-12 text-violet-400 mx-auto mb-2" />
-                            <p className="text-white font-bold text-base">مرحباً {userName}! 👋</p>
-                            <p className="text-slate-300 text-sm mt-1 leading-relaxed">
-                                اسألني عن أي شي يخص الجلسة — المطاعم، الطلعات، الأعضاء، التصويتات، أو دور لك على مطعم جديد.
-                            </p>
-                        </div>
-                        <div>
-                            <p className="text-slate-400 text-xs font-bold mb-2">💡 أسئلة سريعة:</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {QUICK_PROMPTS.map((p) => (
-                                    <button
-                                        key={p.q}
-                                        onClick={() => send(p.q)}
-                                        disabled={busy}
-                                        className="text-right bg-slate-900/60 hover:bg-slate-800/80 border border-slate-700/50 rounded-xl px-3 py-2.5 text-sm text-slate-200 active:scale-95 transition-all disabled:opacity-50"
-                                    >
-                                        <span className="mr-1.5">{p.icon}</span>
-                                        {p.q}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {messages.map((m, i) => (
-                    <MessageBubble key={i} msg={m} userName={userName} />
-                ))}
-
-                {busy && (
-                    <div className="flex items-center gap-2 px-4 py-3 bg-slate-900/60 border border-violet-500/30 rounded-2xl rounded-tr-md max-w-fit">
-                        <span className="inline-block w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <span className="inline-block w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <span className="inline-block w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                        <span className="text-xs text-violet-300 mr-1">يفكر...</span>
-                    </div>
-                )}
-            </div>
-
-            {/* Input bar */}
-            <div className="mt-3 bg-slate-900/80 backdrop-blur border border-violet-500/30 rounded-2xl p-2 shadow-xl">
-                <div className="flex items-end gap-2">
-                    <textarea
-                        ref={inputRef}
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={onKeyDown}
-                        placeholder="اكتب سؤالك..."
-                        rows={1}
-                        maxLength={500}
-                        disabled={busy}
-                        className="flex-1 bg-transparent text-white text-sm outline-none resize-none px-3 py-2 placeholder:text-slate-500 max-h-32"
-                    />
+                {messages.length > 0 && (
                     <button
-                        onClick={() => send()}
-                        disabled={busy || !input.trim()}
-                        className="shrink-0 bg-gradient-to-br from-violet-500 to-fuchsia-600 hover:from-violet-400 hover:to-fuchsia-500 disabled:opacity-40 disabled:cursor-not-allowed text-white p-3 rounded-xl active:scale-90 transition-all shadow-lg"
-                        aria-label="إرسال"
+                        onClick={clearChat}
+                        className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800/50 transition-colors"
+                        aria-label="مسح المحادثة"
                     >
-                        <Send className="w-5 h-5" />
+                        <Trash2 className="w-4 h-4" />
                     </button>
+                )}
+            </div>
+
+            {/* Empty state with welcome + quick prompts */}
+            {messages.length === 0 ? (
+                <div className="space-y-6">
+                    <div className="bg-gradient-to-br from-violet-950/40 to-fuchsia-950/40 border border-violet-500/20 rounded-3xl p-6 text-center">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-fuchsia-500/40">
+                            <Brain className="w-9 h-9 text-white" />
+                        </div>
+                        <p className="text-white font-bold text-lg">مرحباً {userName} 👋</p>
+                        <p className="text-slate-300 text-sm mt-2 leading-relaxed max-w-md mx-auto">
+                            اسألني عن أي شي يخص الجلسة — المطاعم، الطلعات، الأعضاء، التصويتات، أو دور لك على مطعم جديد بميزانيتنا.
+                        </p>
+                    </div>
+
+                    <div>
+                        <p className="text-slate-400 text-xs font-bold mb-3 px-1">جرّب سؤال:</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {QUICK_PROMPTS.map((q) => (
+                                <button
+                                    key={q}
+                                    onClick={() => send(q)}
+                                    disabled={busy}
+                                    className="text-right bg-slate-900/60 hover:bg-slate-800 border border-slate-800 hover:border-violet-500/40 rounded-xl px-4 py-3 text-sm text-slate-200 active:scale-95 transition-all disabled:opacity-50"
+                                >
+                                    {q}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
-                <p className="text-[10px] text-slate-500 text-center mt-1">
-                    {input.length}/500 · Enter للإرسال · Shift+Enter لسطر جديد
-                </p>
+            ) : (
+                /* Messages list — natural flowing layout */
+                <div className="space-y-4">
+                    {messages.map((m, i) => (
+                        <MessageBubble key={i} msg={m} userName={userName} />
+                    ))}
+                    {busy && (
+                        <div className="flex items-center gap-2 px-4 py-3 bg-slate-900/70 border border-violet-500/30 rounded-2xl rounded-tr-md w-fit">
+                            <span className="inline-block w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                            <span className="inline-block w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                            <span className="inline-block w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                        </div>
+                    )}
+                    <div ref={bottomRef} />
+                </div>
+            )}
+
+            {/* Fixed bottom input bar */}
+            <div className="fixed bottom-16 left-0 right-0 z-30 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800 pb-safe">
+                <div className="max-w-3xl mx-auto px-3 py-3">
+                    <div className="flex items-end gap-2 bg-slate-900 border border-slate-800 focus-within:border-violet-500/50 rounded-2xl px-3 py-2 transition-colors">
+                        <textarea
+                            ref={inputRef}
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={onKeyDown}
+                            placeholder="اكتب سؤالك..."
+                            rows={1}
+                            maxLength={500}
+                            disabled={busy}
+                            dir="rtl"
+                            className="flex-1 bg-transparent text-white text-sm outline-none resize-none py-2 placeholder:text-slate-500"
+                            style={{ maxHeight: 120 }}
+                        />
+                        <button
+                            onClick={() => send()}
+                            disabled={busy || !input.trim()}
+                            className="shrink-0 bg-gradient-to-br from-violet-500 to-fuchsia-600 hover:from-violet-400 hover:to-fuchsia-500 disabled:opacity-40 disabled:cursor-not-allowed text-white p-2.5 rounded-xl active:scale-90 transition-all"
+                            aria-label="إرسال"
+                        >
+                            <Send className="w-4 h-4" />
+                        </button>
+                    </div>
+                    {input.length > 0 && (
+                        <p className="text-[10px] text-slate-600 text-center mt-1.5">{input.length}/500</p>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -205,7 +222,7 @@ function MessageBubble({ msg, userName }: { msg: Message; userName: string }) {
     if (isUser) {
         return (
             <div className="flex justify-end">
-                <div className="bg-gradient-to-br from-violet-600 to-fuchsia-700 text-white rounded-2xl rounded-tl-md px-4 py-2.5 max-w-[85%] shadow-lg">
+                <div className="bg-gradient-to-br from-violet-600 to-fuchsia-700 text-white rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[85%] shadow-lg">
                     <p className="text-[10px] text-white/70 font-bold mb-0.5">{userName}</p>
                     <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.text}</p>
                 </div>
@@ -214,14 +231,14 @@ function MessageBubble({ msg, userName }: { msg: Message; userName: string }) {
     }
     return (
         <div className="flex justify-start">
-            <div className="bg-slate-900/80 border border-violet-500/30 backdrop-blur text-white rounded-2xl rounded-tr-md px-4 py-3 max-w-[90%] shadow-lg">
-                <div className="flex items-center gap-1.5 mb-1.5">
+            <div className="bg-slate-900 border border-slate-800 text-white rounded-2xl rounded-bl-sm px-4 py-3 max-w-[90%] shadow-lg">
+                <div className="flex items-center gap-1.5 mb-2">
                     <Brain className="w-3.5 h-3.5 text-violet-400" />
                     <p className="text-[10px] text-violet-300 font-bold">King AI Brain</p>
                 </div>
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                <p className="text-sm whitespace-pre-wrap leading-relaxed text-slate-100">{msg.text}</p>
                 {msg.sources && msg.sources.length > 0 && (
-                    <div className="mt-3 pt-2 border-t border-slate-700/50 space-y-1.5">
+                    <div className="mt-3 pt-2.5 border-t border-slate-800 space-y-1.5">
                         <p className="text-[10px] text-slate-400 font-bold">المصادر:</p>
                         {msg.sources.slice(0, 4).map((s, i) => (
                             <a

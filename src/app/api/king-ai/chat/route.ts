@@ -181,6 +181,10 @@ export async function POST(request: Request) {
                 temperature: 0.7,
                 maxOutputTokens: 1024,
                 topP: 0.95,
+                // Disable Gemini 2.5 "thinking" mode — otherwise the model
+                // streams its chain-of-thought + tool_code prefixes into the
+                // user-visible answer.
+                thinkingConfig: { thinkingBudget: 0 },
             },
             safetySettings: [
                 { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
@@ -207,7 +211,31 @@ export async function POST(request: Request) {
         }
 
         const data = await res.json();
-        let answer: string = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+        // Extract ONLY the answer parts — skip any parts flagged as 'thought',
+        // and strip out leaked tool_code/print/queries=… blocks that some
+        // grounding responses still emit even with thinkingBudget=0.
+        const parts: { text?: string; thought?: boolean }[] =
+            data?.candidates?.[0]?.content?.parts || [];
+        let answer = parts
+            .filter((p) => !p.thought && typeof p.text === "string")
+            .map((p) => p.text as string)
+            .join("\n")
+            .trim();
+
+        // Strip lines that look like internal reasoning markers
+        answer = answer
+            .split("\n")
+            .filter((line) => {
+                const l = line.trim();
+                if (!l) return true;
+                // Skip leaked markers
+                if (/^(tool_code|thought|print\(|queries\s*=)/i.test(l)) return false;
+                if (/^\s*google_search\.search/i.test(l)) return false;
+                return true;
+            })
+            .join("\n")
+            .trim();
 
         if (!answer) {
             const finishReason = data?.candidates?.[0]?.finishReason || "UNKNOWN";
