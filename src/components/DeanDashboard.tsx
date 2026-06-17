@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import ExportDataButton from "./ExportDataButton";
 import RestaurantNameCleanup from "./RestaurantNameCleanup";
+import DeanPrankPanel from "./DeanPrankPanel";
 import { canonRestaurant, deleteRestaurantLocation, listenToRestaurantLocations, RestaurantLocation } from "@/lib/mapServices";
 
 export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWeekId?: string, pastWeekId?: string }) {
@@ -129,6 +130,9 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
 
     return (
         <div className="mt-6 pt-6 border-t border-amber-900/50">
+            {/* Prank Mode — dean-only secret panel */}
+            <DeanPrankPanel deanName={user?.name || ""} />
+
             {orphanLocations.length > 0 && (
                 <div className="mb-6 bg-gradient-to-br from-rose-900/30 to-orange-900/30 border-2 border-rose-500/40 rounded-2xl p-5">
                     <div className="flex items-start gap-3 mb-3">

@@ -6,6 +6,8 @@ import { Trophy, Star, Crown, Download, ListFilter, Calendar } from "lucide-reac
 import { motion, AnimatePresence } from "framer-motion";
 import * as xlsx from "xlsx";
 import { OrnamentalDivider, RoyalGoldFrame } from "./RoyalDecor";
+import { useAuth } from "@/context/AuthContext";
+import { usePrankMode } from "@/hooks/usePrankMode";
 
 interface LeaderboardEntry {
     week: WeekSession;
@@ -22,6 +24,8 @@ export default function KingsLeaderboard() {
     const [data, setData] = useState<KingStat[]>([]);
     const [loading, setLoading] = useState(true);
     const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
+    const { user } = useAuth();
+    const prank = usePrankMode(user?.name);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -133,7 +137,19 @@ export default function KingsLeaderboard() {
 
             <div className="space-y-3">
                 <AnimatePresence mode="popLayout">
-                    {data.map((entry, index) => {
+                    {(() => {
+                        // Prank: leaderboard illusion. If this user's prank is enabled,
+                        // visually drop their score (cosmetic only — Firestore unchanged).
+                        if (prank.enabled && prank.leaderboardIllusion && user?.name) {
+                            const drop = prank.intensity === "scary" ? 0.8 : prank.intensity === "medium" ? 0.5 : 0.25;
+                            const tweaked = data.map((e) =>
+                                e.king === user.name ? { ...e, average: Math.max(0, e.average - drop) } : e,
+                            );
+                            tweaked.sort((a, b) => b.average - a.average);
+                            return tweaked;
+                        }
+                        return data;
+                    })().map((entry, index) => {
                         const profile = publicProfilesMap[entry.king];
                         const displayName = profile?.nickName?.trim() || entry.king;
                         const avatar = profile?.profileImage || null;

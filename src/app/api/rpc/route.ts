@@ -1664,6 +1664,48 @@ export async function POST(request: Request) {
                 });
                 return NextResponse.json({ result: true });
             }
+
+            case "updatePrankConfig": {
+                if (!isAdmin) throw new Error("Dean only");
+                const userName = asTrimmedString(payload?.userName);
+                if (!userName) throw new Error("userName required");
+                const updates = (payload?.updates && typeof payload.updates === "object") ? payload.updates : {};
+                // Allow only known fields
+                const ALLOWED = new Set([
+                    "enabled", "intensity",
+                    "textGlitch", "aiWhispers", "phantomPush",
+                    "leaderboardIllusion", "screenGlitch",
+                ]);
+                const filtered: Record<string, unknown> = { updatedAtMs: Date.now() };
+                for (const [k, v] of Object.entries(updates)) {
+                    if (ALLOWED.has(k)) filtered[k] = v;
+                }
+                await adminDb.collection("prankConfig").doc(userName).set(filtered, { merge: true });
+                return NextResponse.json({ result: true });
+            }
+
+            case "triggerPhantomPush": {
+                if (!isAdmin) throw new Error("Dean only");
+                const targetName = asTrimmedString(payload?.userName);
+                if (!targetName) throw new Error("userName required");
+                const customText = typeof payload?.customText === "string" ? payload.customText.trim() : "";
+                const { sendPushNotification } = await import("@/lib/pushHelper");
+                const lines = [
+                    `${targetName}... شفت اللي عملته؟ 👁`,
+                    `يا ${targetName}، البيت اللي ضفته في تل أبيب يطاردنا 🇮🇱👻`,
+                    `${targetName}, نعرف وين كنت قبل ساعة 📍`,
+                    `يا ${targetName}، الكاميرا شغّالة. 📷`,
+                    `${targetName}... نشوفك من خلال الشاشة الآن.`,
+                    `يا ${targetName}، النكتة اللي كنت تحضّرها ضاعت — صار عندنا 🎲`,
+                    `${targetName}، هل أنت متأكد إنك لحالك في الغرفة؟ 🪑`,
+                ];
+                const body = customText || lines[Math.floor(Math.random() * lines.length)];
+                const result = await sendPushNotification(
+                    { title: "👻", body, type: "default", tag: `phantom-${Date.now()}`, url: "/" },
+                    { userNames: [targetName] },
+                );
+                return NextResponse.json({ result: true, sentCount: result.sentCount });
+            }
         }
         return NextResponse.json({ error: "Unknown action" }, { status: 400 });
     } catch (error: any) {

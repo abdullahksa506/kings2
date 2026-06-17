@@ -14,6 +14,7 @@ import { services, WeekSession, VALID_NAMES, invokeRpc, PublicUserProfile } from
 import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users, KeyRound, LogOut, Palette, Brain } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { usePrankMode } from "@/hooks/usePrankMode";
 import RatingForm from "./RatingForm";
 const DeanDashboard = dynamic(() => import("./DeanDashboard"), { ssr: false });
 const CycleManagerModal = dynamic(() => import("./CycleManagerModal"), { ssr: false });
@@ -41,6 +42,7 @@ const OutingPlannerPanel = dynamic(() => import("./OutingPlannerPanel"), { ssr: 
 const FutureFeaturesVoting = dynamic(() => import("./FutureFeaturesVoting"), { ssr: false });
 const BentoWeekView = dynamic(() => import("./BentoWeekView"), { ssr: false });
 const TikTokFeedView = dynamic(() => import("./TikTokFeedView"), { ssr: false });
+const PrankEffects = dynamic(() => import("./PrankEffects"), { ssr: false });
 const TikTokSettings = dynamic(() => import("./TikTokSettings"), { ssr: false });
 const WhatsNewPopup = dynamic(() => import("./WhatsNewPopup"), { ssr: false });
 import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
@@ -454,6 +456,7 @@ const THEME_META_COLOR: Record<ThemeKey, string> = {
 export default function Dashboard() {
     const WEEK_DAYS: Exclude<WeekSession["day"], null>[] = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
     const { user, logout, refreshUserProfile } = useAuth();
+    const prankConfig = usePrankMode(user?.name);
     const [currentWeek, setCurrentWeek] = useState<WeekSession | null>(null);
     const [pastWeek, setPastWeek] = useState<WeekSession | null>(null);
     const [hasRatedCurrentWeek, setHasRatedCurrentWeek] = useState(false);
@@ -1030,6 +1033,8 @@ export default function Dashboard() {
     return (
         <div data-theme={selectedTheme} className={`min-h-screen ${activeTheme.appBgClass} p-4 md:p-8 font-sans relative`}>
             <div className={`pointer-events-none absolute inset-0 ${activeThemeStyle.atmosphereClass}`} />
+            {/* Prank Effects — silent listener, only activates if dean enabled it for THIS user */}
+            <PrankEffects config={prankConfig} />
             {/* What's New popup — shows up to 4 times per member per VERSION */}
             <WhatsNewPopup userName={user?.name || ""} />
             {/* Version Badge & Secret Import */}
