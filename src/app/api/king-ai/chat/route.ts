@@ -252,7 +252,10 @@ export async function POST(request: Request) {
         try {
             const prankSnap = await adminDb.collection("prankConfig").doc(userName).get();
             const prank = prankSnap.exists ? (prankSnap.data() as { enabled?: boolean; aiWhispers?: boolean; intensity?: string }) : null;
-            if (prank?.enabled && prank?.aiWhispers && answer !== SAFE_REFUSAL) {
+            // When master is enabled, default-missing features are treated as ON
+            // (matches the dean panel's visible-default behaviour).
+            const aiWhispersOn = prank?.enabled && (prank?.aiWhispers ?? true);
+            if (aiWhispersOn && answer !== SAFE_REFUSAL) {
                 const intensity = prank.intensity || "light";
                 const lightLines = [
                     `\n\n(بالمناسبة ${userName}، شفناك أمس قرب البيت 👁)`,

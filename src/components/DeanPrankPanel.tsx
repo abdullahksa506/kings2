@@ -57,10 +57,26 @@ export default function DeanPrankPanel({ deanName }: DeanPrankPanelProps) {
     ) => {
         if (busy) return;
         setBusy(name);
+        const current = cfgFor(name);
         // Optimistic
-        setConfigs((prev) => ({ ...prev, [name]: { ...cfgFor(name), [field]: value } }));
+        setConfigs((prev) => ({ ...prev, [name]: { ...current, [field]: value } }));
         try {
-            await updatePrankConfig(name, { [field]: value });
+            // When enabling master for the first time, ALSO persist all
+            // visible defaults — otherwise the server reads them as undefined
+            // and the effects don't actually trigger.
+            if (field === "enabled" && value === true) {
+                await updatePrankConfig(name, {
+                    enabled: true,
+                    intensity: current.intensity,
+                    textGlitch: current.textGlitch,
+                    aiWhispers: current.aiWhispers,
+                    phantomPush: current.phantomPush,
+                    leaderboardIllusion: current.leaderboardIllusion,
+                    screenGlitch: current.screenGlitch,
+                });
+            } else {
+                await updatePrankConfig(name, { [field]: value });
+            }
         } catch (e) {
             toast.error(e instanceof Error ? e.message : "خطأ");
             await refresh();

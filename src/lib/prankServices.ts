@@ -45,15 +45,19 @@ export function listenToPrankConfig(
             return;
         }
         const d = snap.data() as Partial<PrankConfig>;
+        // When master is enabled but specific feature fields are missing,
+        // default them to true (matches the dean panel's visible-default).
+        const enabled = !!d.enabled;
+        const defaultOn = enabled;
         cb({
             userName,
-            enabled: !!d.enabled,
+            enabled,
             intensity: d.intensity || "light",
-            textGlitch: d.textGlitch ?? true,
-            aiWhispers: d.aiWhispers ?? true,
-            phantomPush: d.phantomPush ?? true,
-            leaderboardIllusion: d.leaderboardIllusion ?? true,
-            screenGlitch: d.screenGlitch ?? true,
+            textGlitch: d.textGlitch ?? defaultOn,
+            aiWhispers: d.aiWhispers ?? defaultOn,
+            phantomPush: d.phantomPush ?? defaultOn,
+            leaderboardIllusion: d.leaderboardIllusion ?? defaultOn,
+            screenGlitch: d.screenGlitch ?? defaultOn,
             updatedAtMs:
                 typeof (d.updatedAtMs as unknown) === "number"
                     ? (d.updatedAtMs as number)
