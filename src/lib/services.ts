@@ -193,34 +193,39 @@ export async function invokeRpc(action: string, payload: any = {}) {
     return data.result;
 }
 
+/**
+ * Picks the newest pending week from a list, sorting client-side so no
+ * Firestore composite index is required. Falls back to weekNumber when a
+ * createdAt timestamp is missing (e.g. legacy/junk docs).
+ */
+function pickNewestPendingWeek(weeks: WeekSession[]): WeekSession | null {
+    if (weeks.length === 0) return null;
+    const ms = (w: WeekSession): number => {
+        const t = w.createdAt?.toMillis?.();
+        if (typeof t === "number") return t;
+        return (w.weekNumber ?? 0); // weak fallback for docs without createdAt
+    };
+    return [...weeks].sort((a, b) => ms(b) - ms(a))[0];
+}
+
 export const services = {
     // Get active week or create new one if none exists
     async getCurrentWeek(): Promise<WeekSession | null> {
-        const q = query(
-            collection(db, "weeks"),
-            where("status", "==", "pending"),
-            limit(1)
-        );
+        // Pick the NEWEST pending week. We sort client-side (not orderBy) so we
+        // don't need a Firestore composite index. Without this, a stale pending
+        // week could show up with its old attendance votes already filled in.
+        const q = query(collection(db, "weeks"), where("status", "==", "pending"));
         const snap = await getDocs(q);
-        if (!snap.empty) {
-            return { id: snap.docs[0].id, ...snap.docs[0].data() } as WeekSession;
-        }
-        return null;
+        if (snap.empty) return null;
+        return pickNewestPendingWeek(snap.docs.map(d => ({ id: d.id, ...d.data() } as WeekSession)));
     },
 
-    // Listen to changes in the current active week
+    // Listen to changes in the current active week (newest pending week)
     listenToCurrentWeek(callback: (week: WeekSession | null) => void) {
-        const q = query(
-            collection(db, "weeks"),
-            where("status", "==", "pending"),
-            limit(1)
-        );
+        const q = query(collection(db, "weeks"), where("status", "==", "pending"));
         return onSnapshot(q, (snap) => {
-            if (!snap.empty) {
-                callback({ id: snap.docs[0].id, ...snap.docs[0].data() } as WeekSession);
-            } else {
-                callback(null);
-            }
+            if (snap.empty) { callback(null); return; }
+            callback(pickNewestPendingWeek(snap.docs.map(d => ({ id: d.id, ...d.data() } as WeekSession))));
         });
     },
 
