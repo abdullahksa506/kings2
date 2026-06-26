@@ -17,7 +17,6 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { usePrankMode } from "@/hooks/usePrankMode";
 import RatingForm from "./RatingForm";
 const DeanDashboard = dynamic(() => import("./DeanDashboard"), { ssr: false });
-const CycleManagerModal = dynamic(() => import("./CycleManagerModal"), { ssr: false });
 // Leaderboards — only the "leaderboard" tab uses these.
 const Leaderboard = dynamic(() => import("./Leaderboard"), { ssr: false });
 const GlobalLeaderboard = dynamic(() => import("./GlobalLeaderboard"), { ssr: false });
@@ -504,7 +503,6 @@ export default function Dashboard() {
     // Statistics State
     const [isStatsOpen, setIsStatsOpen] = useState(false);
     const [isMemberProfileOpen, setIsMemberProfileOpen] = useState(false);
-    const [isCycleManagerOpen, setIsCycleManagerOpen] = useState(false);
 
     // Tab State
     // "ai" is rendered as a Link in the bottom bar (navigates to /ai page);
@@ -1211,13 +1209,7 @@ export default function Dashboard() {
                             {currentWeek ? "إنهاء الأسبوع الحالي وبدء أسبوع جديد" : "بدء أسبوع جديد"}
                         </button>
 
-                        <button
-                            onClick={() => setIsCycleManagerOpen(true)}
-                            className="bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-semibold py-2 px-4 rounded-xl text-sm flex items-center gap-2"
-                        >
-                            <RotateCcw className="w-4 h-4" />
-                            فتح مدير الدورات
-                        </button>
+                        {/* مدير الدورات القديم اتحذف — استبدل بـ 'منظّم الدورات' في لوحة العميد (أشمل) */}
 
                         {currentWeek && (
                             <div className="flex items-center gap-2 bg-slate-950/40 p-1 rounded-xl border border-amber-500/20">
@@ -2397,13 +2389,6 @@ export default function Dashboard() {
                     />
                 )
             }
-
-            <CycleManagerModal
-                isOpen={isCycleManagerOpen}
-                onClose={() => setIsCycleManagerOpen(false)}
-                currentCycleNumber={currentWeek?.cycleNumber || pastWeek?.cycleNumber || 1}
-                onAfterSave={() => fetchWeek()}
-            />
 
             <StatisticsPanel
                 isOpen={isStatsOpen}
