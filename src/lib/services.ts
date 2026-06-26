@@ -386,8 +386,9 @@ export const services = {
         const weeksSnap = await getDocs(q);
         const weeks = weeksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as WeekSession));
 
-        // Filter out explicitly imported historical weeks from the active cycle leaderboard
-        const activeWeeks = weeks.filter((w: any) => w.historicalAverageRating === undefined);
+        // Filter out: (1) imported historical weeks, (2) random weeks.
+        // Random weeks are organizational only and never count toward competition.
+        const activeWeeks = weeks.filter((w: any) => w.historicalAverageRating === undefined && !w.isRandom);
 
         const leaderboard = await Promise.all(activeWeeks.map(async (week) => {
             const ratings = await this.getAllRatingsForWeek(week.id);
@@ -532,6 +533,32 @@ export const services = {
 
     async bulkSetWeekCycle(weekIds: string[], cycleNumber: number) {
         return invokeRpc("bulkSetWeekCycle", { weekIds, cycleNumber });
+    },
+
+    // Cycle Organizer — edit any subset of a week's metadata.
+    async updateWeekMeta(weekId: string, updates: {
+        cycleNumber?: number;
+        weekNumber?: number;
+        isRandom?: boolean;
+        king?: string | null;
+        status?: "completed" | "pending" | "skipped";
+    }) {
+        return invokeRpc("updateWeekMeta", { weekId, updates });
+    },
+
+    async deleteWeekById(weekId: string) {
+        return invokeRpc("deleteWeekById", { weekId });
+    },
+
+    // Fetch ALL weeks (any status) for the organizer — raw, unfiltered.
+    async getAllWeeksRaw(): Promise<WeekSession[]> {
+        const snap = await getDocs(collection(db, "weeks"));
+        const weeks = snap.docs.map(d => ({ id: d.id, ...d.data() } as WeekSession));
+        return weeks.sort((a, b) => {
+            const am = a.createdAt?.toMillis?.() ?? 0;
+            const bm = b.createdAt?.toMillis?.() ?? 0;
+            return am - bm;
+        });
     },
 
     async getAllUsers() {
@@ -736,8 +763,10 @@ export const services = {
         // 1. Get all weeks
         const weeksSnap = await getDocs(collection(db, "weeks"));
         const allWeeks = weeksSnap.docs.map(d => ({ id: d.id, ...d.data() } as WeekSession));
-        const completedWeeks = allWeeks.filter(w => w.status === "completed");
-        const pendingWeeks = allWeeks.filter(w => w.status === "pending");
+        // Random weeks are organizational filler — fully excluded from every
+        // statistic (king rankings, cycle averages, attendance math, etc.).
+        const completedWeeks = allWeeks.filter(w => w.status === "completed" && !w.isRandom);
+        const pendingWeeks = allWeeks.filter(w => w.status === "pending" && !w.isRandom);
 
         // 2. Get all ratings
         const ratingsSnap = await getDocs(collection(db, "ratings"));

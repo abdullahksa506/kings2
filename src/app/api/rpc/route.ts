@@ -740,6 +740,61 @@ export async function POST(request: Request) {
                 return NextResponse.json({ result: { updated: count } });
             }
 
+            // Cycle Organizer — edit any subset of a week's metadata in one call.
+            case "updateWeekMeta": {
+                if (!isAdmin) throw new Error("Dean only");
+                const weekId = asTrimmedString(payload?.weekId);
+                if (!weekId) throw new Error("Missing weekId");
+                const u = (payload?.updates && typeof payload.updates === "object") ? payload.updates : {};
+                const patch: Record<string, unknown> = {};
+
+                if (u.cycleNumber !== undefined) {
+                    const c = Number(u.cycleNumber);
+                    if (!Number.isInteger(c) || c < 1 || c > 999) throw new Error("رقم دورة غير صالح");
+                    patch.cycleNumber = c;
+                }
+                if (u.weekNumber !== undefined) {
+                    const w = Number(u.weekNumber);
+                    if (!Number.isInteger(w) || w < 1 || w > 9999) throw new Error("رقم أسبوع غير صالح");
+                    patch.weekNumber = w;
+                }
+                if (u.isRandom !== undefined) {
+                    patch.isRandom = Boolean(u.isRandom);
+                    // A random week has no king.
+                    if (patch.isRandom === true) patch.king = null;
+                }
+                if (u.king !== undefined) {
+                    const k = u.king === null ? null : asTrimmedString(u.king);
+                    if (k !== null && !VALID_NAMES_RPC.includes(k)) throw new Error("ملك غير معروف");
+                    patch.king = k;
+                    if (k !== null) patch.isRandom = false;
+                }
+                if (u.status !== undefined) {
+                    const s = asTrimmedString(u.status);
+                    if (s !== "completed" && s !== "pending" && s !== "skipped") throw new Error("حالة غير صالحة");
+                    patch.status = s;
+                }
+                if (Object.keys(patch).length === 0) {
+                    return NextResponse.json({ result: true });
+                }
+                await adminDb.collection("weeks").doc(weekId).update(patch);
+                return NextResponse.json({ result: true });
+            }
+
+            // Cycle Organizer — delete a week by its document id (+ its ratings).
+            case "deleteWeekById": {
+                if (!isAdmin) throw new Error("Dean only");
+                const weekId = asTrimmedString(payload?.weekId);
+                if (!weekId) throw new Error("Missing weekId");
+                const ratingsSnap = await adminDb.collection("ratings").where("weekId", "==", weekId).get();
+                const batch = adminDb.batch();
+                let deletedRatings = 0;
+                ratingsSnap.forEach((d) => { batch.delete(d.ref); deletedRatings++; });
+                batch.delete(adminDb.collection("weeks").doc(weekId));
+                await batch.commit();
+                return NextResponse.json({ result: { deletedRatings } });
+            }
+
             // --- RATINGS ---
             case "submitRating":
                 // Note: authName is now reliably set for all authenticated requests

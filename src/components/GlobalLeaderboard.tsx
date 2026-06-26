@@ -24,7 +24,8 @@ export default function GlobalLeaderboard() {
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
-            const results = await services.getAllCompletedWeeks();
+            // Exclude random weeks — they're organizational, not competitive.
+            const results = (await services.getAllCompletedWeeks()).filter(e => !e.week.isRandom);
             const indexedResults = results.map((entry, index) => ({
                 ...entry,
                 absoluteIndex: index + 1

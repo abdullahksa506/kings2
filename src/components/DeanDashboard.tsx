@@ -9,6 +9,7 @@ import Link from "next/link";
 import ExportDataButton from "./ExportDataButton";
 import RestaurantNameCleanup from "./RestaurantNameCleanup";
 import DeanPrankPanel from "./DeanPrankPanel";
+import CycleOrganizer from "./CycleOrganizer";
 import { canonRestaurant, deleteRestaurantLocation, listenToRestaurantLocations, RestaurantLocation } from "@/lib/mapServices";
 
 export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWeekId?: string, pastWeekId?: string }) {
@@ -130,6 +131,9 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
 
     return (
         <div className="mt-6 pt-6 border-t border-amber-900/50">
+            {/* Cycle Organizer — fix cycles, week numbers, random flags, junk */}
+            <CycleOrganizer />
+
             {/* Prank Mode — dean-only secret panel */}
             <DeanPrankPanel deanName={user?.name || ""} />
 

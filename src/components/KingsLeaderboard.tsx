@@ -35,7 +35,9 @@ export default function KingsLeaderboard() {
             const kingsStats: Record<string, { totalScore: number; count: number }> = {};
             
             results.forEach(entry => {
-                // Ignore random weeks or unrated weeks
+                // Ignore random weeks (organizational, no king) and unrated weeks.
+                // Random weeks are fully excluded from all competitive math.
+                if (entry.week.isRandom) return;
                 if (entry.week.king && entry.week.king !== "عشوائي" && entry.averageScore > 0) {
                     if (!kingsStats[entry.week.king]) {
                         kingsStats[entry.week.king] = { totalScore: 0, count: 0 };
