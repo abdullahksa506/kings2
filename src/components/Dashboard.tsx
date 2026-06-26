@@ -470,6 +470,9 @@ export default function Dashboard() {
     // Forms state
     const [selectedDay, setSelectedDay] = useState<Exclude<WeekSession["day"], null>>("الخميس");
     const [deanSelectedDay, setDeanSelectedDay] = useState<Exclude<WeekSession["day"], null>>("الخميس");
+    // Dean's explicit choice for the NEXT king. "__auto__" = follow rotation,
+    // "__random__" = random week, or a member name. Defaults to auto.
+    const [deanNextKing, setDeanNextKing] = useState<string>("__auto__");
     const [restaurant, setRestaurant] = useState("");
     const [restaurantMapsUrl, setRestaurantMapsUrl] = useState("");
     const [isPlannerOpen, setIsPlannerOpen] = useState(false);
@@ -870,42 +873,65 @@ export default function Dashboard() {
         }
     };
 
-    const handleStartNewWeek = async () => {
+    // Suggests the next king by rotation order (for the default selection).
+    const suggestNextKing = (): { king: string | null; isRandom: boolean; cycle: number } => {
+        let nextKing: string | null = VALID_NAMES[0];
+        let isRandom = false;
+        let nextCycleNumber = currentWeek ? currentWeek.cycleNumber : 1;
+
+        if (currentWeek && !currentWeek.isRandom) {
+            const currentIndex = VALID_NAMES.indexOf(currentWeek.king || "");
+            if (currentIndex === VALID_NAMES.length - 1) {
+                nextKing = null; // after the 6th, suggest random
+                isRandom = true;
+            } else if (currentIndex !== -1) {
+                nextKing = VALID_NAMES[currentIndex + 1];
+            }
+        } else if (currentWeek && currentWeek.isRandom) {
+            nextKing = VALID_NAMES[0];
+            nextCycleNumber++;
+        }
+        return { king: nextKing, isRandom, cycle: nextCycleNumber };
+    };
+
+    /**
+     * Dean starts a new week. `override` lets the dean explicitly pick the next
+     * king / random / cycle instead of forced auto-rotation. When omitted, falls
+     * back to the rotation suggestion.
+     */
+    const handleStartNewWeek = async (override?: { king: string | null; isRandom: boolean; cycle?: number }) => {
         setSaving(true);
         try {
             if (currentWeek) {
-                // Complete the current one first
                 await services.completeWeek(currentWeek.id);
             }
-
-            // Determine the next king in the sequence
-            let nextKing = VALID_NAMES[0];
-            let isRandom = false;
-            let nextCycleNumber = currentWeek ? currentWeek.cycleNumber : 1;
-            let nextWeekNumber = currentWeek ? currentWeek.weekNumber + 1 : 1;
-
-            if (currentWeek && !currentWeek.isRandom) {
-                const currentIndex = VALID_NAMES.indexOf(currentWeek.king || "");
-                if (currentIndex === VALID_NAMES.length - 1) {
-                    // After the 6th person, the 7th week is random
-                    nextKing = "أسبوع عشوائي";
-                    isRandom = true;
-                } else if (currentIndex !== -1) {
-                    nextKing = VALID_NAMES[currentIndex + 1];
-                }
-            } else if (currentWeek && currentWeek.isRandom) {
-                // After random week, start new cycle
-                nextKing = VALID_NAMES[0];
-                nextCycleNumber++;
-            }
-
-            // Note: Not selecting "أسبوع عشوائي" as actual king name in DB if random, set to null
-            const finalKingName = isRandom ? null : nextKing;
+            const suggestion = suggestNextKing();
+            const isRandom = override ? override.isRandom : suggestion.isRandom;
+            const finalKingName = isRandom ? null : (override ? override.king : suggestion.king);
+            const nextCycleNumber = override?.cycle ?? suggestion.cycle;
+            const nextWeekNumber = currentWeek ? (currentWeek.weekNumber || 0) + 1 : 1;
 
             await services.startNewWeek(finalKingName, isRandom, nextCycleNumber, nextWeekNumber);
             await fetchWeek();
         } catch (e) {
             console.error(e);
+            alert("تعذّر بدء أسبوع جديد");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Dean ends the current week WITHOUT starting a new one.
+    const handleEndCurrentWeek = async () => {
+        if (!currentWeek) return;
+        if (!confirm("إنهاء الأسبوع الحالي بدون بدء أسبوع جديد؟")) return;
+        setSaving(true);
+        try {
+            await services.completeWeek(currentWeek.id);
+            await fetchWeek();
+        } catch (e) {
+            console.error(e);
+            alert("تعذّر إنهاء الأسبوع");
         } finally {
             setSaving(false);
         }
@@ -1200,39 +1226,81 @@ export default function Dashboard() {
                         لوحة العميد (سرية)
                     </h2>
                     <div className="flex flex-wrap gap-4">
-                        <button
-                            onClick={handleStartNewWeek}
-                            disabled={saving}
-                            className={`${activeThemeStyle.accentSolidClass} ${activeThemeStyle.accentSolidHoverClass} text-slate-950 font-semibold py-3 px-6 rounded-xl flex items-center gap-2 transition-all`}
-                        >
-                            <PlusCircle className="w-5 h-5" />
-                            {currentWeek ? "إنهاء الأسبوع الحالي وبدء أسبوع جديد" : "بدء أسبوع جديد"}
-                        </button>
+                        {/* ═══ تحكّم العميد بالأسبوع — مكان واحد واضح ═══ */}
+                        <div className="w-full bg-slate-950/50 border border-amber-500/25 rounded-2xl p-4 space-y-4">
 
-                        {/* مدير الدورات القديم اتحذف — استبدل بـ 'منظّم الدورات' في لوحة العميد (أشمل) */}
+                            {/* الأسبوع الحالي: تغيير الملك */}
+                            {currentWeek && (
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-slate-300 text-sm font-semibold min-w-[110px]">👑 ملك الأسبوع الحالي:</span>
+                                    <select
+                                        className="flex-1 min-w-[140px] bg-slate-900 text-amber-400 border border-slate-700/50 rounded-lg p-2 text-sm outline-none focus:border-amber-500"
+                                        value={currentWeek.isRandom ? "" : currentWeek.king || ""}
+                                        onChange={async (e) => {
+                                            setSaving(true);
+                                            const newKing = e.target.value === "" ? null : e.target.value;
+                                            await services.secretlyChangeKing(currentWeek.id, newKing);
+                                            await fetchWeek();
+                                            setSaving(false);
+                                        }}
+                                        disabled={saving}
+                                    >
+                                        <option value="">🎲 عشوائي (بدون ملك)</option>
+                                        {VALID_NAMES.map(name => (
+                                            <option key={name} value={name}>{name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
 
-                        {currentWeek && (
-                            <div className="flex items-center gap-2 bg-slate-950/40 p-1 rounded-xl border border-amber-500/20">
-                                <span className="text-slate-400 text-sm px-2">تغيير سري للملك:</span>
-                                <select
-                                    className="bg-slate-900 text-amber-500 border border-slate-700/50 rounded-lg p-2 text-sm outline-none w-32 focus:border-amber-500"
-                                    value={currentWeek.isRandom ? "" : currentWeek.king || ""}
-                                    onChange={async (e) => {
-                                        setSaving(true);
-                                        const newKing = e.target.value === "" ? null : e.target.value;
-                                        await services.secretlyChangeKing(currentWeek.id, newKing);
-                                        await fetchWeek();
-                                        setSaving(false);
-                                    }}
-                                    disabled={saving}
-                                >
-                                    <option value="">عشوائي (من غير ملك)</option>
-                                    {VALID_NAMES.map(name => (
-                                        <option key={name} value={name}>{name}</option>
-                                    ))}
-                                </select>
+                            {/* إنهاء + بدء أسبوع */}
+                            <div className="border-t border-slate-800 pt-4 space-y-3">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-slate-300 text-sm font-semibold min-w-[110px]">🆕 الملك القادم:</span>
+                                    <select
+                                        className="flex-1 min-w-[140px] bg-slate-900 text-emerald-400 border border-slate-700/50 rounded-lg p-2 text-sm outline-none focus:border-emerald-500"
+                                        value={deanNextKing}
+                                        onChange={(e) => setDeanNextKing(e.target.value)}
+                                        disabled={saving}
+                                    >
+                                        <option value="__auto__">⏭️ تلقائي (حسب الترتيب)</option>
+                                        <option value="__random__">🎲 أسبوع عشوائي</option>
+                                        {VALID_NAMES.map(name => (
+                                            <option key={name} value={name}>{name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        onClick={() => {
+                                            const override =
+                                                deanNextKing === "__auto__" ? undefined :
+                                                deanNextKing === "__random__" ? { king: null, isRandom: true } :
+                                                { king: deanNextKing, isRandom: false };
+                                            handleStartNewWeek(override);
+                                            setDeanNextKing("__auto__");
+                                        }}
+                                        disabled={saving}
+                                        className={`${activeThemeStyle.accentSolidClass} ${activeThemeStyle.accentSolidHoverClass} text-slate-950 font-bold py-2.5 px-5 rounded-xl flex items-center gap-2 transition-all disabled:opacity-50`}
+                                    >
+                                        <PlusCircle className="w-5 h-5" />
+                                        {currentWeek ? "إنهاء الحالي + بدء جديد" : "بدء أسبوع جديد"}
+                                    </button>
+
+                                    {currentWeek && (
+                                        <button
+                                            onClick={handleEndCurrentWeek}
+                                            disabled={saving}
+                                            className="bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-300 font-semibold py-2.5 px-4 rounded-xl text-sm flex items-center gap-2 disabled:opacity-50"
+                                        >
+                                            <CheckCircle className="w-4 h-4" />
+                                            إنهاء الحالي فقط
+                                        </button>
+                                    )}
+                                </div>
                             </div>
-                        )}
+                        </div>
 
                         {currentWeek && (
                             <div className="w-full bg-slate-950/40 p-4 rounded-xl border border-amber-500/20 mt-4">
