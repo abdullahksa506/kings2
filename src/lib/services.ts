@@ -2,6 +2,8 @@ import { db } from "./firebase";
 import {
     collection,
     getDocs,
+    getDoc,
+    doc,
     query,
     where,
     orderBy,
@@ -239,6 +241,25 @@ export const services = {
 
     async setWeekChoices(weekId: string, day: WeekSession["day"], restaurant: string | null, activity: string | null) {
         return invokeRpc("setWeekChoices", { weekId, day, restaurant, activity });
+    },
+
+    // ── Current cycle config (auto-assigns every new outing to this cycle) ──
+    listenToCurrentCycle(cb: (cycle: number) => void) {
+        return onSnapshot(doc(db, "appConfig", "main"), (snap) => {
+            const c = snap.exists() ? Number((snap.data() as { currentCycle?: number })?.currentCycle) : NaN;
+            cb(Number.isInteger(c) && c > 0 ? c : 1);
+        });
+    },
+
+    async getCurrentCycle(): Promise<number> {
+        const snap = await getDoc(doc(db, "appConfig", "main"));
+        const c = snap.exists() ? Number((snap.data() as { currentCycle?: number })?.currentCycle) : NaN;
+        return Number.isInteger(c) && c > 0 ? c : 1;
+    },
+
+    // Sets the active cycle. applyToCurrentWeek retags the pending week too.
+    async setCurrentCycle(currentCycle: number, applyToCurrentWeek = false) {
+        return invokeRpc("setCurrentCycle", { currentCycle, applyToCurrentWeek });
     },
 
     async toggleDayVoting(weekId: string, enabled: boolean, resetVotes = false) {

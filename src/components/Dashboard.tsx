@@ -475,6 +475,9 @@ export default function Dashboard() {
     const [isPlannerOpen, setIsPlannerOpen] = useState(false);
     const [tieBreakDay, setTieBreakDay] = useState<"الخميس" | "الجمعة">("الخميس");
     const [saving, setSaving] = useState(false);
+    // Active cycle config — every new outing auto-lands in this cycle.
+    const [currentCycle, setCurrentCycle] = useState<number>(1);
+    const [cycleInput, setCycleInput] = useState<string>("");
 
     // Change Password State
     const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
@@ -618,6 +621,15 @@ export default function Dashboard() {
         setProfileImageData(user.profileImage || null);
         setShowProfileImageInput(typeof user.showProfileImage === "boolean" ? user.showProfileImage : true);
     }, [user?.name, user?.nickName, user?.profileImage, user?.showProfileImage]);
+
+    // Listen to the active cycle config (live).
+    useEffect(() => {
+        const unsub = services.listenToCurrentCycle((c) => {
+            setCurrentCycle(c);
+            setCycleInput(String(c));
+        });
+        return unsub;
+    }, []);
 
     useEffect(() => {
         const storedTheme = localStorage.getItem("king_theme") as ThemeKey | null;
@@ -1209,7 +1221,60 @@ export default function Dashboard() {
                             {currentWeek ? "إنهاء الأسبوع الحالي وبدء أسبوع جديد" : "بدء أسبوع جديد"}
                         </button>
 
-                        {/* مدير الدورات القديم اتحذف — استبدل بـ 'منظّم الدورات' في لوحة العميد (أشمل) */}
+                        {/* ═══ الدورة الحالية — كل طلعة جديدة تدخل فيها تلقائياً ═══ */}
+                        <div className="w-full bg-slate-950/50 border border-amber-500/25 rounded-2xl p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <RotateCcw className="w-4 h-4 text-amber-400" />
+                                <h3 className="text-amber-400 font-bold text-sm">الدورة الحالية</h3>
+                                <span className="text-[11px] text-slate-500">— كل طلعة جديدة تُحسب فيها تلقائياً</span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-slate-300 text-sm">إحنا في الدورة:</span>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    value={cycleInput}
+                                    onChange={(e) => setCycleInput(e.target.value)}
+                                    className="w-20 bg-slate-900 text-amber-400 border border-slate-700/50 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-amber-500"
+                                    disabled={saving}
+                                />
+                                <button
+                                    onClick={async () => {
+                                        const c = Number(cycleInput);
+                                        if (!Number.isInteger(c) || c < 1) { alert("رقم دورة غير صالح"); return; }
+                                        setSaving(true);
+                                        try {
+                                            await services.setCurrentCycle(c, true); // also retag the pending week
+                                            await fetchWeek();
+                                        } catch (e) { console.error(e); alert("تعذّر الحفظ"); }
+                                        finally { setSaving(false); }
+                                    }}
+                                    disabled={saving || cycleInput === String(currentCycle)}
+                                    className="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 px-3 py-1.5 rounded-lg text-sm font-bold disabled:opacity-40"
+                                >
+                                    احفظ
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (!confirm(`بدء الدورة ${currentCycle + 1}؟ الطلعات الجاية كلها تدخل فيها.`)) return;
+                                        setSaving(true);
+                                        try {
+                                            await services.setCurrentCycle(currentCycle + 1, false);
+                                            await fetchWeek();
+                                        } catch (e) { console.error(e); alert("تعذّر"); }
+                                        finally { setSaving(false); }
+                                    }}
+                                    disabled={saving}
+                                    className="bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 px-3 py-1.5 rounded-lg text-sm font-bold disabled:opacity-40 flex items-center gap-1.5"
+                                >
+                                    <PlusCircle className="w-3.5 h-3.5" />
+                                    بدء الدورة {currentCycle + 1}
+                                </button>
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-2">
+                                💡 &quot;احفظ&quot; يضبط الدورة + يحوّل الأسبوع الحالي لها. &quot;بدء الدورة&quot; يبدأ دورة جديدة (الطلعات القادمة فيها).
+                            </p>
+                        </div>
 
                         {currentWeek && (
                             <div className="flex items-center gap-2 bg-slate-950/40 p-1 rounded-xl border border-amber-500/20">

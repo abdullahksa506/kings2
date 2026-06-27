@@ -292,14 +292,34 @@ export async function POST(request: Request) {
 
         switch (action) {
             // --- WEEKS ---
-            case "startNewWeek":
+            case "startNewWeek": {
                 if (!isAdmin) throw new Error("Dean only");
+
+                // ── Server owns cycle + week numbering ──
+                // cycleNumber = the configured "current cycle" (set by the dean).
+                // The client no longer decides it, so every new outing auto-lands
+                // in the active cycle. weekNumber = clean max+1 (ignores junk ≥900).
+                const cfgSnap = await adminDb.collection("appConfig").doc("main").get();
+                const configuredCycle = Number(cfgSnap.exists ? (cfgSnap.data() as { currentCycle?: number } | undefined)?.currentCycle : undefined);
+                const cycleNumber = Number.isInteger(configuredCycle) && configuredCycle > 0
+                    ? configuredCycle
+                    : (Number.isInteger(payload.cycleNumber) ? payload.cycleNumber : 1);
+
+                // Clean sequential weekNumber: max real (<900) weekNumber + 1.
+                const allWeeksSnap = await adminDb.collection("weeks").get();
+                let maxWeek = 0;
+                allWeeksSnap.forEach((d) => {
+                    const wn = Number((d.data() as { weekNumber?: number } | undefined)?.weekNumber ?? 0);
+                    if (Number.isInteger(wn) && wn < 900 && wn > maxWeek) maxWeek = wn;
+                });
+                const weekNumber = maxWeek + 1;
+
                 const newWeekRef = adminDb.collection("weeks").doc();
                 const newWeek = {
                     king: payload.kingName,
                     isRandom: payload.isRandom,
-                    cycleNumber: payload.cycleNumber,
-                    weekNumber: payload.weekNumber,
+                    cycleNumber,
+                    weekNumber,
                     day: null,
                     dayVotingEnabled: true,
                     dayVotes: {},
@@ -313,6 +333,23 @@ export async function POST(request: Request) {
                 };
                 await newWeekRef.set(newWeek);
                 return NextResponse.json({ result: { id: newWeekRef.id, ...newWeek } });
+            }
+
+            case "setCurrentCycle": {
+                if (!isAdmin) throw new Error("Dean only");
+                const c = Number(payload?.currentCycle);
+                if (!Number.isInteger(c) || c < 1 || c > 999) throw new Error("رقم دورة غير صالح");
+                const applyToCurrent = payload?.applyToCurrentWeek === true;
+                await adminDb.collection("appConfig").doc("main").set({ currentCycle: c, updatedAt: Timestamp.now() }, { merge: true });
+                // Optionally retag the active pending week into the new cycle.
+                if (applyToCurrent) {
+                    const pendingSnap = await adminDb.collection("weeks").where("status", "==", "pending").get();
+                    const batch = adminDb.batch();
+                    pendingSnap.forEach((d) => batch.update(d.ref, { cycleNumber: c }));
+                    await batch.commit();
+                }
+                return NextResponse.json({ result: { currentCycle: c } });
+            }
 
             case "toggleAttendance":
                 if (authName !== payload.userName && !isAdmin) throw new Error("Can only change your own attendance");
