@@ -15,17 +15,43 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
     const [data, setData] = useState<LeaderboardEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
+    // Self-discovered cycles so the list works even if the current week has a
+    // junk cycle number. Defaults to the latest cycle that actually has weeks.
+    const [cycles, setCycles] = useState<number[]>([]);
+    const [selectedCycle, setSelectedCycle] = useState<number | null>(null);
+
+    // Discover which cycles have real (completed, non-random, non-historical) weeks.
+    useEffect(() => {
+        const discover = async () => {
+            const all = await services.getAllCompletedWeeks();
+            const cyc = new Set<number>();
+            all.forEach((e) => {
+                const w = e.week as WeekSession & { historicalAverageRating?: number };
+                if (!w.isRandom && w.historicalAverageRating === undefined) {
+                    cyc.add(w.cycleNumber ?? 1);
+                }
+            });
+            const sorted = [...cyc].sort((a, b) => a - b);
+            setCycles(sorted);
+            // Prefer the passed cycleNumber if it has data, else the latest real cycle.
+            const initial = sorted.includes(cycleNumber)
+                ? cycleNumber
+                : (sorted.length > 0 ? sorted[sorted.length - 1] : cycleNumber);
+            setSelectedCycle(initial);
+        };
+        discover();
+    }, [cycleNumber]);
 
     useEffect(() => {
         const fetchData = async () => {
-            if (!cycleNumber) return;
+            if (!selectedCycle) return;
             setLoading(true);
-            const leaderboard = await services.getLeaderboardData(cycleNumber);
+            const leaderboard = await services.getLeaderboardData(selectedCycle);
             setData(leaderboard);
             setLoading(false);
         };
         fetchData();
-    }, [cycleNumber]);
+    }, [selectedCycle]);
 
     useEffect(() => {
         const unsub = services.listenToPublicUserProfiles((profiles) => {
@@ -50,12 +76,15 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
     if (data.length === 0) {
         return (
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
-                <h3 className="font-semibold text-lg mb-4 text-slate-300 flex items-center gap-2">
+                <h3 className="font-semibold text-lg mb-3 text-slate-300 flex items-center gap-2 justify-center">
                     <Trophy className="w-5 h-5 text-amber-500" />
                     قائمة الشرف (المتصدرين)
                 </h3>
+                <CycleTabs cycles={cycles} selected={selectedCycle} onSelect={setSelectedCycle} />
                 <p className="text-sm text-slate-500 text-center py-6">
-                    لا يوجد طلعات سابقة مكتملة حتى الآن. شاركوا وقيّموا لتبدأ المنافسة!
+                    {cycles.length > 0
+                        ? `ما فيه طلعات مكتملة في دورة ${selectedCycle}. اختر دورة ثانية فوق 👆`
+                        : "لا يوجد طلعات سابقة مكتملة حتى الآن. شاركوا وقيّموا لتبدأ المنافسة!"}
                 </p>
             </div>
         );
@@ -72,7 +101,12 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
                 <h3 className="mt-2 font-bold text-xl text-transparent bg-clip-text bg-gradient-to-b from-amber-200 via-amber-300 to-amber-500">
                     قائمة شرف المطاعم
                 </h3>
-                <p className="text-[11px] text-amber-400/70 mt-1.5 font-medium">دورة هذا الموسم</p>
+                <p className="text-[11px] text-amber-400/70 mt-1.5 font-medium">
+                    {selectedCycle ? `الدورة ${selectedCycle}` : "دورة هذا الموسم"}
+                </p>
+            </div>
+            <div className="relative z-10">
+                <CycleTabs cycles={cycles} selected={selectedCycle} onSelect={setSelectedCycle} />
             </div>
             <div className="mb-4 relative z-10"><OrnamentalDivider /></div>
             {isDean && onReset && (
@@ -161,5 +195,35 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
             </div>
         </div>
         </RoyalGoldFrame>
+    );
+}
+
+// Cycle selector chips — lets the user pick which cycle the list covers.
+function CycleTabs({
+    cycles,
+    selected,
+    onSelect,
+}: {
+    cycles: number[];
+    selected: number | null;
+    onSelect: (c: number) => void;
+}) {
+    if (cycles.length <= 1) return null;
+    return (
+        <div className="flex flex-wrap justify-center gap-1.5 mb-3">
+            {cycles.map((c) => (
+                <button
+                    key={c}
+                    onClick={() => onSelect(c)}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${
+                        selected === c
+                            ? "bg-amber-500 text-slate-950 border-amber-400"
+                            : "bg-slate-800/60 text-amber-300/80 border-amber-500/20 hover:bg-slate-700"
+                    }`}
+                >
+                    دورة {c}
+                </button>
+            ))}
+        </div>
     );
 }
