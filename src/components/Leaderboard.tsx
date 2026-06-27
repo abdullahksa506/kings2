@@ -15,29 +15,25 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
     const [data, setData] = useState<LeaderboardEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
-    // Self-discovered cycles so the list works even if the current week has a
-    // junk cycle number. Defaults to the latest cycle that actually has weeks.
-    const [cycles, setCycles] = useState<number[]>([]);
+    // Always shows the LATEST real cycle (ignores junk cycle numbers on the
+    // current week). Self-discovered so it works regardless of data mess.
     const [selectedCycle, setSelectedCycle] = useState<number | null>(null);
 
-    // Discover which cycles have real (completed, non-random, non-historical) weeks.
     useEffect(() => {
         const discover = async () => {
             const all = await services.getAllCompletedWeeks();
             const cyc = new Set<number>();
             all.forEach((e) => {
                 const w = e.week as WeekSession & { historicalAverageRating?: number };
-                if (!w.isRandom && w.historicalAverageRating === undefined) {
-                    cyc.add(w.cycleNumber ?? 1);
+                // Real competitive cycles only — ignore random, historical, and
+                // obvious junk cycle numbers (0 or >=100).
+                const c = w.cycleNumber ?? 1;
+                if (!w.isRandom && w.historicalAverageRating === undefined && c > 0 && c < 100) {
+                    cyc.add(c);
                 }
             });
             const sorted = [...cyc].sort((a, b) => a - b);
-            setCycles(sorted);
-            // Prefer the passed cycleNumber if it has data, else the latest real cycle.
-            const initial = sorted.includes(cycleNumber)
-                ? cycleNumber
-                : (sorted.length > 0 ? sorted[sorted.length - 1] : cycleNumber);
-            setSelectedCycle(initial);
+            setSelectedCycle(sorted.length > 0 ? sorted[sorted.length - 1] : (cycleNumber || 1));
         };
         discover();
     }, [cycleNumber]);
@@ -80,11 +76,8 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
                     <Trophy className="w-5 h-5 text-amber-500" />
                     قائمة الشرف (المتصدرين)
                 </h3>
-                <CycleTabs cycles={cycles} selected={selectedCycle} onSelect={setSelectedCycle} />
                 <p className="text-sm text-slate-500 text-center py-6">
-                    {cycles.length > 0
-                        ? `ما فيه طلعات مكتملة في دورة ${selectedCycle}. اختر دورة ثانية فوق 👆`
-                        : "لا يوجد طلعات سابقة مكتملة حتى الآن. شاركوا وقيّموا لتبدأ المنافسة!"}
+                    لا يوجد طلعات سابقة مكتملة حتى الآن. شاركوا وقيّموا لتبدأ المنافسة!
                 </p>
             </div>
         );
@@ -102,11 +95,8 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
                     قائمة شرف المطاعم
                 </h3>
                 <p className="text-[11px] text-amber-400/70 mt-1.5 font-medium">
-                    {selectedCycle ? `الدورة ${selectedCycle}` : "دورة هذا الموسم"}
+                    {selectedCycle ? `أحدث دورة — الدورة ${selectedCycle}` : "أحدث دورة"}
                 </p>
-            </div>
-            <div className="relative z-10">
-                <CycleTabs cycles={cycles} selected={selectedCycle} onSelect={setSelectedCycle} />
             </div>
             <div className="mb-4 relative z-10"><OrnamentalDivider /></div>
             {isDean && onReset && (
@@ -195,35 +185,5 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
             </div>
         </div>
         </RoyalGoldFrame>
-    );
-}
-
-// Cycle selector chips — lets the user pick which cycle the list covers.
-function CycleTabs({
-    cycles,
-    selected,
-    onSelect,
-}: {
-    cycles: number[];
-    selected: number | null;
-    onSelect: (c: number) => void;
-}) {
-    if (cycles.length <= 1) return null;
-    return (
-        <div className="flex flex-wrap justify-center gap-1.5 mb-3">
-            {cycles.map((c) => (
-                <button
-                    key={c}
-                    onClick={() => onSelect(c)}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${
-                        selected === c
-                            ? "bg-amber-500 text-slate-950 border-amber-400"
-                            : "bg-slate-800/60 text-amber-300/80 border-amber-500/20 hover:bg-slate-700"
-                    }`}
-                >
-                    دورة {c}
-                </button>
-            ))}
-        </div>
     );
 }

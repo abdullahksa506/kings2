@@ -27,54 +27,32 @@ export default function KingsLeaderboard() {
     const { user } = useAuth();
     const prank = usePrankMode(user?.name);
 
-    // Raw entries kept so we can re-filter by cycle without re-fetching.
-    const [allEntries, setAllEntries] = useState<{ week: WeekSession; averageScore: number }[]>([]);
-    const [cycles, setCycles] = useState<number[]>([]);
-    // selectedCycle: a cycle number, or "all" for all-time.
-    const [selectedCycle, setSelectedCycle] = useState<number | "all">("all");
-
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             const results = await services.getAllCompletedWeeks();
-            setAllEntries(results);
-            // Cycles that actually have rated, non-random king weeks.
-            const cyc = new Set<number>();
-            results.forEach((e) => {
-                if (!e.week.isRandom && e.week.king && e.week.king !== "عشوائي" && e.averageScore > 0) {
-                    cyc.add(e.week.cycleNumber ?? 1);
+            // قائمة الملوك = المتوسط الشامل عبر كل الدورات (يستثني العشوائي فقط).
+            const kingsStats: Record<string, { totalScore: number; count: number }> = {};
+            results.forEach(entry => {
+                if (entry.week.isRandom) return;
+                if (entry.week.king && entry.week.king !== "عشوائي" && entry.averageScore > 0) {
+                    if (!kingsStats[entry.week.king]) {
+                        kingsStats[entry.week.king] = { totalScore: 0, count: 0 };
+                    }
+                    kingsStats[entry.week.king].totalScore += entry.averageScore;
+                    kingsStats[entry.week.king].count += 1;
                 }
             });
-            const sorted = [...cyc].sort((a, b) => a - b);
-            setCycles(sorted);
-            // Default to the LATEST cycle (the one "this cycle" usually means).
-            setSelectedCycle(sorted.length > 0 ? sorted[sorted.length - 1] : "all");
+            const formattedStats = Object.keys(kingsStats).map(king => ({
+                king,
+                average: kingsStats[king].totalScore / kingsStats[king].count,
+                count: kingsStats[king].count,
+            })).sort((a, b) => b.average - a.average);
+            setData(formattedStats);
             setLoading(false);
         };
         fetchData();
     }, []);
-
-    // Recompute the ranking whenever the data or the selected cycle changes.
-    useEffect(() => {
-        const kingsStats: Record<string, { totalScore: number; count: number }> = {};
-        allEntries.forEach(entry => {
-            if (entry.week.isRandom) return;
-            if (selectedCycle !== "all" && (entry.week.cycleNumber ?? 1) !== selectedCycle) return;
-            if (entry.week.king && entry.week.king !== "عشوائي" && entry.averageScore > 0) {
-                if (!kingsStats[entry.week.king]) {
-                    kingsStats[entry.week.king] = { totalScore: 0, count: 0 };
-                }
-                kingsStats[entry.week.king].totalScore += entry.averageScore;
-                kingsStats[entry.week.king].count += 1;
-            }
-        });
-        const formattedStats = Object.keys(kingsStats).map(king => ({
-            king,
-            average: kingsStats[king].totalScore / kingsStats[king].count,
-            count: kingsStats[king].count,
-        })).sort((a, b) => b.average - a.average);
-        setData(formattedStats);
-    }, [allEntries, selectedCycle]);
 
     useEffect(() => {
         const unsub = services.listenToPublicUserProfiles((profiles) => {
@@ -118,8 +96,7 @@ export default function KingsLeaderboard() {
         );
     }
 
-    // Only show the full "no data" state when NO cycle has any rated weeks.
-    if (cycles.length === 0) {
+    if (data.length === 0) {
         return (
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
                 <h3 className="font-semibold text-lg mb-4 text-slate-300 flex items-center gap-2">
@@ -142,39 +119,8 @@ export default function KingsLeaderboard() {
                 <h3 className="mt-2 font-bold text-xl text-transparent bg-clip-text bg-gradient-to-b from-amber-200 via-amber-300 to-amber-500">
                     قائمة الملوك
                 </h3>
-                <p className="text-[11px] text-amber-400/70 mt-1.5 font-medium">
-                    {selectedCycle === "all" ? "متوسط تقييم الطلعات — كل الدورات" : `الدورة ${selectedCycle}`}
-                </p>
+                <p className="text-[11px] text-amber-400/70 mt-1.5 font-medium">المتوسط الشامل — كل الدورات</p>
             </div>
-
-            {/* Cycle selector — choose which cycle the hall of fame covers */}
-            {cycles.length > 0 && (
-                <div className="flex flex-wrap justify-center gap-1.5 mb-4 relative z-10">
-                    {cycles.map((c) => (
-                        <button
-                            key={c}
-                            onClick={() => setSelectedCycle(c)}
-                            className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${
-                                selectedCycle === c
-                                    ? "bg-amber-500 text-slate-950 border-amber-400"
-                                    : "bg-slate-800/60 text-amber-300/80 border-amber-500/20 hover:bg-slate-700"
-                            }`}
-                        >
-                            دورة {c}
-                        </button>
-                    ))}
-                    <button
-                        onClick={() => setSelectedCycle("all")}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${
-                            selectedCycle === "all"
-                                ? "bg-amber-500 text-slate-950 border-amber-400"
-                                : "bg-slate-800/60 text-amber-300/80 border-amber-500/20 hover:bg-slate-700"
-                        }`}
-                    >
-                        كل الدورات
-                    </button>
-                </div>
-            )}
             <div className="mb-5 relative z-10"><OrnamentalDivider /></div>
             <div className="flex justify-end mb-4 relative z-10">
                 <button
