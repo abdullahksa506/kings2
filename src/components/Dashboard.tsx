@@ -32,6 +32,7 @@ const BathroomRatingForm = dynamic(() => import("./BathroomRatingForm"), { ssr: 
 const BathroomRatingsDisplay = dynamic(() => import("./BathroomRatingsDisplay"), { ssr: false });
 const BathroomLeaderboard = dynamic(() => import("./BathroomLeaderboard"), { ssr: false });
 const SuggestionBox = dynamic(() => import("./SuggestionBox"), { ssr: false });
+const WhisperPanel = dynamic(() => import("./WhisperPanel"), { ssr: false });
 const ChatBoard = dynamic(() => import("./ChatBoard"), { ssr: false });
 const StatisticsPanel = dynamic(() => import("./StatisticsPanel"), { ssr: false });
 import SmartReminders from "./SmartReminders";
@@ -2347,6 +2348,9 @@ export default function Dashboard() {
                                     قراءة الدستور الكامل
                                 </button>
                             </div>
+
+                            {/* Whisper system — send a notification to anyone, 1 per 30 min */}
+                            <WhisperPanel userName={user?.name || ""} getAuthHeaders={getReminderAuthHeaders} />
 
                             {/* Suggestion Box */}
                             <SuggestionBox isDean={user?.role === "dean"} />
