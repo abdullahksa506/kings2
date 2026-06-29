@@ -33,6 +33,7 @@ const BathroomRatingsDisplay = dynamic(() => import("./BathroomRatingsDisplay"),
 const BathroomLeaderboard = dynamic(() => import("./BathroomLeaderboard"), { ssr: false });
 const SuggestionBox = dynamic(() => import("./SuggestionBox"), { ssr: false });
 const WhisperPanel = dynamic(() => import("./WhisperPanel"), { ssr: false });
+const SecurityLogPanel = dynamic(() => import("./SecurityLogPanel"), { ssr: false });
 const ChatBoard = dynamic(() => import("./ChatBoard"), { ssr: false });
 const StatisticsPanel = dynamic(() => import("./StatisticsPanel"), { ssr: false });
 import SmartReminders from "./SmartReminders";
@@ -2351,6 +2352,9 @@ export default function Dashboard() {
 
                             {/* Whisper system — send a notification to anyone, 1 per 30 min */}
                             <WhisperPanel userName={user?.name || ""} getAuthHeaders={getReminderAuthHeaders} />
+
+                            {/* Security log — global requests + stats (anyone can view) */}
+                            <SecurityLogPanel />
 
                             {/* Suggestion Box */}
                             <SuggestionBox isDean={user?.role === "dean"} />
