@@ -174,21 +174,45 @@ export interface MemberProfileData {
 export const VALID_NAMES = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
 export const MAX_BUDGET = 175;
 
+/*
+ * 🤖 نكتة الذكاء الاصطناعي:
+ * سألوا كلود: "ليش حاطّ تايم آوت ١٥ ثانية؟"
+ * قال: "لأني تعبت أنتظر السيرفر زي ما الشعب ينتظر الملك يقرّر المطعم 😂⏳"
+ * الصبر له حدود... حتى للروبوتات 🔋
+ */
+
+// Hard ceiling for any RPC call. Without this, a hung/overwhelmed server
+// leaves `await fetch` pending forever — which froze the whole app on the
+// loading spinner. The timeout guarantees every call resolves or rejects,
+// so loading states ALWAYS clear. Manual AbortController for old-Safari/iOS.
+const RPC_TIMEOUT_MS = 15000;
+
 export async function invokeRpc(action: string, payload: any = {}) {
     const baseUrl = typeof window === "undefined" ? "http://localhost:3000" : "";
-    if (typeof window === "undefined") {
-        // Node.js environment
-    }
     const name = typeof window !== "undefined" ? localStorage.getItem("king_user_name") : global.localStorage.getItem("king_user_name");
     const token = typeof window !== "undefined" ? localStorage.getItem("king_user_token") : global.localStorage.getItem("king_user_token");
 
-    const res = await fetch(`${baseUrl}/api/rpc`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, payload, auth: { name, token } })
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), RPC_TIMEOUT_MS);
 
-    const data = await res.json();
+    let res: Response;
+    try {
+        res = await fetch(`${baseUrl}/api/rpc`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action, payload, auth: { name, token } }),
+            signal: controller.signal,
+        });
+    } catch (e) {
+        clearTimeout(timer);
+        if ((e as Error)?.name === "AbortError") {
+            throw new Error("الخادم ما استجاب — تأكد من الاتصال وحاول مرة ثانية");
+        }
+        throw e;
+    }
+    clearTimeout(timer);
+
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
         throw new Error(data.error || "حدث خطأ غير معروف");
     }
