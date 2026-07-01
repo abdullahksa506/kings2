@@ -892,11 +892,11 @@ export default function Dashboard() {
                 await services.completeWeek(currentWeek.id);
             }
 
-            // Determine the next king in the sequence
+            // Determine the next king in the sequence. Cycle & week NUMBERS are owned
+            // by the server now (it auto-advances the cycle after a random week and
+            // computes a clean weekNumber) — we only decide who's next & random-ness.
             let nextKing = VALID_NAMES[0];
             let isRandom = false;
-            let nextCycleNumber = currentWeek ? currentWeek.cycleNumber : 1;
-            let nextWeekNumber = currentWeek ? currentWeek.weekNumber + 1 : 1;
 
             if (currentWeek && !currentWeek.isRandom) {
                 const currentIndex = VALID_NAMES.indexOf(currentWeek.king || "");
@@ -908,15 +908,14 @@ export default function Dashboard() {
                     nextKing = VALID_NAMES[currentIndex + 1];
                 }
             } else if (currentWeek && currentWeek.isRandom) {
-                // After random week, start new cycle
+                // After the random week, the server opens the next cycle automatically.
                 nextKing = VALID_NAMES[0];
-                nextCycleNumber++;
             }
 
-            // Note: Not selecting "أسبوع عشوائي" as actual king name in DB if random, set to null
+            // Random weeks have no real king → null in the DB.
             const finalKingName = isRandom ? null : nextKing;
 
-            await services.startNewWeek(finalKingName, isRandom, nextCycleNumber, nextWeekNumber);
+            await services.startNewWeek(finalKingName, isRandom, 0, 0);
             await fetchWeek();
         } catch (e) {
             console.error(e);

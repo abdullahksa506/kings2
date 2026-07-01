@@ -301,24 +301,54 @@ export async function POST(request: Request) {
             case "startNewWeek": {
                 if (!isAdmin) throw new Error("Dean only");
 
-                // ── Server owns cycle + week numbering ──
-                // cycleNumber = the configured "current cycle" (set by the dean).
-                // The client no longer decides it, so every new outing auto-lands
-                // in the active cycle. weekNumber = clean max+1 (ignores junk ≥900).
+                // ── Server owns cycle + week numbering ── (client-passed numbers ignored)
                 const cfgSnap = await adminDb.collection("appConfig").doc("main").get();
-                const configuredCycle = Number(cfgSnap.exists ? (cfgSnap.data() as { currentCycle?: number } | undefined)?.currentCycle : undefined);
-                const cycleNumber = Number.isInteger(configuredCycle) && configuredCycle > 0
-                    ? configuredCycle
-                    : (Number.isInteger(payload.cycleNumber) ? payload.cycleNumber : 1);
+                let configuredCycle = Number(cfgSnap.exists ? (cfgSnap.data() as { currentCycle?: number } | undefined)?.currentCycle : undefined);
+                if (!Number.isInteger(configuredCycle) || configuredCycle <= 0) configuredCycle = 1;
 
-                // Clean sequential weekNumber: max real (<900) weekNumber + 1.
+                // Scan every week once for: (a) clean max weekNumber, (b) lingering
+                // pending weeks to retire, (c) the newest completed week (to detect
+                // end-of-cycle).
                 const allWeeksSnap = await adminDb.collection("weeks").get();
                 let maxWeek = 0;
+                const stalePending: FirebaseFirestore.DocumentReference[] = [];
+                let newestCompleted: { ref: FirebaseFirestore.DocumentReference; isRandom: boolean; ms: number } | null = null;
                 allWeeksSnap.forEach((d) => {
-                    const wn = Number((d.data() as { weekNumber?: number } | undefined)?.weekNumber ?? 0);
+                    const w = d.data() as { weekNumber?: number; status?: string; isRandom?: boolean; createdAt?: FirebaseFirestore.Timestamp };
+                    const wn = Number(w?.weekNumber ?? 0);
                     if (Number.isInteger(wn) && wn < 900 && wn > maxWeek) maxWeek = wn;
+                    if (w?.status === "pending") stalePending.push(d.ref);
+                    if (w?.status === "completed") {
+                        const ms = w.createdAt?.toMillis?.() ?? 0;
+                        if (!newestCompleted || ms > newestCompleted.ms) {
+                            newestCompleted = { ref: d.ref, isRandom: Boolean(w.isRandom), ms };
+                        }
+                    }
                 });
                 const weekNumber = maxWeek + 1;
+
+                // ── Auto-advance the cycle ── If the last completed outing was the
+                // random week, this new week opens the next cycle. The dead client-
+                // side "nextCycleNumber++" never worked because the server overrode it;
+                // now the server owns it and persists the advance to appConfig.
+                let cycleNumber = configuredCycle;
+                if (newestCompleted && (newestCompleted as { isRandom: boolean }).isRandom && !payload.isRandom) {
+                    cycleNumber = configuredCycle + 1;
+                    await adminDb.collection("appConfig").doc("main").set(
+                        { currentCycle: cycleNumber, updatedAt: Timestamp.now() },
+                        { merge: true },
+                    );
+                }
+
+                // ── Enforce a single pending week ── Any lingering pending weeks are
+                // stale duplicates (the just-finished week was already completed by the
+                // client). Retire them as "skipped" so they never pollute stats or get
+                // picked as the "current" week.
+                if (stalePending.length > 0) {
+                    const retireBatch = adminDb.batch();
+                    stalePending.forEach((ref) => retireBatch.update(ref, { status: "skipped" }));
+                    await retireBatch.commit();
+                }
 
                 const newWeekRef = adminDb.collection("weeks").doc();
                 const newWeek = {
@@ -1340,9 +1370,15 @@ export async function POST(request: Request) {
                 const { weekNumber } = payload;
                 if (!Number.isInteger(weekNumber)) throw new Error("Invalid week number");
 
-                const weekQuery = await adminDb.collection("weeks").where("weekNumber", "==", weekNumber).limit(1).get();
+                // weekNumber is NOT unique (junk/manual edits duplicate it), so
+                // deleting "the first match" could nuke the wrong week + its ratings.
+                // Refuse when ambiguous — the dean deletes by id via deleteWeekById.
+                const weekQuery = await adminDb.collection("weeks").where("weekNumber", "==", weekNumber).get();
                 if (weekQuery.empty) {
                     return NextResponse.json({ error: `Week ${weekNumber} not found` }, { status: 404 });
+                }
+                if (weekQuery.size > 1) {
+                    return NextResponse.json({ error: `أكثر من أسبوع يحمل الرقم ${weekNumber} — احذف بالمعرّف (id) من منظّم الدورات` }, { status: 409 });
                 }
 
                 const weekDoc = weekQuery.docs[0];

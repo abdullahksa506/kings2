@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { services, WeekSession, BathroomRating } from "@/lib/services";
+import { services, WeekSession, BathroomRating, isCompetitiveWeek } from "@/lib/services";
 import { Bath, Trophy } from "lucide-react";
 
 interface BathroomStats {
@@ -30,6 +30,7 @@ export default function BathroomLeaderboard() {
                 for (const item of allWeeks) {
                     const week = item.week;
                     if (!week.restaurant) continue;
+                    if (!isCompetitiveWeek(week)) continue; // skip random/junk weeks
 
                     const ratings = await services.getBathroomRatingsForWeek(week.id);
                     if (ratings.length === 0) continue;

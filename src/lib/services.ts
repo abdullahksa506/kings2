@@ -174,6 +174,32 @@ export interface MemberProfileData {
 export const VALID_NAMES = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
 export const MAX_BUDGET = 175;
 
+// ─────────────────────────────────────────────────────────────
+// Single source of truth: "does this week count in competition/stats?"
+// Previously every read function filtered differently (some excluded only
+// isRandom, some nothing) so a single junk week (cycle 999) skewed the math.
+// These three helpers unify that rule everywhere.
+// ─────────────────────────────────────────────────────────────
+
+/** Imported/organizational week that carries a pre-computed historical average. */
+export function isHistoricalWeek(w: any): boolean {
+    return w?.historicalAverageRating !== undefined;
+}
+
+/** Junk left by manual edits or hacks — must never enter competitive math. */
+export function isJunkWeek(w: Partial<WeekSession>): boolean {
+    if ((w.weekNumber ?? 0) >= 900) return true;      // 999/1000+ week-number hacks
+    if ((w.cycleNumber ?? 0) <= 0) return true;        // cycle 0 / negative
+    if ((w.cycleNumber ?? 0) >= 100) return true;      // cycle 100+ placeholders
+    if (!w.isRandom && w.king && !VALID_NAMES.includes(w.king)) return true; // fake king
+    return false;
+}
+
+/** TRUE only for real, competitive outings (excludes random, historical, junk). */
+export function isCompetitiveWeek(w: any): boolean {
+    return !w.isRandom && !isHistoricalWeek(w) && !isJunkWeek(w);
+}
+
 /*
  * 🤖 نكتة الذكاء الاصطناعي:
  * سألوا كلود: "ليش حاطّ تايم آوت ١٥ ثانية؟"
@@ -436,9 +462,8 @@ export const services = {
         const weeksSnap = await getDocs(q);
         const weeks = weeksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as WeekSession));
 
-        // Filter out: (1) imported historical weeks, (2) random weeks.
-        // Random weeks are organizational only and never count toward competition.
-        const activeWeeks = weeks.filter((w: any) => w.historicalAverageRating === undefined && !w.isRandom);
+        // Unified rule: only real competitive outings (no historical, random, or junk).
+        const activeWeeks = weeks.filter(isCompetitiveWeek);
 
         const leaderboard = await Promise.all(activeWeeks.map(async (week) => {
             const ratings = await this.getAllRatingsForWeek(week.id);
@@ -489,7 +514,9 @@ export const services = {
         ]);
 
         const allRatings = ratingsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Rating));
-        const completedWeeks = allWeeksWithAvg.map(w => w.week);
+        // Only competitive outings count toward a member's attendance/participation
+        // (random & junk weeks are organizational and must not pollute profiles).
+        const completedWeeks = allWeeksWithAvg.map(w => w.week).filter(isCompetitiveWeek);
         const memberWeeks = completedWeeks.filter(week => {
             if (week.king === memberName) return true;
             if ((week.responded || []).includes(memberName)) return true;
@@ -813,10 +840,11 @@ export const services = {
         // 1. Get all weeks
         const weeksSnap = await getDocs(collection(db, "weeks"));
         const allWeeks = weeksSnap.docs.map(d => ({ id: d.id, ...d.data() } as WeekSession));
-        // Random weeks are organizational filler — fully excluded from every
+        // Random/junk weeks are organizational filler — fully excluded from every
         // statistic (king rankings, cycle averages, attendance math, etc.).
-        const completedWeeks = allWeeks.filter(w => w.status === "completed" && !w.isRandom);
-        const pendingWeeks = allWeeks.filter(w => w.status === "pending" && !w.isRandom);
+        // A single junk cycle (e.g. 999) used to skew maxCycle & comparisons.
+        const completedWeeks = allWeeks.filter(w => w.status === "completed" && isCompetitiveWeek(w));
+        const pendingWeeks = allWeeks.filter(w => w.status === "pending" && isCompetitiveWeek(w));
 
         // 2. Get all ratings
         const ratingsSnap = await getDocs(collection(db, "ratings"));
