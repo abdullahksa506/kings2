@@ -264,12 +264,15 @@ export async function POST(request: Request) {
         let userDocData: any = null;
         let authName = auth?.name;
 
-        const actorKey = authName && typeof authName === "string" && authName.trim()
-            ? `user:${authName.trim()}`
-            : `ip:${clientIp}`;
-        enforceRateLimit(action, actorKey);
-        
-        if (!publicActions.includes(action)) {
+        if (publicActions.includes(action)) {
+            // Public actions can't verify identity yet, so limit by declared name/IP.
+            // Brute-forceable actions (login/reset) are additionally protected by
+            // non-spoofable per-account counters/lockouts inside their handlers.
+            const actorKey = authName && typeof authName === "string" && authName.trim()
+                ? `user:${authName.trim()}`
+                : `ip:${clientIp}`;
+            enforceRateLimit(action, actorKey);
+        } else {
             if (!auth || !auth.name || !auth.token) {
                 return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
             }
@@ -280,6 +283,9 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: "Unauthorized - Invalid Token" }, { status: 401 });
             }
             userDocData = userSnap.data();
+            // Rate-limit on the VERIFIED identity so a caller can't spoof another
+            // member's name to drain their bucket (or rotate names for fresh ones).
+            enforceRateLimit(action, `user:${authName}`);
         }
 
         const isAdmin = authName === "شوكا";
@@ -904,7 +910,7 @@ export async function POST(request: Request) {
                 });
                 return NextResponse.json({ result: bathroomRef.id });
 
-            case "login":
+            case "login": {
                 if (!VALID_NAMES_RPC.includes(payload.name)) throw new Error("اسم غير مصرح به");
                 if (typeof payload.password !== "string" || !payload.password) throw new Error("كلمة المرور مطلوبة");
 
@@ -916,17 +922,36 @@ export async function POST(request: Request) {
                 const storedPassword = typeof loginData?.password === "string" ? loginData.password : "";
                 if (!storedPassword) throw new Error("بيانات الحساب ناقصة. تواصل مع العميد.");
 
+                // Per-account lockout — non-spoofable (bound to the username, not IP).
+                // After MAX_LOGIN_FAILS wrong tries the account locks for LOCK_MS.
+                const MAX_LOGIN_FAILS = 8;
+                const LOCK_MS = 15 * 60 * 1000;
+                const lockedUntil = Number(loginData?.loginLockedUntil || 0);
+                if (lockedUntil && Date.now() < lockedUntil) {
+                    const mins = Math.ceil((lockedUntil - Date.now()) / 60000);
+                    throw new Error(`الحساب مقفل مؤقتاً — حاول بعد ${mins} دقيقة`);
+                }
+
                 const hashedInput = await hashPassword(payload.password);
                 let tokenToStore = "";
 
                 if (storedPassword === payload.password) {
                     tokenToStore = hashedInput;
-                    await loginRef.update({ password: tokenToStore });
+                    await loginRef.update({ password: tokenToStore, loginFailedAttempts: 0, loginLockedUntil: null });
                     loginData.password = tokenToStore;
                 } else if (authPasswordMatches(storedPassword, hashedInput)) {
                     tokenToStore = storedPassword;
+                    if (loginData?.loginFailedAttempts || loginData?.loginLockedUntil) {
+                        await loginRef.update({ loginFailedAttempts: 0, loginLockedUntil: null });
+                    }
                 } else {
-                    throw new Error("كلمة المرور غير صحيحة");
+                    const fails = Number(loginData?.loginFailedAttempts || 0) + 1;
+                    if (fails >= MAX_LOGIN_FAILS) {
+                        await loginRef.update({ loginFailedAttempts: 0, loginLockedUntil: Date.now() + LOCK_MS });
+                        throw new Error("تجاوزت عدد المحاولات — الحساب مقفل ١٥ دقيقة");
+                    }
+                    await loginRef.update({ loginFailedAttempts: fails });
+                    throw new Error(`كلمة المرور غير صحيحة (${MAX_LOGIN_FAILS - fails} محاولات متبقية)`);
                 }
 
                 return NextResponse.json({
@@ -935,6 +960,7 @@ export async function POST(request: Request) {
                         token: tokenToStore,
                     }
                 });
+            }
 
             case "validateSession":
                 if (!authName || !userDocData) throw new Error("Unauthorized");
@@ -1091,22 +1117,46 @@ export async function POST(request: Request) {
                 const prRef = adminDb.collection("users").doc(payload.userName);
                 const prSnap = await prRef.get();
                 if (!prSnap.exists) throw new Error("المستخدم غير مسجل بعد");
-                const code = Math.floor(1000 + Math.random() * 9000).toString();
-                await prRef.update({ resetCode: code, resetCodeTimestamp: Date.now() });
+                // 6-digit code (1,000,000 space vs the old 9,000) + a fresh per-account
+                // attempt counter so each new request resets the lockout window.
+                const code = Math.floor(100000 + Math.random() * 900000).toString();
+                await prRef.update({
+                    resetCode: code,
+                    resetCodeTimestamp: Date.now(),
+                    resetCodeAttempts: 0,
+                });
                 return NextResponse.json({ result: true });
 
-            case "resetPasswordWithCode":
+            case "resetPasswordWithCode": {
                 if (!VALID_NAMES_RPC.includes(payload.userName)) throw new Error("اسم غير مصرح به");
                 const rpRef = adminDb.collection("users").doc(payload.userName);
-                const rpSnap = await rpRef.get();
-                if (!rpSnap.exists) throw new Error("المستخدم غير مسجل");
-                if ((rpSnap.data() as any).resetCode !== payload.code) throw new Error("رمز الاسترجاع خاطئ");
-                if (Date.now() - (rpSnap.data() as any).resetCodeTimestamp > 15 * 60 * 1000) {
-                    await rpRef.update({ resetCode: null, resetCodeTimestamp: null });
-                    throw new Error("انتهت صلاحية الكود");
-                }
-                await rpRef.update({ password: await hashPassword(payload.newPassword), resetCode: null, resetCodeTimestamp: null });
+                // Atomic: verify + count attempts + lockout inside one transaction so a
+                // scripted F12 caller can't race unlimited guesses (IP throttling is
+                // spoofable; this per-account counter is not).
+                const MAX_RESET_ATTEMPTS = 5;
+                const newHashed = await hashPassword(payload.newPassword);
+                await adminDb.runTransaction(async (tx) => {
+                    const snap = await tx.get(rpRef);
+                    if (!snap.exists) throw new Error("المستخدم غير مسجل");
+                    const d = snap.data() as any;
+                    if (!d.resetCode) throw new Error("ما فيه طلب استرجاع نشط — اطلب كود جديد");
+                    if (Date.now() - (d.resetCodeTimestamp || 0) > 15 * 60 * 1000) {
+                        tx.update(rpRef, { resetCode: null, resetCodeTimestamp: null, resetCodeAttempts: 0 });
+                        throw new Error("انتهت صلاحية الكود");
+                    }
+                    const attempts = Number(d.resetCodeAttempts || 0);
+                    if (attempts >= MAX_RESET_ATTEMPTS) {
+                        tx.update(rpRef, { resetCode: null, resetCodeTimestamp: null, resetCodeAttempts: 0 });
+                        throw new Error("تجاوزت عدد المحاولات — اطلب كود جديد");
+                    }
+                    if (String(d.resetCode) !== String(payload.code)) {
+                        tx.update(rpRef, { resetCodeAttempts: attempts + 1 });
+                        throw new Error(`رمز الاسترجاع خاطئ (${MAX_RESET_ATTEMPTS - attempts - 1} محاولات متبقية)`);
+                    }
+                    tx.update(rpRef, { password: newHashed, resetCode: null, resetCodeTimestamp: null, resetCodeAttempts: 0 });
+                });
                 return NextResponse.json({ result: true });
+            }
 
             case "changePassword":
                 if (authName !== payload.userName) throw new Error("Identity mismatch");
