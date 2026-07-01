@@ -387,28 +387,35 @@ export async function POST(request: Request) {
                 return NextResponse.json({ result: { currentCycle: c } });
             }
 
-            case "toggleAttendance":
+            case "toggleAttendance": {
                 if (authName !== payload.userName && !isAdmin) throw new Error("Can only change your own attendance");
                 const weekRef = adminDb.collection("weeks").doc(payload.weekId);
-                const weekSnap = await weekRef.get();
-                if (!weekSnap.exists) throw new Error("Week not found");
-                
-                let { absentees = [], responded = [] } = weekSnap.data() as any;
-                const dayVotes = { ...((weekSnap.data() as any).dayVotes || {}) } as Record<string, string>;
-                
-                if (payload.isAbsent && !absentees.includes(payload.userName)) {
-                    absentees.push(payload.userName);
-                    delete dayVotes[payload.userName];
-                }
-                else if (!payload.isAbsent) absentees = absentees.filter((n: string) => n !== payload.userName);
-
-                if (!responded.includes(payload.userName)) responded.push(payload.userName);
-
-                await weekRef.update({ absentees, responded, dayVotes });
-                
+                // Atomic read-modify-write: two members toggling at the same instant
+                // used to clobber each other (last full-array write wins). The
+                // transaction re-reads inside the commit so both updates survive.
                 const requiredCount = VALID_NAMES_RPC.length - 1;
-                const justCompleted = responded.length >= requiredCount && ((weekSnap.data() as any).responded || []).length < requiredCount;
+                const justCompleted = await adminDb.runTransaction(async (tx) => {
+                    const snap = await tx.get(weekRef);
+                    if (!snap.exists) throw new Error("Week not found");
+                    const data = snap.data() as any;
+                    let absentees: string[] = Array.isArray(data.absentees) ? [...data.absentees] : [];
+                    const responded: string[] = Array.isArray(data.responded) ? [...data.responded] : [];
+                    const dayVotes = { ...(data.dayVotes || {}) } as Record<string, string>;
+
+                    if (payload.isAbsent && !absentees.includes(payload.userName)) {
+                        absentees.push(payload.userName);
+                        delete dayVotes[payload.userName];
+                    } else if (!payload.isAbsent) {
+                        absentees = absentees.filter((n) => n !== payload.userName);
+                    }
+                    if (!responded.includes(payload.userName)) responded.push(payload.userName);
+
+                    tx.update(weekRef, { absentees, responded, dayVotes });
+                    const prevResponded = Array.isArray(data.responded) ? data.responded.length : 0;
+                    return responded.length >= requiredCount && prevResponded < requiredCount;
+                });
                 return NextResponse.json({ result: justCompleted });
+            }
 
             case "setWeekChoices": {
                 const weekChoicesRef = adminDb.collection("weeks").doc(payload.weekId);
@@ -884,6 +891,8 @@ export async function POST(request: Request) {
                 if ((submitWeekData?.absentees || []).includes(authName)) throw new Error("لا يمكن للغائب التصويت");
                 if (!(submitWeekData?.responded || []).includes(authName)) throw new Error("يجب تسجيل الحضور أولاً");
 
+                // Legacy ratings were stored under random ids — a field query still
+                // catches those to prevent a duplicate.
                 const existingRatingSnap = await adminDb
                     .collection("ratings")
                     .where("weekId", "==", payload.weekId)
@@ -892,11 +901,20 @@ export async function POST(request: Request) {
                     .get();
                 if (!existingRatingSnap.empty) throw new Error("تم إرسال تقييمك مسبقاً");
 
-                const ratingRef = await adminDb.collection("ratings").add({
-                    weekId: payload.weekId,
-                    userName: authName,
-                    score: payload.score,
-                    createdAt: Timestamp.now()
+                // Deterministic id (weekId_userName) + transactional create makes a
+                // double-tap race impossible: the second concurrent submit collides on
+                // the same doc id and is rejected instead of inserting a 2nd rating.
+                const ratingId = `${payload.weekId}_${authName}`;
+                const ratingRef = adminDb.collection("ratings").doc(ratingId);
+                await adminDb.runTransaction(async (tx) => {
+                    const existing = await tx.get(ratingRef);
+                    if (existing.exists) throw new Error("تم إرسال تقييمك مسبقاً");
+                    tx.set(ratingRef, {
+                        weekId: payload.weekId,
+                        userName: authName,
+                        score: payload.score,
+                        createdAt: Timestamp.now(),
+                    });
                 });
 
                 return NextResponse.json({ result: ratingRef.id });
@@ -1298,20 +1316,6 @@ export async function POST(request: Request) {
                     added++;
                 }
                 return NextResponse.json({ result: added });
-
-            case "getPublicUserProfiles": {
-                const usersSnap = await adminDb.collection("users").get();
-                const profiles = usersSnap.docs.map(doc => {
-                    const data = doc.data();
-                    return {
-                        userName: doc.id,
-                        nickName: data.nickName,
-                        profileImage: data.profileImage,
-                        showProfileImage: data.showProfileImage,
-                    };
-                });
-                return NextResponse.json({ result: profiles });
-            }
 
             case "submitFeatureVote": {
                 const featureId = asTrimmedString(payload?.featureId);

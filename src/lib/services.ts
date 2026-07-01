@@ -478,7 +478,10 @@ export const services = {
         return leaderboard.sort((a, b) => b.averageScore - a.averageScore);
     },
 
-    async getAllCompletedWeeks(): Promise<{ week: WeekSession, averageScore: number }[]> {
+    // Fetch completed weeks WITH their ratings, once. Callers that don't need the
+    // raw ratings just ignore that field — this avoids the old double-fetch where
+    // getRatingsExplorerData re-queried ratings for every week a second time.
+    async getCompletedWeeksWithRatings(): Promise<{ week: WeekSession, averageScore: number, ratings: Rating[] }[]> {
         const q = query(
             collection(db, "weeks"),
             where("status", "==", "completed")
@@ -492,19 +495,20 @@ export const services = {
             if (ratings.length > 0) {
                 averageScore = ratings.reduce((acc, curr) => acc + curr.score, 0) / ratings.length;
             }
-            return { week, averageScore };
+            return { week, averageScore, ratings };
         }));
 
         return results.sort((a, b) => a.week.createdAt.toMillis() - b.week.createdAt.toMillis());
     },
 
+    async getAllCompletedWeeks(): Promise<{ week: WeekSession, averageScore: number }[]> {
+        const full = await this.getCompletedWeeksWithRatings();
+        return full.map(({ week, averageScore }) => ({ week, averageScore }));
+    },
+
     async getRatingsExplorerData(): Promise<RatingExplorerWeek[]> {
-        const completed = await this.getAllCompletedWeeks();
-        const withRatings = await Promise.all(completed.map(async ({ week, averageScore }) => {
-            const ratings = await this.getAllRatingsForWeek(week.id);
-            return { week, averageScore, ratings };
-        }));
-        return withRatings;
+        // Reuse the ratings already fetched instead of querying them a second time.
+        return this.getCompletedWeeksWithRatings();
     },
 
     async getMemberProfile(memberName: string): Promise<MemberProfileData> {

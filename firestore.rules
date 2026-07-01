@@ -1,21 +1,47 @@
 rules_version = '2';
 
+// 🤖 نكتة الذكاء الاصطناعي:
+// سألوا كلود: "ليش تقفل المجموعات؟"
+// قال: "لأن أسرار الهمس مو عشان تنقرأ من أي حد بالعالم فاتح F12 😂🔒"
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // All read operations are allowed for the client to render UI.
-    // However, ALL write operations are strictly blocked.
-    // Mutations must go through the secure Next.js /api/rpc server routes.
+    // ── WRITES ── always server-only (through the secure /api/rpc routes using the
+    // admin SDK, which bypasses these rules). The client is NEVER allowed to write.
+    //
+    // ── READS ── explicit allow-list of ONLY the collections the client UI needs.
+    // Everything else — users (password hashes, reset codes, lockout counters),
+    // whisperLog (private messages), whisperLimits, ipThrottle, ipGeo — falls
+    // through to the default DENY at the bottom, so it is NOT world-readable.
+    //
+    // Rules are OR-combined: an allow-listed path matches both its own rule
+    // (read:true) and the catch-all (read:false), and true wins → readable. A
+    // non-listed path matches ONLY the catch-all → denied.
+    //
+    // ⚠️ DEPLOY: this file is NOT deployed by Render. Apply with:
+    //     firebase deploy --only firestore:rules
+    // and smoke-test the app afterwards (leaderboards, chat, map, games, security log).
 
-    // Users collection contains sensitive auth-related fields (password hashes, reset codes, devices).
-    // Client must never read it directly; profile/public/admin reads go through /api/rpc.
-    match /users/{userId} {
-      allow read: if false;
-      allow write: if false;
-    }
+    match /weeks/{document=**}               { allow read: if true; allow write: if false; }
+    match /ratings/{document=**}             { allow read: if true; allow write: if false; }
+    match /bathroomRatings/{document=**}     { allow read: if true; allow write: if false; }
+    match /appConfig/{document=**}           { allow read: if true; allow write: if false; }
+    match /chatMessages/{document=**}        { allow read: if true; allow write: if false; }
+    match /suggestions/{document=**}         { allow read: if true; allow write: if false; }
+    match /featureFeedback/{document=**}     { allow read: if true; allow write: if false; }
+    match /restaurantLocations/{document=**} { allow read: if true; allow write: if false; }
+    match /coupRooms/{document=**}           { allow read: if true; allow write: if false; }
+    match /royaleDuels/{document=**}         { allow read: if true; allow write: if false; }
+    match /minigames/{document=**}           { allow read: if true; allow write: if false; }
+    match /impromptuMeetups/{document=**}    { allow read: if true; allow write: if false; }
+    match /prankConfig/{document=**}         { allow read: if true; allow write: if false; }
+    match /userActivity/{document=**}        { allow read: if true; allow write: if false; }
+    match /siteVisits/{document=**}          { allow read: if true; allow write: if false; }
+    match /requestLog/{document=**}          { allow read: if true; allow write: if false; }
+    match /securityStats/{document=**}       { allow read: if true; allow write: if false; }
 
-    match /{document=**} {
-      allow read: if true;
-      allow write: if false;
-    }
+    // Default DENY — private collections (users, whisperLog, whisperLimits,
+    // ipThrottle, ipGeo, and anything new) are not readable by the client.
+    match /{document=**} { allow read, write: if false; }
   }
 }
