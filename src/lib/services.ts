@@ -60,6 +60,21 @@ export interface Rating {
     createdAt: Timestamp;
 }
 
+export interface DataIntegrityIssue {
+    type: string;
+    severity: "high" | "medium" | "low";
+    message: string;
+    weekId?: string;
+}
+
+export interface DataIntegrityReport {
+    healthy: boolean;
+    totalWeeks: number;
+    totalRatings: number;
+    pendingCount: number;
+    issues: DataIntegrityIssue[];
+}
+
 export interface BathroomRating {
     id: string;
     weekId: string;
@@ -629,6 +644,11 @@ export const services = {
 
     async deleteWeekById(weekId: string) {
         return invokeRpc("deleteWeekById", { weekId });
+    },
+
+    // Dean-only read-only health scan — surfaces silent data problems.
+    async checkDataIntegrity(): Promise<DataIntegrityReport> {
+        return invokeRpc("checkDataIntegrity");
     },
 
     // Fetch ALL weeks (any status) for the organizer — raw, unfiltered.

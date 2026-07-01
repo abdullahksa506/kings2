@@ -387,6 +387,68 @@ export async function POST(request: Request) {
                 return NextResponse.json({ result: { currentCycle: c } });
             }
 
+            case "checkDataIntegrity": {
+                if (!isAdmin) throw new Error("Dean only");
+                // Read-only health scan. Surfaces the silent data problems (they
+                // never throw, they just quietly skew stats) so the dean can see &
+                // fix them before the friends notice. Returns a list of issues.
+                const wSnap = await adminDb.collection("weeks").get();
+                const weeks = wSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+                const rSnap = await adminDb.collection("ratings").get();
+                const ratings = rSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+
+                const issues: { type: string; severity: "high" | "medium" | "low"; message: string; weekId?: string }[] = [];
+
+                // 1) More than one pending week (should always be exactly one).
+                const pending = weeks.filter((w) => w.status === "pending");
+                if (pending.length > 1) {
+                    issues.push({ type: "multiple_pending", severity: "high", message: `فيه ${pending.length} أسابيع معلّقة (المفروض واحد فقط) — الزايد يصير stale ويشوّش` });
+                }
+
+                // 2) Junk numbering (mirrors the client isJunk rule).
+                for (const w of weeks) {
+                    const wn = Number(w.weekNumber ?? 0);
+                    const cn = Number(w.cycleNumber ?? 0);
+                    if (wn >= 900) issues.push({ type: "junk_weeknumber", severity: "medium", message: `أسبوع برقم غير طبيعي (${wn}) — دورة ${cn} · ${w.king || "عشوائي"}`, weekId: w.id });
+                    else if (cn <= 0 || cn >= 100) issues.push({ type: "junk_cycle", severity: "medium", message: `رقم دورة غير طبيعي (${cn}) — أسبوع ${wn} · ${w.king || "عشوائي"}`, weekId: w.id });
+                    if (!w.isRandom && w.king && !VALID_NAMES_RPC.includes(w.king)) {
+                        issues.push({ type: "fake_king", severity: "medium", message: `ملك غير معروف "${w.king}" — دورة ${cn}`, weekId: w.id });
+                    }
+                    // 3) Completed non-random week with no king.
+                    if (!w.isRandom && w.status === "completed" && !w.king) {
+                        issues.push({ type: "missing_king", severity: "low", message: `أسبوع مكتمل بدون ملك — دورة ${cn} أسبوع ${wn}`, weekId: w.id });
+                    }
+                }
+
+                // 4) Duplicate ratings (same week + same user).
+                const seen = new Map<string, number>();
+                for (const r of ratings) {
+                    const key = `${r.weekId}__${r.userName}`;
+                    seen.set(key, (seen.get(key) || 0) + 1);
+                }
+                for (const [key, count] of seen) {
+                    if (count > 1) {
+                        const [wid, uname] = key.split("__");
+                        issues.push({ type: "duplicate_rating", severity: "high", message: `تقييم مكرر (${count}×) للعضو ${uname} في نفس الأسبوع`, weekId: wid });
+                    }
+                }
+
+                issues.sort((a, b) => {
+                    const rank = { high: 0, medium: 1, low: 2 } as const;
+                    return rank[a.severity] - rank[b.severity];
+                });
+
+                return NextResponse.json({
+                    result: {
+                        healthy: issues.length === 0,
+                        totalWeeks: weeks.length,
+                        totalRatings: ratings.length,
+                        pendingCount: pending.length,
+                        issues,
+                    },
+                });
+            }
+
             case "toggleAttendance": {
                 if (authName !== payload.userName && !isAdmin) throw new Error("Can only change your own attendance");
                 const weekRef = adminDb.collection("weeks").doc(payload.weekId);
