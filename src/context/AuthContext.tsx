@@ -63,27 +63,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
                 const storedName = localStorage.getItem("king_user_name");
                 const storedToken = localStorage.getItem("king_user_token");
+
+                // Fire both RPCs IN PARALLEL. Previously they ran back-to-back, so the
+                // loading spinner stayed up for the SUM of both round-trips. The count
+                // is only needed on the auth screen and never blocks a logged-in user.
+                const sessionPromise = (storedName && storedToken)
+                    ? invokeRpc("validateSession").catch(() => null)
+                    : Promise.resolve(null);
+                const countPromise = invokeRpc("getRegisteredNamesCount").catch(() => 0);
+
+                const [result, count] = await Promise.all([sessionPromise, countPromise]);
+
                 if (storedName && storedToken) {
-                    try {
-                        const result = await invokeRpc("validateSession");
-                        const profile = result?.profile;
-                        const normalizedToken = result?.token;
-                        if (profile) {
-                            setUser(profile);
-                            if (typeof normalizedToken === "string" && normalizedToken) {
-                                localStorage.setItem("king_user_token", normalizedToken);
-                            }
-                        } else {
-                            localStorage.removeItem("king_user_name");
-                            localStorage.removeItem("king_user_token");
+                    const profile = result?.profile;
+                    const normalizedToken = result?.token;
+                    if (profile) {
+                        setUser(profile);
+                        if (typeof normalizedToken === "string" && normalizedToken) {
+                            localStorage.setItem("king_user_token", normalizedToken);
                         }
-                    } catch {
+                    } else {
                         localStorage.removeItem("king_user_name");
                         localStorage.removeItem("king_user_token");
                     }
                 }
 
-                const count = await invokeRpc("getRegisteredNamesCount");
                 setRegisteredNamesCount(typeof count === "number" ? count : 0);
             } catch (error) {
                 console.error("Auth init error:", error);

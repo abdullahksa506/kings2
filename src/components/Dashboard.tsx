@@ -2427,60 +2427,67 @@ export default function Dashboard() {
                 </div>
             )}
 
-            <ConstitutionModal
-                isOpen={isConstitutionOpen}
-                onClose={() => setIsConstitutionOpen(false)}
-            />
+            {/* Each panel below is a `next/dynamic` chunk. Gating on its open-state
+                (instead of always rendering / just `user &&`) means the chunk only
+                downloads the first time the user opens it — not on Dashboard mount.
+                This keeps the game/stat/planner bundles (incl. framer-motion) off the
+                critical path. */}
+            {isConstitutionOpen && (
+                <ConstitutionModal
+                    isOpen={isConstitutionOpen}
+                    onClose={() => setIsConstitutionOpen(false)}
+                />
+            )}
 
-            {
-                user && (
-                    <HungryKingsArena
-                        isOpen={isGameOpen}
-                        onClose={() => setIsGameOpen(false)}
-                        userName={user.name}
-                    />
-                )
-            }
+            {user && isGameOpen && (
+                <HungryKingsArena
+                    isOpen={isGameOpen}
+                    onClose={() => setIsGameOpen(false)}
+                    userName={user.name}
+                />
+            )}
 
-            {
-                user && (
-                    <RoyalDuelArena
-                        isOpen={isDuelOpen}
-                        onClose={() => setIsDuelOpen(false)}
-                        userName={user.name}
-                    />
-                )
-            }
+            {user && isDuelOpen && (
+                <RoyalDuelArena
+                    isOpen={isDuelOpen}
+                    onClose={() => setIsDuelOpen(false)}
+                    userName={user.name}
+                />
+            )}
 
-            {
-                user && (
-                    <CoupArena
-                        isOpen={isCoupOpen}
-                        onClose={() => setIsCoupOpen(false)}
-                        userName={user.name}
-                    />
-                )
-            }
+            {user && isCoupOpen && (
+                <CoupArena
+                    isOpen={isCoupOpen}
+                    onClose={() => setIsCoupOpen(false)}
+                    userName={user.name}
+                />
+            )}
 
-            <StatisticsPanel
-                isOpen={isStatsOpen}
-                onClose={() => setIsStatsOpen(false)}
-            />
+            {isStatsOpen && (
+                <StatisticsPanel
+                    isOpen={isStatsOpen}
+                    onClose={() => setIsStatsOpen(false)}
+                />
+            )}
 
-            <OutingPlannerPanel
-                isOpen={isPlannerOpen}
-                onClose={() => setIsPlannerOpen(false)}
-                onPick={(name, mapsUrl) => {
-                    setRestaurant(name);
-                    setRestaurantMapsUrl(mapsUrl);
-                }}
-            />
+            {isPlannerOpen && (
+                <OutingPlannerPanel
+                    isOpen={isPlannerOpen}
+                    onClose={() => setIsPlannerOpen(false)}
+                    onPick={(name, mapsUrl) => {
+                        setRestaurant(name);
+                        setRestaurantMapsUrl(mapsUrl);
+                    }}
+                />
+            )}
 
-            <MemberProfilePanel
-                isOpen={isMemberProfileOpen}
-                onClose={() => setIsMemberProfileOpen(false)}
-                currentUserName={user?.name || ""}
-            />
+            {isMemberProfileOpen && (
+                <MemberProfilePanel
+                    isOpen={isMemberProfileOpen}
+                    onClose={() => setIsMemberProfileOpen(false)}
+                    currentUserName={user?.name || ""}
+                />
+            )}
         </div >
     );
 }
