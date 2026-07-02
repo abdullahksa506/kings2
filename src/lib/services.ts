@@ -393,6 +393,20 @@ export const services = {
         return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Rating));
     },
 
+    // Read the whole ratings collection ONCE and group by week. Callers that need
+    // ratings for many weeks use this instead of firing one query per week (N+1).
+    async getRatingsGroupedByWeek(): Promise<Map<string, Rating[]>> {
+        const snap = await getDocs(collection(db, "ratings"));
+        const map = new Map<string, Rating[]>();
+        snap.docs.forEach((d) => {
+            const r = { id: d.id, ...d.data() } as Rating;
+            const arr = map.get(r.weekId);
+            if (arr) arr.push(r);
+            else map.set(r.weekId, [r]);
+        });
+        return map;
+    },
+
     listenToRatingsForWeek(weekId: string, callback: (ratings: Rating[]) => void) {
         const q = query(collection(db, "ratings"), where("weekId", "==", weekId));
         return onSnapshot(q, (snap) => {
@@ -480,14 +494,16 @@ export const services = {
         // Unified rule: only real competitive outings (no historical, random, or junk).
         const activeWeeks = weeks.filter(isCompetitiveWeek);
 
-        const leaderboard = await Promise.all(activeWeeks.map(async (week) => {
-            const ratings = await this.getAllRatingsForWeek(week.id);
+        // One grouped ratings read instead of one query per week (was N+1).
+        const grouped = await this.getRatingsGroupedByWeek();
+        const leaderboard = activeWeeks.map((week) => {
+            const ratings = grouped.get(week.id) || [];
             let averageScore = 0;
             if (ratings.length > 0) {
                 averageScore = ratings.reduce((acc, curr) => acc + curr.score, 0) / ratings.length;
             }
             return { week, averageScore };
-        }));
+        });
 
         // Sort by average score descending
         return leaderboard.sort((a, b) => b.averageScore - a.averageScore);
@@ -504,14 +520,16 @@ export const services = {
         const snap = await getDocs(q);
         const weeks = snap.docs.map(d => ({ id: d.id, ...d.data() } as WeekSession));
 
-        const results = await Promise.all(weeks.map(async (week) => {
-            const ratings = await this.getAllRatingsForWeek(week.id);
+        // One grouped ratings read instead of one query per week (was N+1).
+        const grouped = await this.getRatingsGroupedByWeek();
+        const results = weeks.map((week) => {
+            const ratings = grouped.get(week.id) || [];
             let averageScore = 0;
             if (ratings.length > 0) {
                 averageScore = ratings.reduce((acc, curr) => acc + curr.score, 0) / ratings.length;
             }
             return { week, averageScore, ratings };
-        }));
+        });
 
         return results.sort((a, b) => a.week.createdAt.toMillis() - b.week.createdAt.toMillis());
     },
