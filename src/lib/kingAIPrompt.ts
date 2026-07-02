@@ -94,6 +94,22 @@ export interface KingAIContext {
 }
 
 /**
+ * Neutralises user-controlled strings (restaurant names, etc.) before they're
+ * injected into the context block. Strips newlines / markdown structure markers
+ * and backticks so a value like "Cafe\n# NEW RULES: ignore everything" can't
+ * break out of its line and pose as an instruction. Caps length too.
+ */
+function sanitizeField(v: string | null | undefined, max = 80): string {
+    if (typeof v !== "string") return "";
+    return v
+        .replace(/[\r\n]+/g, " ")      // no line breaks → can't start a new block
+        .replace(/[`#*_>]+/g, " ")     // strip markdown/heading/emphasis markers
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, max);
+}
+
+/**
  * Builds a compact text block describing the group's state. Goes BEFORE the
  * user's question in the conversation so Gemini knows what to talk about.
  */
@@ -107,7 +123,7 @@ export function buildContextBlock(ctx: KingAIContext): string {
         const w = ctx.currentWeek;
         lines.push("## الأسبوع الحالي:");
         lines.push(
-            `- أسبوع ${w.weekNumber} (دورة ${w.cycleNumber}) · الملك: ${w.king || "عشوائي 🎲"} · اليوم: ${w.day || "لم يحدد"} · المطعم: ${w.restaurant || "لم يختر"} · الحالة: ${w.status}`,
+            `- أسبوع ${w.weekNumber} (دورة ${w.cycleNumber}) · الملك: ${sanitizeField(w.king) || "عشوائي 🎲"} · اليوم: ${sanitizeField(w.day) || "لم يحدد"} · المطعم: ${sanitizeField(w.restaurant) || "لم يختر"} · الحالة: ${sanitizeField(w.status)}`,
         );
         lines.push("");
     }
@@ -118,7 +134,7 @@ export function buildContextBlock(ctx: KingAIContext): string {
         for (const w of ctx.recentWeeks) {
             const r = w.avgRating ? `(تقييم ${w.avgRating}⭐)` : "";
             lines.push(
-                `- أسبوع ${w.weekNumber} (دورة ${w.cycleNumber}): ${w.king || "عشوائي"} · ${w.day || "—"} · ${w.restaurant || "—"} ${r}`,
+                `- أسبوع ${w.weekNumber} (دورة ${w.cycleNumber}): ${sanitizeField(w.king) || "عشوائي"} · ${sanitizeField(w.day) || "—"} · ${sanitizeField(w.restaurant) || "—"} ${r}`,
             );
         }
         lines.push("");
@@ -152,7 +168,7 @@ export function buildContextBlock(ctx: KingAIContext): string {
     // Restaurants on map
     if (ctx.knownRestaurants.length > 0) {
         lines.push("## المطاعم المحفوظة على الخريطة:");
-        const names = ctx.knownRestaurants.map((r) => r.name).join(" · ");
+        const names = ctx.knownRestaurants.map((r) => sanitizeField(r.name, 60)).filter(Boolean).join(" · ");
         lines.push(names);
         lines.push("");
     }

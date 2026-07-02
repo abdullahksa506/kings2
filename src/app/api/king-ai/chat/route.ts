@@ -6,6 +6,8 @@ import { services, VALID_NAMES } from "@/lib/services";
 import { adminDb } from "@/lib/firebase-admin";
 
 const MAX_INPUT_CHARS = 500;
+const MAX_HISTORY_TURNS = 8;
+const MAX_HISTORY_CHARS = 600;
 const MODEL = "gemini-2.5-flash";
 
 interface ChatRequest {
@@ -156,11 +158,26 @@ export async function POST(request: Request) {
     const ctx = await buildContext(userName);
     const contextBlock = buildContextBlock(ctx);
 
-    // ── 6. Build chat history (limit to last 8 turns) ──
-    const history = (body.history || []).slice(-8).map((h) => ({
-        role: h.role,
-        parts: [{ text: h.text }],
-    }));
+    // ── 6. Build chat history — VALIDATED ──
+    // The client fully controls `history`, so it's an injection vector: forged
+    // `model` turns can fake "the assistant already agreed to break the rules",
+    // and unbounded text can burn Gemini tokens/cost. We never trust it blindly:
+    // keep only well-formed {user|model} turns, cap each turn's length, cap count.
+    const rawHistory = Array.isArray(body?.history) ? body.history : [];
+    const history = rawHistory
+        .filter(
+            (h): h is { role: "user" | "model"; text: string } =>
+                !!h &&
+                typeof h === "object" &&
+                (h.role === "user" || h.role === "model") &&
+                typeof h.text === "string" &&
+                h.text.trim().length > 0,
+        )
+        .slice(-MAX_HISTORY_TURNS)
+        .map((h) => ({
+            role: h.role,
+            parts: [{ text: h.text.slice(0, MAX_HISTORY_CHARS) }],
+        }));
 
     // ── 7. Call Gemini (non-streaming for simplicity; reliability over fanciness) ──
     try {
