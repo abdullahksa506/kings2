@@ -101,8 +101,6 @@ export default function MangaPage() {
         return () => ro.disconnect();
     }, [displayUrl]);
 
-    const isUpload = pages.length === 0 && !!displayUrl; // manual-upload mode marker
-
     const runSearch = async () => {
         const q = query.trim();
         if (!q) return;
@@ -225,7 +223,11 @@ export default function MangaPage() {
     }
     if (!user || user.role !== "dean") return null;
 
-    const hasViewer = !!displayUrl;
+    // Stay in the reader while inside a chapter (pages loaded) OR an uploaded image.
+    // Previously this was `!!displayUrl` alone, so the split-second a new page's
+    // image was loading (displayUrl briefly null) the whole viewer unmounted and
+    // kicked the user back to the chapter list — making paging feel broken.
+    const hasViewer = pages.length > 0 || !!displayUrl;
 
     return (
         <main className="min-h-screen bg-slate-950 text-slate-100" dir="rtl">
@@ -340,19 +342,27 @@ export default function MangaPage() {
                         {msg && <p className="text-center text-xs text-amber-400">{msg}</p>}
 
                         {/* image + absolute overlay boxes */}
-                        <div ref={imgWrapRef} className="relative mx-auto bg-slate-900 rounded-xl overflow-hidden max-w-2xl">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={displayUrl!} alt="صفحة" className="w-full h-auto block select-none" />
-                            {showOverlay && blocks.map((b, i) => {
-                                const fontPx = Math.max(9, Math.min(30, b.h * wrapH * 0.42));
-                                return (
-                                    <div key={i}
-                                        className="absolute flex items-center justify-center text-center bg-white text-black rounded-[3px] leading-tight overflow-hidden px-0.5"
-                                        style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.w * 100}%`, height: `${b.h * 100}%`, fontSize: `${fontPx}px`, fontWeight: 700 }}>
-                                        <span style={{ wordBreak: "break-word" }}>{b.ar}</span>
-                                    </div>
-                                );
-                            })}
+                        <div ref={imgWrapRef} className="relative mx-auto bg-slate-900 rounded-xl overflow-hidden max-w-2xl min-h-[200px]">
+                            {displayUrl ? (
+                                <>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={displayUrl} alt="صفحة" className="w-full h-auto block select-none" />
+                                    {showOverlay && blocks.map((b, i) => {
+                                        const fontPx = Math.max(9, Math.min(30, b.h * wrapH * 0.42));
+                                        return (
+                                            <div key={i}
+                                                className="absolute flex items-center justify-center text-center bg-white text-black rounded-[3px] leading-tight overflow-hidden px-0.5"
+                                                style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.w * 100}%`, height: `${b.h * 100}%`, fontSize: `${fontPx}px`, fontWeight: 700 }}>
+                                                <span style={{ wordBreak: "break-word" }}>{b.ar}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </>
+                            ) : (
+                                <div className="flex items-center justify-center py-24">
+                                    <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+                                </div>
+                            )}
                         </div>
 
                         {/* page navigation (manga mode) */}
