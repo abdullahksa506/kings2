@@ -13,8 +13,9 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronRight, Search, Loader2, BookOpen, Upload, Languages, ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
 
-interface MangaResult { id: string; title: string; year: number | null; coverUrl: string | null; availableLangs: string[]; }
-interface Chapter { id: string; chapter: string | null; volume: string | null; title: string; pages: number; lang: string; }
+type MangaSource = "mangadex" | "vortex";
+interface MangaResult { id: string; source: MangaSource; title: string; year: number | null; coverUrl: string | null; availableLangs: string[]; kind?: string; }
+interface Chapter { id: string; chapter: string | null; title: string; pages: number; }
 interface Block { ar: string; x: number; y: number; w: number; h: number; }
 
 const LANGS = [
@@ -118,7 +119,7 @@ export default function MangaPage() {
     const loadChapters = useCallback(async (m: MangaResult, l: string) => {
         setLoadingChapters(true); setChapters([]); setPages([]); setDisplayUrl(null); setBlocks([]);
         try {
-            const res = await fetch(`/api/manga/chapters?mangaId=${m.id}&lang=${l}`, { headers: authHeaders() });
+            const res = await fetch(`/api/manga/chapters?source=${m.source}&mangaId=${encodeURIComponent(m.id)}&lang=${l}`, { headers: authHeaders() });
             const json = await res.json();
             if (!res.ok) throw new Error(json?.error || "خطأ");
             setChapters(json.chapters || []);
@@ -128,7 +129,10 @@ export default function MangaPage() {
 
     const openManga = (m: MangaResult) => {
         setManga(m);
-        const preferred = m.availableLangs.includes("en") ? "en" : (m.availableLangs.includes("ar") ? "ar" : (m.availableLangs[0] || "en"));
+        // MangaDex has per-language chapters; Vortex is pre-translated (lang ignored).
+        const preferred = m.source === "vortex"
+            ? "en"
+            : (m.availableLangs.includes("en") ? "en" : (m.availableLangs.includes("ar") ? "ar" : (m.availableLangs[0] || "en")));
         setLang(preferred);
         loadChapters(m, preferred);
     };
@@ -137,7 +141,7 @@ export default function MangaPage() {
         setLoadingPages(true); setPages([]); setPageIdx(0); setDisplayUrl(null); setBlocks([]); setMsg("");
         blobCache.current.clear(); transCache.current.clear();
         try {
-            const res = await fetch(`/api/manga/pages?chapterId=${c.id}`, { headers: authHeaders() });
+            const res = await fetch(`/api/manga/pages?source=${manga?.source || "mangadex"}&chapterId=${encodeURIComponent(c.id)}`, { headers: authHeaders() });
             const json = await res.json();
             if (!res.ok) throw new Error(json?.error || "خطأ");
             setPages(json.pages || []);
@@ -276,9 +280,12 @@ export default function MangaPage() {
                 {!manga && !hasViewer && results.length > 0 && (
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                         {results.map((m) => (
-                            <button key={m.id} onClick={() => openManga(m)} className="group text-right">
-                                <div className="aspect-[3/4] rounded-xl overflow-hidden border border-slate-800 group-hover:border-indigo-500 transition">
+                            <button key={`${m.source}-${m.id}`} onClick={() => openManga(m)} className="group text-right">
+                                <div className="aspect-[3/4] rounded-xl overflow-hidden border border-slate-800 group-hover:border-indigo-500 transition relative">
                                     {m.coverUrl ? <AuthImg src={proxied(m.coverUrl)} alt={m.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-800 flex items-center justify-center"><BookOpen className="w-6 h-6 text-slate-600" /></div>}
+                                    {m.kind && (
+                                        <span className={`absolute top-1 right-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${m.source === "vortex" ? "bg-fuchsia-600/90 text-white" : "bg-indigo-600/90 text-white"}`}>{m.kind}</span>
+                                    )}
                                 </div>
                                 <p className="text-[11px] mt-1 line-clamp-2 text-slate-300">{m.title}{m.year ? ` (${m.year})` : ""}</p>
                             </button>
@@ -294,20 +301,22 @@ export default function MangaPage() {
                             <h2 className="font-bold text-sm truncate">{manga.title}</h2>
                         </div>
 
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <Languages className="w-4 h-4 text-slate-500" />
-                            {LANGS.map((l) => (
-                                <button key={l.code} onClick={() => { setLang(l.code); loadChapters(manga, l.code); }}
-                                    className={`text-xs px-3 py-1.5 rounded-full border ${lang === l.code ? "bg-indigo-600 border-indigo-500 text-white" : "border-slate-700 text-slate-300 hover:border-slate-500"}`}>
-                                    {l.label}
-                                </button>
-                            ))}
-                        </div>
+                        {manga.source === "mangadex" && (
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <Languages className="w-4 h-4 text-slate-500" />
+                                {LANGS.map((l) => (
+                                    <button key={l.code} onClick={() => { setLang(l.code); loadChapters(manga, l.code); }}
+                                        className={`text-xs px-3 py-1.5 rounded-full border ${lang === l.code ? "bg-indigo-600 border-indigo-500 text-white" : "border-slate-700 text-slate-300 hover:border-slate-500"}`}>
+                                        {l.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
 
                         {loadingChapters ? (
                             <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
                         ) : chapters.length === 0 ? (
-                            <p className="text-center text-sm text-slate-500 py-6">ما فيه فصول بهالغة — جرّب لغة ثانية.</p>
+                            <p className="text-center text-sm text-slate-500 py-6">ما فيه فصول متاحة — جرّب عنوان ثاني{manga.source === "mangadex" ? " أو لغة ثانية" : ""}.</p>
                         ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[60vh] overflow-y-auto pr-1">
                                 {chapters.map((c) => (

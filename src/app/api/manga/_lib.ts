@@ -14,6 +14,13 @@ import { authenticateServerRequest } from "@/lib/serverRequestAuth";
 export const MD_UA = "KingOfThursday/1.0 (private friends manga reader)";
 export const MD_API = "https://api.mangadex.org";
 
+// VortexScans — free manhwa/manhua source (no key). Comick was dropped: it sits
+// behind Cloudflare and 403s any datacenter request, so it can't work on Render.
+export const VX_API = "https://vortexscans.vercel.app/api/v1";
+export const VX_UA = "Mozilla/5.0 (compatible; KingOfThursday/1.0)";
+
+export type MangaSource = "mangadex" | "vortex";
+
 /** Gate every manga route behind the dean role. Returns null when allowed. */
 export async function requireDean(request: Request): Promise<NextResponse | null> {
     const auth = await authenticateServerRequest(request, { allowedRoles: ["dean"] });
@@ -23,7 +30,7 @@ export async function requireDean(request: Request): Promise<NextResponse | null
     return null;
 }
 
-/** SSRF guard: only ever fetch images from MangaDex-owned hosts. */
+/** SSRF guard: only ever fetch images from the whitelisted source hosts. */
 export function isAllowedImageHost(rawUrl: string): boolean {
     try {
         const u = new URL(rawUrl);
@@ -32,11 +39,23 @@ export function isAllowedImageHost(rawUrl: string): boolean {
         return (
             h === "uploads.mangadex.org" ||
             h.endsWith(".mangadex.org") ||
-            h.endsWith(".mangadex.network")
+            h.endsWith(".mangadex.network") ||
+            h === "storage.vortexscans.org" ||
+            h.endsWith(".vortexscans.org")
         );
     } catch {
         return false;
     }
+}
+
+/** Fetch JSON from the VortexScans API. */
+export async function vxFetchJson(path: string): Promise<any> {
+    const res = await fetch(`${VX_API}${path}`, {
+        headers: { "User-Agent": VX_UA, Accept: "application/json" },
+        signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) throw new Error(`Vortex ${res.status}`);
+    return res.json();
 }
 
 /** Fetch JSON from the MangaDex API with the UA header + a timeout. */
