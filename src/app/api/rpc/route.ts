@@ -341,8 +341,8 @@ export async function POST(request: Request) {
                 for (const w of weeks) {
                     const wn = Number(w.weekNumber ?? 0);
                     const cn = Number(w.cycleNumber ?? 0);
-                    if (wn >= 900) issues.push({ type: "junk_weeknumber", severity: "medium", message: `أسبوع برقم غير طبيعي (${wn}) — دورة ${cn} · ${w.king || "عشوائي"}`, weekId: w.id });
-                    else if (cn <= 0 || cn >= 100) issues.push({ type: "junk_cycle", severity: "medium", message: `رقم دورة غير طبيعي (${cn}) — أسبوع ${wn} · ${w.king || "عشوائي"}`, weekId: w.id });
+                    // A large weekNumber (1001+) is NOT junk — real weeks got those.
+                    if (cn <= 0 || cn >= 100) issues.push({ type: "junk_cycle", severity: "medium", message: `رقم دورة غير طبيعي (${cn}) — أسبوع ${wn} · ${w.king || "عشوائي"}`, weekId: w.id });
                     if (!w.isRandom && w.king && !VALID_NAMES_RPC.includes(w.king)) {
                         issues.push({ type: "fake_king", severity: "medium", message: `ملك غير معروف "${w.king}" — دورة ${cn}`, weekId: w.id });
                     }

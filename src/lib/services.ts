@@ -202,16 +202,24 @@ export function isHistoricalWeek(w: any): boolean {
     return w?.historicalAverageRating !== undefined;
 }
 
-/** Junk left by manual edits or hacks — must never enter competitive math. */
+/** Junk left by manual edits — invalid CYCLE or a fake king. NOTE: a large
+ *  weekNumber is NOT junk — real weeks legitimately got numbered 1001-1005. */
 export function isJunkWeek(w: Partial<WeekSession>): boolean {
-    if ((w.weekNumber ?? 0) >= 900) return true;      // 999/1000+ week-number hacks
     if ((w.cycleNumber ?? 0) <= 0) return true;        // cycle 0 / negative
     if ((w.cycleNumber ?? 0) >= 100) return true;      // cycle 100+ placeholders
     if (!w.isRandom && w.king && !VALID_NAMES.includes(w.king)) return true; // fake king
     return false;
 }
 
-/** TRUE only for real, competitive outings (excludes random, historical, junk). */
+/** A REAL outing (for attendance / participation / totals). Includes historical
+ *  imports — they're real past outings with real attendance. Excludes only random
+ *  filler and junk-tagged weeks. */
+export function isRealOuting(w: any): boolean {
+    return !w.isRandom && !isJunkWeek(w);
+}
+
+/** TRUE only for RATING competition (excludes random, junk, AND historical —
+ *  historical weeks carry an imported aggregate rating, not per-user ratings). */
 export function isCompetitiveWeek(w: any): boolean {
     return !w.isRandom && !isHistoricalWeek(w) && !isJunkWeek(w);
 }
@@ -554,7 +562,7 @@ export const services = {
         const allRatings = ratingsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Rating));
         // Only competitive outings count toward a member's attendance/participation
         // (random & junk weeks are organizational and must not pollute profiles).
-        const completedWeeks = allWeeksWithAvg.map(w => w.week).filter(isCompetitiveWeek);
+        const completedWeeks = allWeeksWithAvg.map(w => w.week).filter(isRealOuting);
         // Only count what was ACTUALLY recorded (see getStatistics). Three honest
         // buckets: confirmed present / recorded absence / no record.
         const memberWeeks = completedWeeks; // denominator = every outing in the period
@@ -863,11 +871,12 @@ export const services = {
         // 1. Get all weeks
         const weeksSnap = await getDocs(collection(db, "weeks"));
         const allWeeks = weeksSnap.docs.map(d => ({ id: d.id, ...d.data() } as WeekSession));
-        // Random/junk weeks are organizational filler — fully excluded from every
-        // statistic (king rankings, cycle averages, attendance math, etc.).
-        // A single junk cycle (e.g. 999) used to skew maxCycle & comparisons.
-        const completedWeeks = allWeeks.filter(w => w.status === "completed" && isCompetitiveWeek(w));
-        const pendingWeeks = allWeeks.filter(w => w.status === "pending" && isCompetitiveWeek(w));
+        // Real outings for attendance/participation/totals — INCLUDES historical
+        // imports (real past outings) and large-numbered weeks (real). Only random
+        // filler + junk-cycle weeks are excluded. (Rating-specific stats below still
+        // skip historical naturally, since those weeks have no per-user rating docs.)
+        const completedWeeks = allWeeks.filter(w => w.status === "completed" && isRealOuting(w));
+        const pendingWeeks = allWeeks.filter(w => w.status === "pending" && isRealOuting(w));
 
         // 2. Get all ratings
         const ratingsSnap = await getDocs(collection(db, "ratings"));
