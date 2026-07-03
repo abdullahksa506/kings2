@@ -42,6 +42,8 @@ function proxied(src: string): string {
     return `/api/manga/image?src=${encodeURIComponent(src)}`;
 }
 
+const UPLOAD_KEY = "__upload__";
+
 // Small auth-aware image (used for cover thumbnails).
 function AuthImg({ src, alt, className }: { src: string; alt: string; className?: string }) {
     const [url, setUrl] = useState<string | null>(null);
@@ -56,16 +58,14 @@ function AuthImg({ src, alt, className }: { src: string; alt: string; className?
     return <img src={url} alt={alt} className={className} />;
 }
 
-// One webtoon page in the continuous vertical scroll. Lazy-loads its own image
-// (only when near the viewport) and owns its own translation + overlay.
-function MangaPageView({ rawUrl, dataUrl }: { rawUrl?: string; dataUrl?: string }) {
+// One webtoon page in the continuous vertical scroll. Lazy-loads its own image;
+// translation `blocks` are computed by the parent (whole-chapter translate) and
+// passed in, so it's purely presentational.
+function MangaPageView({ rawUrl, dataUrl, blocks, show }: { rawUrl?: string; dataUrl?: string; blocks?: Block[]; show: boolean }) {
     const ref = useRef<HTMLDivElement>(null);
     const [near, setNear] = useState(!!dataUrl);
     const [imgUrl, setImgUrl] = useState<string | null>(dataUrl || null);
     const [wrap, setWrap] = useState({ w: 0, h: 0 });
-    const [blocks, setBlocks] = useState<Block[] | null>(null);
-    const [busy, setBusy] = useState(false);
-    const [show, setShow] = useState(true);
     const [err, setErr] = useState("");
 
     // Lazy: only fetch the image once it's about to scroll into view.
@@ -97,20 +97,6 @@ function MangaPageView({ rawUrl, dataUrl }: { rawUrl?: string; dataUrl?: string 
         return () => ro.disconnect();
     }, [imgUrl]);
 
-    const translate = async () => {
-        if (busy) return;
-        setBusy(true); setErr("");
-        try {
-            const payload = dataUrl ? { imageBase64: dataUrl } : { imageUrl: rawUrl };
-            const res = await fetch("/api/manga/translate", { method: "POST", headers: authHeaders(), body: JSON.stringify(payload) });
-            const json = await res.json();
-            if (!res.ok) throw new Error(json?.error || "خطأ");
-            setBlocks(json.blocks || []); setShow(true);
-            if ((json.blocks || []).length === 0) setErr("ما فيه نص بهالصفحة");
-        } catch (e) { setErr(e instanceof Error ? e.message : "فشلت الترجمة"); }
-        finally { setBusy(false); }
-    };
-
     return (
         <div ref={ref} className="relative bg-slate-900 min-h-[280px]">
             {imgUrl ? (
@@ -140,18 +126,6 @@ function MangaPageView({ rawUrl, dataUrl }: { rawUrl?: string; dataUrl?: string 
                 );
             })}
 
-            {imgUrl && (
-                <div className="absolute bottom-2 left-2 flex gap-1.5 z-10">
-                    <button onClick={translate} disabled={busy} className="bg-indigo-600/90 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-full px-3 py-1.5 text-[11px] font-bold flex items-center gap-1 shadow-lg backdrop-blur">
-                        {busy ? <><Loader2 className="w-3 h-3 animate-spin" /> يترجم</> : <><Languages className="w-3 h-3" /> {blocks ? "ترجم مجدداً" : "ترجم"}</>}
-                    </button>
-                    {blocks && blocks.length > 0 && (
-                        <button onClick={() => setShow((v) => !v)} className="bg-slate-800/90 text-slate-200 rounded-full px-3 py-1.5 text-[11px] font-bold flex items-center gap-1 shadow-lg backdrop-blur">
-                            {show ? <><EyeOff className="w-3 h-3" /> الأصل</> : <><Eye className="w-3 h-3" /> الترجمة</>}
-                        </button>
-                    )}
-                </div>
-            )}
             {err && <span className="absolute bottom-2 right-2 z-10 text-[10px] text-amber-200 bg-black/70 px-2 py-1 rounded">{err}</span>}
         </div>
     );
@@ -183,6 +157,38 @@ export default function MangaPage() {
     const [loadingPages, setLoadingPages] = useState(false);
     const [uploadImg, setUploadImg] = useState<string | null>(null);
     const [msg, setMsg] = useState("");
+
+    // ── whole-chapter translation (parent-owned; pages just display) ──
+    const [translations, setTranslations] = useState<Record<string, Block[]>>({});
+    const [translatingAll, setTranslatingAll] = useState(false);
+    const [transDone, setTransDone] = useState(0);
+    const [showTrans, setShowTrans] = useState(true);
+
+    const translateChapter = async () => {
+        if (translatingAll) return;
+        const items = uploadImg
+            ? [{ key: UPLOAD_KEY, payload: { imageBase64: uploadImg } as any }]
+            : pages.map((u) => ({ key: u, payload: { imageUrl: u } as any }));
+        if (items.length === 0) return;
+        setTranslatingAll(true); setTransDone(0); setShowTrans(true); setMsg("");
+        let done = 0, idx = 0;
+        const worker = async () => {
+            while (idx < items.length) {
+                const cur = items[idx++];
+                let blocks: Block[] = [];
+                try {
+                    const res = await fetch("/api/manga/translate", { method: "POST", headers: authHeaders(), body: JSON.stringify(cur.payload) });
+                    const json = await res.json();
+                    if (res.ok) blocks = json.blocks || [];
+                } catch { /* skip failed page */ }
+                setTranslations((prev) => ({ ...prev, [cur.key]: blocks }));
+                done++; setTransDone(done);
+            }
+        };
+        // Up to 3 pages in flight — fast without hammering the API.
+        await Promise.all(Array.from({ length: Math.min(3, items.length) }, worker));
+        setTranslatingAll(false);
+    };
 
     const runSearch = async () => {
         const q = query.trim();
@@ -220,7 +226,7 @@ export default function MangaPage() {
     };
 
     const openChapter = async (c: Chapter) => {
-        setLoadingPages(true); setPages([]); setMsg("");
+        setLoadingPages(true); setPages([]); setMsg(""); setTranslations({}); setTransDone(0);
         try {
             const res = await fetch(`/api/manga/pages?source=${manga?.source || "mangadex"}&chapterId=${encodeURIComponent(c.id)}`, { headers: authHeaders() });
             const json = await res.json();
@@ -251,7 +257,7 @@ export default function MangaPage() {
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 const jpeg = canvas.toDataURL("image/jpeg", 0.9);
                 setManga(null); setChapters([]); setPages([]); setResults([]);
-                setUploadImg(jpeg); setMsg("");
+                setUploadImg(jpeg); setMsg(""); setTranslations({}); setTransDone(0);
             };
             img.src = dataUrl;
         };
@@ -260,6 +266,7 @@ export default function MangaPage() {
 
     const backToLibrary = () => {
         setManga(null); setChapters([]); setPages([]); setUploadImg(null); setMsg("");
+        setTranslations({}); setTransDone(0);
     };
 
     if (loading) {
@@ -369,10 +376,21 @@ export default function MangaPage() {
                 {/* ── Continuous webtoon reader ── */}
                 {hasViewer && (
                     <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                            <button onClick={pages.length > 0 ? () => setPages([]) : backToLibrary}
+                        <div className="sticky top-[52px] z-30 -mx-4 px-4 py-2 bg-slate-950/90 backdrop-blur-sm flex items-center justify-between gap-2">
+                            <button onClick={pages.length > 0 ? () => { setPages([]); setTranslations({}); } : backToLibrary}
                                 className="text-sm text-slate-400 hover:text-white flex items-center gap-1"><ArrowRight className="w-4 h-4" /> {pages.length > 0 ? "الفصول" : "رجوع"}</button>
-                            <p className="text-[11px] text-slate-500">انزل بالإصبع · اضغط "ترجم" تحت كل صفحة</p>
+                            <div className="flex items-center gap-2">
+                                {Object.keys(translations).length > 0 && (
+                                    <button onClick={() => setShowTrans((v) => !v)} className="text-xs px-3 py-1.5 rounded-full border border-slate-700 text-slate-300 flex items-center gap-1">
+                                        {showTrans ? <><EyeOff className="w-3.5 h-3.5" /> الأصل</> : <><Eye className="w-3.5 h-3.5" /> الترجمة</>}
+                                    </button>
+                                )}
+                                <button onClick={translateChapter} disabled={translatingAll} className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 rounded-full px-4 py-1.5 text-xs font-bold flex items-center gap-1.5">
+                                    {translatingAll
+                                        ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> يترجم {transDone}/{uploadImg ? 1 : pages.length}</>
+                                        : <><Languages className="w-3.5 h-3.5" /> ترجم الفصل كامل</>}
+                                </button>
+                            </div>
                         </div>
 
                         {msg && <p className="text-center text-xs text-amber-400">{msg}</p>}
@@ -380,9 +398,9 @@ export default function MangaPage() {
                         {/* Pages stacked vertically — continuous scroll (webtoon style) */}
                         <div className="rounded-xl overflow-hidden bg-black mx-auto max-w-2xl">
                             {uploadImg ? (
-                                <MangaPageView dataUrl={uploadImg} />
+                                <MangaPageView dataUrl={uploadImg} blocks={translations[UPLOAD_KEY]} show={showTrans} />
                             ) : (
-                                pages.map((url) => <MangaPageView key={url} rawUrl={url} />)
+                                pages.map((url) => <MangaPageView key={url} rawUrl={url} blocks={translations[url]} show={showTrans} />)
                             )}
                         </div>
 
