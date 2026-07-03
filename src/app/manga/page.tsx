@@ -11,7 +11,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronRight, Search, Loader2, BookOpen, Upload, Languages, ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { ChevronRight, Search, Loader2, BookOpen, Upload, Languages, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 type MangaSource = "mangadex" | "vortex";
 interface MangaResult { id: string; source: MangaSource; title: string; year: number | null; coverUrl: string | null; availableLangs: string[]; kind?: string; }
@@ -56,6 +56,107 @@ function AuthImg({ src, alt, className }: { src: string; alt: string; className?
     return <img src={url} alt={alt} className={className} />;
 }
 
+// One webtoon page in the continuous vertical scroll. Lazy-loads its own image
+// (only when near the viewport) and owns its own translation + overlay.
+function MangaPageView({ rawUrl, dataUrl }: { rawUrl?: string; dataUrl?: string }) {
+    const ref = useRef<HTMLDivElement>(null);
+    const [near, setNear] = useState(!!dataUrl);
+    const [imgUrl, setImgUrl] = useState<string | null>(dataUrl || null);
+    const [wrap, setWrap] = useState({ w: 0, h: 0 });
+    const [blocks, setBlocks] = useState<Block[] | null>(null);
+    const [busy, setBusy] = useState(false);
+    const [show, setShow] = useState(true);
+    const [err, setErr] = useState("");
+
+    // Lazy: only fetch the image once it's about to scroll into view.
+    useEffect(() => {
+        if (dataUrl) return;
+        const el = ref.current;
+        if (!el || typeof IntersectionObserver === "undefined") { setNear(true); return; }
+        const io = new IntersectionObserver((es) => { if (es[0].isIntersecting) { setNear(true); io.disconnect(); } }, { rootMargin: "1200px 0px" });
+        io.observe(el);
+        return () => io.disconnect();
+    }, [dataUrl]);
+
+    useEffect(() => {
+        if (!near || dataUrl || !rawUrl) return;
+        let alive = true; let obj: string | null = null;
+        fetchBlobUrl(proxied(rawUrl)).then((u) => {
+            if (!alive) { URL.revokeObjectURL(u); return; }
+            obj = u; setImgUrl(u);
+        }).catch(() => setErr("تعذّر تحميل الصفحة"));
+        return () => { alive = false; if (obj) URL.revokeObjectURL(obj); };
+    }, [near, rawUrl, dataUrl]);
+
+    // Track the rendered size so overlay font-sizing fits the actual pixels.
+    useEffect(() => {
+        const el = ref.current;
+        if (!el || typeof ResizeObserver === "undefined") return;
+        const ro = new ResizeObserver((e) => setWrap({ w: e[0].contentRect.width, h: e[0].contentRect.height }));
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [imgUrl]);
+
+    const translate = async () => {
+        if (busy) return;
+        setBusy(true); setErr("");
+        try {
+            const payload = dataUrl ? { imageBase64: dataUrl } : { imageUrl: rawUrl };
+            const res = await fetch("/api/manga/translate", { method: "POST", headers: authHeaders(), body: JSON.stringify(payload) });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json?.error || "خطأ");
+            setBlocks(json.blocks || []); setShow(true);
+            if ((json.blocks || []).length === 0) setErr("ما فيه نص بهالصفحة");
+        } catch (e) { setErr(e instanceof Error ? e.message : "فشلت الترجمة"); }
+        finally { setBusy(false); }
+    };
+
+    return (
+        <div ref={ref} className="relative bg-slate-900 min-h-[280px]">
+            {imgUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={imgUrl} alt="صفحة" className="w-full h-auto block select-none" />
+            ) : (
+                <div className="flex items-center justify-center py-24"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+            )}
+
+            {show && blocks && blocks.map((b, i) => {
+                // Auto-fit font to the box: area-per-character keeps long text from
+                // overflowing small bubbles. Also expand the white box a touch so it
+                // fully covers the original text underneath (no bleed like "AS").
+                const boxW = b.w * wrap.w, boxH = b.h * wrap.h;
+                const chars = Math.max(1, b.ar.trim().length);
+                const areaFont = Math.sqrt((boxW * boxH * 0.5) / chars);
+                const fontPx = Math.max(8, Math.min(26, areaFont, boxH * 0.85));
+                const ex = b.w * 0.05, ey = b.h * 0.07;
+                const left = Math.max(0, b.x - ex), top = Math.max(0, b.y - ey);
+                const width = Math.min(1 - left, b.w + ex * 2), height = Math.min(1 - top, b.h + ey * 2);
+                return (
+                    <div key={i}
+                        className="absolute flex items-center justify-center text-center bg-white text-black rounded-md overflow-hidden"
+                        style={{ left: `${left * 100}%`, top: `${top * 100}%`, width: `${width * 100}%`, height: `${height * 100}%`, fontSize: `${fontPx}px`, fontWeight: 700, lineHeight: 1.15, padding: "1px" }}>
+                        <span style={{ wordBreak: "break-word" }}>{b.ar}</span>
+                    </div>
+                );
+            })}
+
+            {imgUrl && (
+                <div className="absolute bottom-2 left-2 flex gap-1.5 z-10">
+                    <button onClick={translate} disabled={busy} className="bg-indigo-600/90 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-full px-3 py-1.5 text-[11px] font-bold flex items-center gap-1 shadow-lg backdrop-blur">
+                        {busy ? <><Loader2 className="w-3 h-3 animate-spin" /> يترجم</> : <><Languages className="w-3 h-3" /> {blocks ? "ترجم مجدداً" : "ترجم"}</>}
+                    </button>
+                    {blocks && blocks.length > 0 && (
+                        <button onClick={() => setShow((v) => !v)} className="bg-slate-800/90 text-slate-200 rounded-full px-3 py-1.5 text-[11px] font-bold flex items-center gap-1 shadow-lg backdrop-blur">
+                            {show ? <><EyeOff className="w-3 h-3" /> الأصل</> : <><Eye className="w-3 h-3" /> الترجمة</>}
+                        </button>
+                    )}
+                </div>
+            )}
+            {err && <span className="absolute bottom-2 right-2 z-10 text-[10px] text-amber-200 bg-black/70 px-2 py-1 rounded">{err}</span>}
+        </div>
+    );
+}
+
 export default function MangaPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
@@ -77,30 +178,11 @@ export default function MangaPage() {
     const [chapters, setChapters] = useState<Chapter[]>([]);
     const [loadingChapters, setLoadingChapters] = useState(false);
 
-    // ── reading ──
+    // ── reading (continuous webtoon scroll) ──
     const [pages, setPages] = useState<string[]>([]);
     const [loadingPages, setLoadingPages] = useState(false);
-    const [pageIdx, setPageIdx] = useState(0);
-    const [displayUrl, setDisplayUrl] = useState<string | null>(null);
-    const [translating, setTranslating] = useState(false);
-    const [showOverlay, setShowOverlay] = useState(true);
+    const [uploadImg, setUploadImg] = useState<string | null>(null);
     const [msg, setMsg] = useState("");
-
-    // caches (avoid refetch / re-translate cost)
-    const blobCache = useRef<Map<string, string>>(new Map());
-    const transCache = useRef<Map<string, Block[]>>(new Map());
-    const [blocks, setBlocks] = useState<Block[]>([]);
-
-    // measure rendered image for font sizing
-    const imgWrapRef = useRef<HTMLDivElement>(null);
-    const [wrapH, setWrapH] = useState(0);
-    useEffect(() => {
-        const el = imgWrapRef.current;
-        if (!el || typeof ResizeObserver === "undefined") return;
-        const ro = new ResizeObserver((entries) => setWrapH(entries[0].contentRect.height));
-        ro.observe(el);
-        return () => ro.disconnect();
-    }, [displayUrl]);
 
     const runSearch = async () => {
         const q = query.trim();
@@ -117,7 +199,7 @@ export default function MangaPage() {
     };
 
     const loadChapters = useCallback(async (m: MangaResult, l: string) => {
-        setLoadingChapters(true); setChapters([]); setPages([]); setDisplayUrl(null); setBlocks([]);
+        setLoadingChapters(true); setChapters([]); setPages([]);
         try {
             const res = await fetch(`/api/manga/chapters?source=${m.source}&mangaId=${encodeURIComponent(m.id)}&lang=${l}`, { headers: authHeaders() });
             const json = await res.json();
@@ -138,58 +220,18 @@ export default function MangaPage() {
     };
 
     const openChapter = async (c: Chapter) => {
-        setLoadingPages(true); setPages([]); setPageIdx(0); setDisplayUrl(null); setBlocks([]); setMsg("");
-        blobCache.current.clear(); transCache.current.clear();
+        setLoadingPages(true); setPages([]); setMsg("");
         try {
             const res = await fetch(`/api/manga/pages?source=${manga?.source || "mangadex"}&chapterId=${encodeURIComponent(c.id)}`, { headers: authHeaders() });
             const json = await res.json();
             if (!res.ok) throw new Error(json?.error || "خطأ");
             setPages(json.pages || []);
-            setPageIdx(0);
+            if (typeof window !== "undefined") window.scrollTo({ top: 0 });
         } catch (e) { setMsg(e instanceof Error ? e.message : "تعذّر فتح الفصل"); }
         finally { setLoadingPages(false); }
     };
 
-    // load the current page image (blob) whenever pageIdx/pages change
-    useEffect(() => {
-        if (pages.length === 0) return;
-        const src = pages[pageIdx];
-        if (!src) return;
-        setBlocks(transCache.current.get(src) || []);
-        const cached = blobCache.current.get(src);
-        if (cached) { setDisplayUrl(cached); return; }
-        let alive = true;
-        setDisplayUrl(null);
-        fetchBlobUrl(proxied(src)).then((u) => {
-            if (!alive) { URL.revokeObjectURL(u); return; }
-            blobCache.current.set(src, u);
-            setDisplayUrl(u);
-        }).catch(() => setMsg("تعذّر تحميل الصفحة"));
-        return () => { alive = false; };
-    }, [pages, pageIdx]);
-
-    const translateCurrent = async () => {
-        if (translating) return;
-        setTranslating(true); setMsg("");
-        try {
-            let payload: any;
-            if (pages.length > 0) payload = { imageUrl: pages[pageIdx] };
-            else if (uploadDataRef.current) payload = { imageBase64: uploadDataRef.current };
-            else return;
-            const res = await fetch(`/api/manga/translate`, { method: "POST", headers: authHeaders(), body: JSON.stringify(payload) });
-            const json = await res.json();
-            if (!res.ok) throw new Error(json?.error || "خطأ");
-            const b: Block[] = json.blocks || [];
-            setBlocks(b);
-            setShowOverlay(true);
-            if (pages.length > 0) transCache.current.set(pages[pageIdx], b);
-            if (b.length === 0) setMsg("ما لقيت نص في هالصفحة");
-        } catch (e) { setMsg(e instanceof Error ? e.message : "فشلت الترجمة"); }
-        finally { setTranslating(false); }
-    };
-
     // ── manual upload fallback ──
-    const uploadDataRef = useRef<string | null>(null);
     const onUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !file.type.startsWith("image/")) return;
@@ -208,9 +250,8 @@ export default function MangaPage() {
                 if (!ctx) return;
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 const jpeg = canvas.toDataURL("image/jpeg", 0.9);
-                uploadDataRef.current = jpeg;
                 setManga(null); setChapters([]); setPages([]); setResults([]);
-                setBlocks([]); setDisplayUrl(jpeg); setPageIdx(0); setMsg("");
+                setUploadImg(jpeg); setMsg("");
             };
             img.src = dataUrl;
         };
@@ -218,8 +259,7 @@ export default function MangaPage() {
     };
 
     const backToLibrary = () => {
-        setManga(null); setChapters([]); setPages([]); setDisplayUrl(null); setBlocks([]);
-        uploadDataRef.current = null; setMsg("");
+        setManga(null); setChapters([]); setPages([]); setUploadImg(null); setMsg("");
     };
 
     if (loading) {
@@ -227,11 +267,7 @@ export default function MangaPage() {
     }
     if (!user || user.role !== "dean") return null;
 
-    // Stay in the reader while inside a chapter (pages loaded) OR an uploaded image.
-    // Previously this was `!!displayUrl` alone, so the split-second a new page's
-    // image was loading (displayUrl briefly null) the whole viewer unmounted and
-    // kicked the user back to the chapter list — making paging feel broken.
-    const hasViewer = pages.length > 0 || !!displayUrl;
+    const hasViewer = pages.length > 0 || !!uploadImg;
 
     return (
         <main className="min-h-screen bg-slate-950 text-slate-100" dir="rtl">
@@ -330,59 +366,32 @@ export default function MangaPage() {
                     </div>
                 )}
 
-                {/* ── Page viewer + overlay ── */}
+                {/* ── Continuous webtoon reader ── */}
                 {hasViewer && (
                     <div className="space-y-3">
                         <div className="flex items-center justify-between gap-2">
-                            <button onClick={pages.length > 0 ? () => { setPages([]); setDisplayUrl(null); setBlocks([]); } : backToLibrary}
+                            <button onClick={pages.length > 0 ? () => setPages([]) : backToLibrary}
                                 className="text-sm text-slate-400 hover:text-white flex items-center gap-1"><ArrowRight className="w-4 h-4" /> {pages.length > 0 ? "الفصول" : "رجوع"}</button>
-                            <div className="flex items-center gap-2">
-                                {blocks.length > 0 && (
-                                    <button onClick={() => setShowOverlay((v) => !v)} className="text-xs px-3 py-1.5 rounded-full border border-slate-700 text-slate-300 flex items-center gap-1">
-                                        {showOverlay ? <><EyeOff className="w-3.5 h-3.5" /> الأصل</> : <><Eye className="w-3.5 h-3.5" /> الترجمة</>}
-                                    </button>
-                                )}
-                                <button onClick={translateCurrent} disabled={translating} className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 rounded-full px-4 py-1.5 text-xs font-bold flex items-center gap-1.5">
-                                    {translating ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> يترجم...</> : <><Languages className="w-3.5 h-3.5" /> ترجم الصفحة</>}
-                                </button>
-                            </div>
+                            <p className="text-[11px] text-slate-500">انزل بالإصبع · اضغط "ترجم" تحت كل صفحة</p>
                         </div>
 
                         {msg && <p className="text-center text-xs text-amber-400">{msg}</p>}
 
-                        {/* image + absolute overlay boxes */}
-                        <div ref={imgWrapRef} className="relative mx-auto bg-slate-900 rounded-xl overflow-hidden max-w-2xl min-h-[200px]">
-                            {displayUrl ? (
-                                <>
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={displayUrl} alt="صفحة" className="w-full h-auto block select-none" />
-                                    {showOverlay && blocks.map((b, i) => {
-                                        const fontPx = Math.max(9, Math.min(30, b.h * wrapH * 0.42));
-                                        return (
-                                            <div key={i}
-                                                className="absolute flex items-center justify-center text-center bg-white text-black rounded-[3px] leading-tight overflow-hidden px-0.5"
-                                                style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.w * 100}%`, height: `${b.h * 100}%`, fontSize: `${fontPx}px`, fontWeight: 700 }}>
-                                                <span style={{ wordBreak: "break-word" }}>{b.ar}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </>
+                        {/* Pages stacked vertically — continuous scroll (webtoon style) */}
+                        <div className="rounded-xl overflow-hidden bg-black mx-auto max-w-2xl">
+                            {uploadImg ? (
+                                <MangaPageView dataUrl={uploadImg} />
                             ) : (
-                                <div className="flex items-center justify-center py-24">
-                                    <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-                                </div>
+                                pages.map((url) => <MangaPageView key={url} rawUrl={url} />)
                             )}
                         </div>
 
-                        {/* page navigation (manga mode) */}
                         {pages.length > 0 && (
-                            <div className="flex items-center justify-between gap-3">
-                                <button disabled={pageIdx === 0} onClick={() => setPageIdx((i) => Math.max(0, i - 1))} className="flex items-center gap-1 text-sm bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 disabled:opacity-40"><ArrowRight className="w-4 h-4" /> السابقة</button>
-                                <span className="text-xs text-slate-400">{pageIdx + 1} / {pages.length}</span>
-                                <button disabled={pageIdx >= pages.length - 1} onClick={() => setPageIdx((i) => Math.min(pages.length - 1, i + 1))} className="flex items-center gap-1 text-sm bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 disabled:opacity-40">التالية <ArrowLeft className="w-4 h-4" /></button>
+                            <div className="flex items-center justify-center gap-3 pt-1">
+                                <span className="text-xs text-slate-500">✦ نهاية الفصل ({pages.length} صفحة) ✦</span>
                             </div>
                         )}
-                        <p className="text-[10px] text-slate-600 text-center">🔒 المصدر: MangaDex · الترجمة عبر الذكاء الاصطناعي (تقريبية) · للاستخدام الخاص</p>
+                        <p className="text-[10px] text-slate-600 text-center">🔒 المصدر: MangaDex / VortexScans · ترجمة AI تقريبية · للاستخدام الخاص</p>
                     </div>
                 )}
 
