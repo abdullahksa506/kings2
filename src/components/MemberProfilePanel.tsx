@@ -70,6 +70,23 @@ export default function MemberProfilePanel({ isOpen, onClose, currentUserName }:
                             <Item label="أضعف طلعة كملك" value={profile.worstWeekAsKing ? `${profile.worstWeekAsKing.restaurant || "غير محدد"} (${profile.worstWeekAsKing.score}⭐)` : "—"} />
                         </div>
 
+                        {/* Missed outings (recorded absences) */}
+                        <div className="border border-red-700/30 bg-red-950/15 rounded-2xl p-3">
+                            <p className="text-sm font-bold text-red-300 mb-1">❌ الطلعات اللي ما حضرها ({profile.absentCount})</p>
+                            <p className="text-[10px] text-slate-500 mb-2">اعتذارات مسجّلة فقط</p>
+                            {profile.missedOutings.length === 0 ? (
+                                <p className="text-sm text-emerald-400">ما تغيّب ولا طلعة مسجّلة ✅</p>
+                            ) : (
+                                <div className="flex flex-wrap gap-1.5">
+                                    {profile.missedOutings.map((o) => (
+                                        <span key={o.weekId} className="text-[10px] bg-red-500/10 border border-red-500/20 text-red-200/90 rounded-lg px-2 py-1">
+                                            دورة {o.cycleNumber} · {o.restaurant || o.king || "—"}{o.day ? ` · ${o.day}` : ""}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
                         <div className="border border-rose-700/40 bg-rose-950/20 rounded-2xl p-3">
                             <button
                                 onClick={() => setIsPrivateRatingsOpen(prev => !prev)}

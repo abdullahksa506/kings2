@@ -176,6 +176,7 @@ export interface MemberProfileData {
     attendedCount: number;
     absentCount: number;
     noResponseCount: number;
+    missedOutings: { weekId: string; weekNumber: number; cycleNumber: number; king: string | null; restaurant: string | null; day: string | null }[];
     timesAsKing: number;
     ratingsGiven: number;
     averageRatingGiven: number;
@@ -630,6 +631,12 @@ export const services = {
             attendanceRate,
             attendedCount: attendedWeeks.length,
             absentCount: absentWeeks.length,
+            missedOutings: [...absentWeeks]
+                .sort((a, b) => (b.cycleNumber - a.cycleNumber) || (b.weekNumber - a.weekNumber))
+                .map((w) => ({
+                    weekId: w.id, weekNumber: w.weekNumber, cycleNumber: w.cycleNumber,
+                    king: w.king, restaurant: w.restaurant, day: w.day,
+                })),
             timesAsKing: kingWeeks.length,
             ratingsGiven: memberGivenRatings.length,
             averageRatingGiven,
