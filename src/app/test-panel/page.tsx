@@ -3,16 +3,14 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { Shield, Bell, Send, CheckCircle, Bug, Gamepad2, ArrowLeft, RefreshCw } from "lucide-react";
+import { Shield, Bell, Send, CheckCircle, Bug, ArrowLeft, RefreshCw } from "lucide-react";
 import { services, VALID_NAMES } from "@/lib/services";
-import HungryKingsArena from "@/components/HungryKingsArena";
 import Link from "next/link";
 
 export default function TestPanel() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [isGameOpen, setIsGameOpen] = useState(false);
     const [output, setOutput] = useState<string[]>([]);
 
     // Auth guard
@@ -103,16 +101,7 @@ export default function TestPanel() {
                             اختبار الميزات
                         </h2>
                         <div className="space-y-3">
-                            <button
-                                onClick={() => {
-                                    log("Launching Minigame...");
-                                    setIsGameOpen(true);
-                                }}
-                                className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 py-3 px-4 rounded-xl flex items-center justify-between transition-colors"
-                            >
-                                <span>تشغيل اللعبة المصغرة (صراع الملوك)</span>
-                                <Gamepad2 className="w-4 h-4 text-amber-400" />
-                            </button>
+                            <p className="text-sm text-slate-500">لا توجد اختبارات فعّالة حالياً.</p>
                         </div>
                     </div>
                 </div>
@@ -137,12 +126,6 @@ export default function TestPanel() {
                 </div>
             </div>
 
-            {/* Render Game Modal for testing */}
-            <HungryKingsArena
-                isOpen={isGameOpen}
-                onClose={() => setIsGameOpen(false)}
-                userName={user.name!}
-            />
         </div>
     );
 }

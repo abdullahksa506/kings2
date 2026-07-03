@@ -723,30 +723,6 @@ export const services = {
         return Array.isArray(result) ? result : [];
     },
 
-    // --- Suggestions (Anonymous, Dean-only visible) ---
-    async submitSuggestion(text: string) {
-        return invokeRpc("submitSuggestion", { text });
-    },
-
-    async getAllSuggestions(): Promise<Suggestion[]> {
-        const snap = await getDocs(collection(db, "suggestions"));
-        const suggestions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Suggestion));
-        return suggestions.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
-    },
-
-    // --- Public Chat Board ---
-    async sendChatMessage(userName: string, text: string) {
-        return invokeRpc("sendChatMessage", { userName, text });
-    },
-
-    listenToChatMessages(callback: (messages: ChatMessage[]) => void) {
-        const q = query(collection(db, "chatMessages"), orderBy("createdAt", "desc"), limit(50));
-        return onSnapshot(q, (snap) => {
-            const messages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
-            callback(messages);
-        });
-    },
-
     listenToPublicUserProfiles(callback: (profiles: PublicUserProfile[]) => void) {
         let stopped = false;
 

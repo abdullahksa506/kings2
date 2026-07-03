@@ -14,7 +14,7 @@ function fmt(n: number): string {
     return String(n);
 }
 import { toast } from "sonner";
-import { WeekSession, VALID_NAMES, services, ChatMessage, Suggestion, FUTURE_FEATURE_SEEDS } from "@/lib/services";
+import { WeekSession, VALID_NAMES, services, FUTURE_FEATURE_SEEDS } from "@/lib/services";
 import { impromptuServices, ImpromptuMeetup } from "@/lib/impromptuServices";
 
 /**
@@ -457,13 +457,9 @@ export default function TikTokFeedView({
     const [leaderboard, setLeaderboard] = useState<{ name: string; avg: number; weeks: number }[]>([]);
     const [bathroomTop, setBathroomTop] = useState<{ restaurant: string; avg: number; count: number }[]>([]);
     const [recentRestaurants, setRecentRestaurants] = useState<{ name: string; king: string | null; week: number }[]>([]);
-    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-    const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-    const [suggestionText, setSuggestionText] = useState("");
     const [stats, setStats] = useState<{
         totalOutings: number;
         uniqueRestaurants: number;
-        suggestionsCount: number;
         avgAttendance: number;
         mostKing?: { name: string; count: number } | null;
         highestRatedKing?: { name: string; score: number } | null;
@@ -537,26 +533,14 @@ export default function TikTokFeedView({
             setBathroomTop(list);
         }).catch(() => {});
 
-        // Live chat
-        const unsub = services.listenToChatMessages((msgs) => {
-            setChatMessages(msgs.slice(-5).reverse());
-        });
-
         // Live impromptu meetup
         const unsubImpromptu = impromptuServices.listenToActiveMeetup((m) => setImpromptu(m));
-
-        // Suggestions list (just last few for preview)
-        services.getAllSuggestions().then((rows) => {
-            const sorted = [...rows].sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
-            setSuggestions(sorted.slice(0, 5));
-        }).catch(() => {});
 
         // Statistics totals
         services.getStatistics().then((s) => {
             setStats({
                 totalOutings: s?.totalOutings ?? 0,
                 uniqueRestaurants: s?.uniqueRestaurants ?? 0,
-                suggestionsCount: s?.suggestionsCount ?? 0,
                 avgAttendance: s?.avgAttendancePerWeek ?? 0,
                 mostKing: s?.funFacts?.mostKing ?? null,
                 highestRatedKing: s?.funFacts?.highestRatedKing ?? null,
@@ -564,7 +548,6 @@ export default function TikTokFeedView({
         }).catch(() => {});
 
         return () => {
-            try { unsub(); } catch {}
             try { unsubImpromptu(); } catch {}
         };
     }, []);
@@ -648,22 +631,6 @@ export default function TikTokFeedView({
             onRatedBathroomPast?.();
         } catch (e) {
             toast.error("ما قدرنا نسجل تقييم الحمّام");
-            console.error(e);
-        } finally {
-            setBusy(null);
-        }
-    };
-
-    const sendSuggestion = async () => {
-        const text = suggestionText.trim();
-        if (!text || busy) return;
-        setBusy("suggest");
-        try {
-            await services.submitSuggestion(text);
-            setSuggestionText("");
-            toast.success("شكراً! اقتراحك وصل للعميد ✨");
-        } catch (e) {
-            toast.error("ما قدرنا نرسل");
             console.error(e);
         } finally {
             setBusy(null);
@@ -1225,44 +1192,6 @@ export default function TikTokFeedView({
         ),
     });
 
-    // ── Live chat card ──
-    cards.push({
-        id: "chat",
-        render: () => (
-            <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-700 flex items-center justify-center">
-                <span className="absolute opacity-10 text-[400px] select-none">💬</span>
-                <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
-                    <p className="text-2xl font-bold mb-1 drop-shadow-2xl">💬 آخر الرسائل</p>
-                    <p className="text-xs text-white/80 mb-4">من شات الجلسة</p>
-                    {chatMessages.length === 0 ? (
-                        <p className="text-white/85 text-sm">ما فيه رسائل بعد</p>
-                    ) : (
-                        <div className="space-y-2 text-right">
-                            {chatMessages.map((m) => (
-                                <div key={m.id} className="rounded-2xl px-4 py-3 bg-white/15 backdrop-blur">
-                                    <div className="flex items-start gap-3">
-                                        <span className="text-2xl">💬</span>
-                                        <div className="flex-1 text-right">
-                                            <p className="font-bold text-sm text-pink-200">{m.nickName || m.userName}</p>
-                                            <p className="text-sm line-clamp-2">{m.text}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-                <CaptionOverlay
-                    username="group_chat"
-                    caption="كلام الجلسة هنا 🗨️"
-                    music={tracks[10]?.title}
-                    artist={tracks[10]?.artist}
-                />
-                <ActionRail profile="💬" playing={!muted && audioReady} {...railProps("chat")} />
-            </div>
-        ),
-    });
-
     // ── Rate past meal card (RatingForm inline) ──
     if (pastWeek && pastWeek.restaurant && pastWeek.ratingEnabled !== false && isMember && currentWeek?.king !== userName) {
         cards.push({
@@ -1528,10 +1457,6 @@ export default function TikTokFeedView({
                                 <p className="text-4xl font-black">{stats.avgAttendance}</p>
                                 <p className="text-xs text-white/85 mt-1">معدل الحضور</p>
                             </div>
-                            <div className="rounded-2xl px-3 py-4 bg-white/15 backdrop-blur">
-                                <p className="text-4xl font-black">{stats.suggestionsCount}</p>
-                                <p className="text-xs text-white/85 mt-1">اقتراح</p>
-                            </div>
                             {stats.mostKing && (
                                 <div className="rounded-2xl px-3 py-3 bg-white/15 backdrop-blur col-span-2">
                                     <p className="text-xs text-white/70">👑 أكثر واحد كان ملك</p>
@@ -1562,51 +1487,6 @@ export default function TikTokFeedView({
         ),
     });
 
-    // ── Suggestions card (inline input) ──
-    cards.push({
-        id: "suggest",
-        render: () => (
-            <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-pink-500 via-rose-600 to-red-700 flex items-center justify-center">
-                <span className="absolute opacity-10 text-[400px] select-none">💡</span>
-                <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
-                    <p className="text-2xl font-bold mb-1 drop-shadow-2xl">💡 صندوق الاقتراحات</p>
-                    <p className="text-xs text-white/80 mb-4">للعميد فقط (مجهول)</p>
-                    {suggestions.length > 0 && (
-                        <div className="space-y-1.5 text-right mb-3">
-                            {suggestions.slice(0, 3).map((s) => (
-                                <div key={s.id} className="rounded-xl px-3 py-2 bg-white/15 backdrop-blur text-sm line-clamp-2">
-                                    {s.text}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    <div className="flex gap-2">
-                        <input
-                            value={suggestionText}
-                            onChange={(e) => setSuggestionText(e.target.value)}
-                            placeholder="اكتب اقتراحك..."
-                            className="flex-1 bg-white/15 backdrop-blur border border-white/30 rounded-full px-4 py-2 text-white text-sm outline-none placeholder:text-white/60"
-                            dir="rtl"
-                        />
-                        <button
-                            onClick={sendSuggestion}
-                            disabled={busy !== null || !suggestionText.trim()}
-                            className="bg-white text-rose-700 font-black px-4 py-2 rounded-full text-sm disabled:opacity-50"
-                        >
-                            أرسل
-                        </button>
-                    </div>
-                </div>
-                <CaptionOverlay
-                    username="suggestion_box"
-                    caption="عندك فكرة؟ ارمها هنا 📝"
-                    music={tracks[7]?.title}
-                    artist={tracks[7]?.artist}
-                />
-                <ActionRail profile="💡" playing={!muted && audioReady} {...railProps("suggest")} />
-            </div>
-        ),
-    });
 
     // ── Future Features Voting card ──
     cards.push({

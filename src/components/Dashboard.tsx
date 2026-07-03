@@ -11,7 +11,7 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, VALID_NAMES, invokeRpc, PublicUserProfile } from "@/lib/services";
-import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, PlayCircle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users, KeyRound, LogOut, Palette, Brain } from "lucide-react";
+import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users, KeyRound, LogOut, Palette, Brain } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { usePrankMode } from "@/hooks/usePrankMode";
@@ -22,19 +22,14 @@ const Leaderboard = dynamic(() => import("./Leaderboard"), { ssr: false });
 const GlobalLeaderboard = dynamic(() => import("./GlobalLeaderboard"), { ssr: false });
 const KingsLeaderboard = dynamic(() => import("./KingsLeaderboard"), { ssr: false });
 const ConstitutionModal = dynamic(() => import("./ConstitutionModal"), { ssr: false });
-// Heavy panels/games — code-split so they only load when first opened.
-const HungryKingsArena = dynamic(() => import("./HungryKingsArena"), { ssr: false });
-const RoyalDuelArena = dynamic(() => import("./RoyalDuelArena"), { ssr: false });
-const CoupArena = dynamic(() => import("./CoupArena"), { ssr: false });
+// Heavy panels — code-split so they only load when first opened.
 const RestaurantMapPanel = dynamic(() => import("./RestaurantMapPanel"), { ssr: false });
 // Bathroom tab + secondary panels — lazy.
 const BathroomRatingForm = dynamic(() => import("./BathroomRatingForm"), { ssr: false });
 const BathroomRatingsDisplay = dynamic(() => import("./BathroomRatingsDisplay"), { ssr: false });
 const BathroomLeaderboard = dynamic(() => import("./BathroomLeaderboard"), { ssr: false });
-const SuggestionBox = dynamic(() => import("./SuggestionBox"), { ssr: false });
 const WhisperPanel = dynamic(() => import("./WhisperPanel"), { ssr: false });
 const SecurityLogPanel = dynamic(() => import("./SecurityLogPanel"), { ssr: false });
-const ChatBoard = dynamic(() => import("./ChatBoard"), { ssr: false });
 const StatisticsPanel = dynamic(() => import("./StatisticsPanel"), { ssr: false });
 import SmartReminders from "./SmartReminders";
 import RestaurantVotingPanel from "./RestaurantVotingPanel";
@@ -47,7 +42,7 @@ const PrankEffects = dynamic(() => import("./PrankEffects"), { ssr: false });
 const TikTokSettings = dynamic(() => import("./TikTokSettings"), { ssr: false });
 const WhatsNewPopup = dynamic(() => import("./WhatsNewPopup"), { ssr: false });
 import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
-import { Gamepad2, Bath, UploadCloud, BarChart3, Swords, Sparkles } from "lucide-react";
+import { Bath, UploadCloud, BarChart3, Sparkles } from "lucide-react";
 const RatingsExplorer = dynamic(() => import("./RatingsExplorer"), { ssr: false });
 const MemberProfilePanel = dynamic(() => import("./MemberProfilePanel"), { ssr: false });
 import Link from "next/link";
@@ -501,9 +496,6 @@ export default function Dashboard() {
     const [isConstitutionOpen, setIsConstitutionOpen] = useState(false);
 
     // Mini-game State
-    const [isGameOpen, setIsGameOpen] = useState(false);
-    const [isDuelOpen, setIsDuelOpen] = useState(false);
-    const [isCoupOpen, setIsCoupOpen] = useState(false);
 
     // Statistics State
     const [isStatsOpen, setIsStatsOpen] = useState(false);
@@ -2262,75 +2254,6 @@ export default function Dashboard() {
                                 </div>
                             )}
 
-                            {/* Mini-Game Banner */}
-                            <div className="bg-gradient-to-br from-rose-900/40 to-slate-900 border border-rose-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
-                                <div className="absolute -right-10 -top-10 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl group-hover:bg-rose-500/20 transition-all duration-500" />
-                                <div className="relative z-10">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="bg-rose-500/20 p-2 rounded-xl text-rose-400">
-                                            <Swords className="w-6 h-6" />
-                                        </div>
-                                        <h3 className="font-bold text-xl text-white">Duel Royale 1v1</h3>
-                                    </div>
-                                    <p className="text-sm text-slate-300 mb-5 leading-relaxed">
-                                        لعبة 1 ضد 1 بأسلوب كلاش رويال: مسارين، إكسير، بطاقات، وتدمير الأبراج. مصممة للجوال بالكامل.
-                                    </p>
-                                    <button
-                                        onClick={() => setIsDuelOpen(true)}
-                                        className="w-full bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-500/20"
-                                    >
-                                        <PlayCircle className="w-5 h-5 fill-current" />
-                                        ادخل 1v1 الآن
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Mini-Game Banner — Coup */}
-                            <div className="bg-gradient-to-br from-rose-900/40 to-slate-900 border border-rose-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
-                                <div className="absolute -right-10 -top-10 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl group-hover:bg-rose-500/20 transition-all duration-500" />
-                                <div className="relative z-10">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="bg-rose-500/20 p-2 rounded-xl text-rose-400">
-                                            <Swords className="w-6 h-6" />
-                                        </div>
-                                        <h3 className="font-bold text-xl text-white">Coup — انقلاب 🎭</h3>
-                                    </div>
-                                    <p className="text-sm text-slate-300 mb-5 leading-relaxed">
-                                        لعبة خداع وذكاء لـ 2-4 لاعبين. ادّعِ الشخصيات، اكذب، وتحدّى خصومك — مع دردشة صوتية داخل اللعبة!
-                                    </p>
-                                    <button
-                                        onClick={() => setIsCoupOpen(true)}
-                                        className="w-full bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-500/20"
-                                    >
-                                        <PlayCircle className="w-5 h-5 fill-current" />
-                                        ادخل الحلبة
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Mini-Game Banner */}
-                            <div className="bg-gradient-to-br from-amber-900/40 to-slate-900 border border-amber-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
-                                <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all duration-500" />
-                                <div className="relative z-10">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="bg-amber-500/20 p-2 rounded-xl text-amber-500">
-                                            <Gamepad2 className="w-6 h-6" />
-                                        </div>
-                                        <h3 className="font-bold text-xl text-white">صراع الملوك الجياع</h3>
-                                    </div>
-                                    <p className="text-sm text-slate-300 mb-5 leading-relaxed">
-                                        لعبة أونلاين جماعية. ادخل الحلبة، اجمع البرجر 🍔، ونافس الشباب على المركز الأول!
-                                    </p>
-                                    <button
-                                        onClick={() => setIsGameOpen(true)}
-                                        className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
-                                    >
-                                        <PlayCircle className="w-5 h-5 fill-current" />
-                                        العب الآن
-                                    </button>
-                                </div>
-                            </div>
-
                             {/* Constitution */}
                             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl text-center flex flex-col items-center">
                                 <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mb-4 border border-amber-500/20">
@@ -2354,12 +2277,6 @@ export default function Dashboard() {
 
                             {/* Security log — global requests + stats (anyone can view) */}
                             <SecurityLogPanel />
-
-                            {/* Suggestion Box */}
-                            <SuggestionBox isDean={user?.role === "dean"} />
-
-                            {/* Chat Board */}
-                            <ChatBoard userName={user?.name || ""} />
 
                             <div className="flex justify-center pt-2 pb-4">
                                 <button
@@ -2436,30 +2353,6 @@ export default function Dashboard() {
                 <ConstitutionModal
                     isOpen={isConstitutionOpen}
                     onClose={() => setIsConstitutionOpen(false)}
-                />
-            )}
-
-            {user && isGameOpen && (
-                <HungryKingsArena
-                    isOpen={isGameOpen}
-                    onClose={() => setIsGameOpen(false)}
-                    userName={user.name}
-                />
-            )}
-
-            {user && isDuelOpen && (
-                <RoyalDuelArena
-                    isOpen={isDuelOpen}
-                    onClose={() => setIsDuelOpen(false)}
-                    userName={user.name}
-                />
-            )}
-
-            {user && isCoupOpen && (
-                <CoupArena
-                    isOpen={isCoupOpen}
-                    onClose={() => setIsCoupOpen(false)}
-                    userName={user.name}
                 />
             )}
 

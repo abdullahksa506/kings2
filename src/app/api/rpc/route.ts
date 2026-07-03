@@ -8,9 +8,6 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import * as admin from 'firebase-admin';
 import { hashPassword } from "@/lib/hash";
-import * as coup from "@/lib/coup/engine";
-import { encryptState, decryptState } from "@/lib/coup/secret";
-import { ActionType, Character, CoupGameState, ResponseType } from "@/lib/coup/types";
 import { sendPushNotification } from "@/lib/pushHelper";
 import { planOuting } from "@/lib/outingPlanner";
 
@@ -35,18 +32,9 @@ const RATE_LIMIT_RULES: Record<string, RateLimitRule> = {
     endRestaurantVoting: { limit: 5, windowMs: 60 * 1000 },
     overrideRestaurantResult: { limit: 5, windowMs: 60 * 1000 },
     cancelRestaurantVoting: { limit: 5, windowMs: 60 * 1000 },
-    submitSuggestion: { limit: 12, windowMs: 60 * 1000 },
-    sendChatMessage: { limit: 30, windowMs: 60 * 1000 },
     submitFeatureVote: { limit: 30, windowMs: 60 * 1000 },
     setFeatureRemoved: { limit: 20, windowMs: 60 * 1000 },
     recordActivity: { limit: 40, windowMs: 60 * 1000 },
-    coupAction: { limit: 60, windowMs: 60 * 1000 },
-    coupRespond: { limit: 120, windowMs: 60 * 1000 },
-    coupTick: { limit: 120, windowMs: 60 * 1000 },
-    coupGetHand: { limit: 120, windowMs: 60 * 1000 },
-    coupReaction: { limit: 60, windowMs: 60 * 1000 },
-    coupVoiceSignal: { limit: 400, windowMs: 60 * 1000 },
-    coupVoiceState: { limit: 60, windowMs: 60 * 1000 },
     setRestaurantLocation: { limit: 20, windowMs: 60 * 1000 },
     deleteRestaurantLocation: { limit: 20, windowMs: 60 * 1000 },
     mergeRestaurantNames: { limit: 30, windowMs: 60 * 1000 },
@@ -183,65 +171,9 @@ function authPasswordMatches(dbPassword: unknown, clientToken: unknown): boolean
     return false;
 }
 
-// ---------- Coup helpers ----------
-
-const COUP_VALID_ACTIONS: ActionType[] = [
-    "income", "foreign_aid", "coup", "tax", "assassinate", "steal", "exchange",
-];
-const COUP_VALID_RESPONSES: ResponseType[] = ["pass", "challenge", "block"];
-const COUP_VALID_CHARACTERS: Character[] = ["duke", "assassin", "captain", "ambassador", "contessa"];
-
-function coupRoomRef(roomId: string) {
-    return adminDb.collection("coupRooms").doc(roomId);
-}
-
 // Deterministic, path-safe doc id for the restaurantLocations collection.
 function restaurantSlug(name: string): string {
     return name.normalize("NFKC").replace(/[\/\.\#\$\[\]]/g, "_").trim().slice(0, 120) || "restaurant";
-}
-
-function validRoomId(id: unknown): string {
-    const s = asTrimmedString(id).toUpperCase();
-    if (!/^[A-Z0-9]{4,6}$/.test(s)) throw new Error("رمز غرفة غير صالح");
-    return s;
-}
-
-async function loadCoupState(roomId: string): Promise<CoupGameState> {
-    const snap = await coupRoomRef(roomId).get();
-    if (!snap.exists) throw new Error("الغرفة غير موجودة");
-    const enc = snap.data()?.enc;
-    if (typeof enc !== "string") throw new Error("بيانات الغرفة تالفة");
-    return decryptState(enc);
-}
-
-async function saveCoupState(state: CoupGameState): Promise<void> {
-    const pub = coup.redactPublic(state);
-    await coupRoomRef(state.roomId).set({
-        ...pub,
-        enc: encryptState(state),
-        lastActivityAt: Timestamp.now(),
-    });
-}
-
-// Self-healing: advance any expired response windows before applying a new action.
-function runCoupTimeouts(state: CoupGameState): boolean {
-    let changed = false;
-    for (let i = 0; i < 12; i++) {
-        if (!coup.handleTimeout(state)) break;
-        changed = true;
-    }
-    return changed;
-}
-
-async function generateCoupRoomId(): Promise<string> {
-    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    for (let attempt = 0; attempt < 8; attempt++) {
-        let code = "";
-        for (let i = 0; i < 4; i++) code += alphabet[Math.floor(Math.random() * alphabet.length)];
-        const snap = await coupRoomRef(code).get();
-        if (!snap.exists) return code;
-    }
-    throw new Error("تعذّر إنشاء رمز غرفة، حاول مرة أخرى");
 }
 
 export async function POST(request: Request) {
@@ -1307,22 +1239,6 @@ export async function POST(request: Request) {
                 await deanRef.update({ trustedDevices });
                 return NextResponse.json({ result: true });
 
-            case "submitSuggestion":
-                await adminDb.collection("suggestions").add({ text: payload.text, createdAt: Timestamp.now() });
-                return NextResponse.json({ result: true });
-
-            case "sendChatMessage":
-                if (authName !== payload.userName) throw new Error("Identity mismatch");
-                await adminDb.collection("chatMessages").add({
-                    userName: payload.userName,
-                    nickName: typeof userDocData?.nickName === "string" ? userDocData.nickName : payload.userName,
-                    profileImage: typeof userDocData?.profileImage === "string" ? userDocData.profileImage : null,
-                    showProfileImage: typeof userDocData?.showProfileImage === "boolean" ? userDocData.showProfileImage : true,
-                    text: payload.text,
-                    createdAt: Timestamp.now()
-                });
-                return NextResponse.json({ result: true });
-
             case "recordVisit":
                 const today = new Date().toISOString().split("T")[0];
                 await adminDb.collection("siteVisits").add({ date: today, timestamp: Timestamp.now() });
@@ -1465,164 +1381,6 @@ export async function POST(request: Request) {
                 return NextResponse.json({ result: { deletedWeekId: weekId, deletedRatingsCount } });
             }
 
-            // ---------- COUP ----------
-            case "coupCreateRoom": {
-                if (!authName) throw new Error("Unauthorized");
-                const roomId = await generateCoupRoomId();
-                const state = coup.createGame(roomId, authName);
-                await saveCoupState(state);
-                return NextResponse.json({ result: { roomId } });
-            }
-
-            case "coupJoinRoom": {
-                if (!authName) throw new Error("Unauthorized");
-                const roomId = validRoomId(payload?.roomId);
-                const state = await loadCoupState(roomId);
-                coup.addPlayer(state, authName);
-                await saveCoupState(state);
-                return NextResponse.json({ result: { roomId } });
-            }
-
-            case "coupLeaveRoom": {
-                if (!authName) throw new Error("Unauthorized");
-                const roomId = validRoomId(payload?.roomId);
-                const state = await loadCoupState(roomId);
-                coup.removePlayer(state, authName);
-                if (state.players.length === 0) {
-                    await coupRoomRef(roomId).delete();
-                } else {
-                    await saveCoupState(state);
-                }
-                return NextResponse.json({ result: true });
-            }
-
-            case "coupStartGame": {
-                if (!authName) throw new Error("Unauthorized");
-                const roomId = validRoomId(payload?.roomId);
-                const state = await loadCoupState(roomId);
-                coup.startGame(state, authName);
-                await saveCoupState(state);
-                return NextResponse.json({ result: true });
-            }
-
-            case "coupAction": {
-                if (!authName) throw new Error("Unauthorized");
-                const roomId = validRoomId(payload?.roomId);
-                const type = asTrimmedString(payload?.type) as ActionType;
-                if (!COUP_VALID_ACTIONS.includes(type)) throw new Error("إجراء غير صالح");
-                const target = payload?.target ? asTrimmedString(payload.target) : undefined;
-                const state = await loadCoupState(roomId);
-                runCoupTimeouts(state);
-                coup.performAction(state, authName, type, target);
-                await saveCoupState(state);
-                return NextResponse.json({ result: true });
-            }
-
-            case "coupRespond": {
-                if (!authName) throw new Error("Unauthorized");
-                const roomId = validRoomId(payload?.roomId);
-                const response = asTrimmedString(payload?.response) as ResponseType;
-                if (!COUP_VALID_RESPONSES.includes(response)) throw new Error("رد غير صالح");
-                let blockCharacter: Character | undefined;
-                if (response === "block") {
-                    blockCharacter = asTrimmedString(payload?.blockCharacter) as Character;
-                    if (!COUP_VALID_CHARACTERS.includes(blockCharacter)) throw new Error("شخصية صدّ غير صالحة");
-                }
-                const state = await loadCoupState(roomId);
-                runCoupTimeouts(state);
-                coup.respond(state, authName, response, blockCharacter);
-                await saveCoupState(state);
-                return NextResponse.json({ result: true });
-            }
-
-            case "coupResolveLose": {
-                if (!authName) throw new Error("Unauthorized");
-                const roomId = validRoomId(payload?.roomId);
-                const cardIndex = Number(payload?.cardIndex);
-                if (!Number.isInteger(cardIndex) || cardIndex < 0 || cardIndex > 1) throw new Error("اختيار غير صالح");
-                const state = await loadCoupState(roomId);
-                runCoupTimeouts(state);
-                coup.resolveLose(state, authName, cardIndex);
-                await saveCoupState(state);
-                return NextResponse.json({ result: true });
-            }
-
-            case "coupResolveExchange": {
-                if (!authName) throw new Error("Unauthorized");
-                const roomId = validRoomId(payload?.roomId);
-                const keepIndices = Array.isArray(payload?.keepIndices)
-                    ? payload.keepIndices.map((n: any) => Number(n)).filter((n: number) => Number.isInteger(n))
-                    : [];
-                const state = await loadCoupState(roomId);
-                runCoupTimeouts(state);
-                coup.resolveExchange(state, authName, keepIndices);
-                await saveCoupState(state);
-                return NextResponse.json({ result: true });
-            }
-
-            case "coupReaction": {
-                if (!authName) throw new Error("Unauthorized");
-                const roomId = validRoomId(payload?.roomId);
-                const emoji = asTrimmedString(payload?.emoji);
-                if (!emoji) throw new Error("إيموجي مطلوب");
-                const state = await loadCoupState(roomId);
-                coup.addReaction(state, authName, emoji);
-                await saveCoupState(state);
-                return NextResponse.json({ result: true });
-            }
-
-            case "coupGetHand": {
-                if (!authName) throw new Error("Unauthorized");
-                const roomId = validRoomId(payload?.roomId);
-                const state = await loadCoupState(roomId);
-                return NextResponse.json({ result: coup.getHandFor(state, authName) });
-            }
-
-            case "coupTick": {
-                if (!authName) throw new Error("Unauthorized");
-                const roomId = validRoomId(payload?.roomId);
-                const state = await loadCoupState(roomId);
-                if (runCoupTimeouts(state)) {
-                    await saveCoupState(state);
-                }
-                return NextResponse.json({ result: true });
-            }
-
-            case "coupVoiceState": {
-                if (!authName) throw new Error("Unauthorized");
-                const roomId = validRoomId(payload?.roomId);
-                await coupRoomRef(roomId).collection("voice").doc(authName).set({
-                    name: authName,
-                    joined: Boolean(payload?.joined),
-                    muted: Boolean(payload?.muted),
-                    atMs: Date.now(),
-                });
-                return NextResponse.json({ result: true });
-            }
-
-            case "coupVoiceSignal": {
-                if (!authName) throw new Error("Unauthorized");
-                const roomId = validRoomId(payload?.roomId);
-                const to = asTrimmedString(payload?.to);
-                const signal = payload?.signal;
-                if (!to || !signal || typeof signal !== "object") throw new Error("إشارة غير صالحة");
-                const signalsCol = coupRoomRef(roomId).collection("signals");
-                await signalsCol.add({
-                    from: authName,
-                    to,
-                    signal: JSON.stringify(signal).slice(0, 8000),
-                    atMs: Date.now(),
-                });
-                // Prune old signals so the subcollection stays small.
-                const cutoff = Date.now() - 2 * 60 * 1000;
-                const old = await signalsCol.where("atMs", "<", cutoff).limit(20).get();
-                if (!old.empty) {
-                    const batch = adminDb.batch();
-                    old.forEach((d) => batch.delete(d.ref));
-                    await batch.commit();
-                }
-                return NextResponse.json({ result: true });
-            }
 
             // ---------- RESTAURANT MAP ----------
             case "setRestaurantLocation": {
