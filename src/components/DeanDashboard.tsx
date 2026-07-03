@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, Rating, VALID_NAMES } from "@/lib/services";
-import { Star, ShieldAlert, BarChart3, KeyRound, Users, CheckCircle2, Bell, Lock, RefreshCw, Trash2, MapPinOff } from "lucide-react";
+import { Star, ShieldAlert, BarChart3, KeyRound, Users, CheckCircle2, Bell, Lock, RefreshCw, Trash2, MapPinOff, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import ExportDataButton from "./ExportDataButton";
@@ -132,6 +132,19 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
 
     return (
         <div className="mt-6 pt-6 border-t border-amber-900/50">
+            {/* ⚠️ REMOVABLE: قارئ المانجا المترجم (تجريبي) — لحذف الميزة كاملة:
+                احذف هذا الـ Link + مجلد src/app/manga + مجلد src/app/api/manga. لا يعتمد عليه شي. */}
+            <Link href="/manga" className="mb-6 flex items-center justify-between gap-3 bg-gradient-to-br from-indigo-900/40 to-violet-900/30 border border-indigo-500/30 hover:border-indigo-400/60 rounded-2xl p-4 transition group">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-indigo-500/20 border border-indigo-500/40 text-xl">📖</div>
+                    <div className="text-right">
+                        <h3 className="text-sm font-bold text-indigo-200">قارئ المانجا المترجم</h3>
+                        <p className="text-[11px] text-indigo-300/60">ابحث · اقرأ · ترجمة عربية تلقائية (تجريبي)</p>
+                    </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-indigo-300 rotate-180 group-hover:-translate-x-1 transition-transform" />
+            </Link>
+
             {/* Cycle Organizer — fix cycles, week numbers, random flags, junk */}
             <CycleOrganizer />
 
