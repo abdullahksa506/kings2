@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { requireDean, MD_API, mdFetchJson, vxFetchJson, pickTitle } from "../_lib";
+import { requireDean, MD_API, WC_BASE, mdFetchJson, vxFetchJson, wcFetchText, pickTitle } from "../_lib";
 
 export const runtime = "nodejs";
 
@@ -48,6 +48,32 @@ async function searchVortex(q: string) {
     }));
 }
 
+async function searchWeeb(q: string) {
+    const html = await wcFetchText(
+        `${WC_BASE}/search/data?text=${encodeURIComponent(q)}&sort=Best+Match&order=Descending&official=Any&anime=Any&adult=Any&display_mode=Full+Display`,
+    );
+    const seen = new Set<string>();
+    const out: any[] = [];
+    const re = /\/series\/([A-Z0-9]+)\/([^"?]+)/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(html)) !== null && out.length < 12) {
+        const id = m[1];
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const title = decodeURIComponent(m[2]).replace(/[-_]+/g, " ").trim();
+        out.push({
+            id,
+            source: "weeb" as const,
+            title: title || "بدون عنوان",
+            year: null,
+            coverUrl: `https://temp.compsci88.com/cover/normal/${id}.webp`,
+            availableLangs: [],
+            kind: "WC",
+        });
+    }
+    return out;
+}
+
 export async function GET(request: Request) {
     const denied = await requireDean(request);
     if (denied) return denied;
@@ -56,14 +82,15 @@ export async function GET(request: Request) {
     if (!q) return NextResponse.json({ error: "اكتب اسم المانجا" }, { status: 400 });
     if (q.length > 120) return NextResponse.json({ error: "البحث طويل" }, { status: 400 });
 
-    // Both sources in parallel; one failing doesn't sink the other.
-    const [md, vx] = await Promise.allSettled([searchMangaDex(q), searchVortex(q)]);
+    // All sources in parallel; one failing doesn't sink the others.
+    const [md, vx, wc] = await Promise.allSettled([searchMangaDex(q), searchVortex(q), searchWeeb(q)]);
     const results = [
         ...(md.status === "fulfilled" ? md.value : []),
         ...(vx.status === "fulfilled" ? vx.value : []),
+        ...(wc.status === "fulfilled" ? wc.value : []),
     ];
 
-    if (results.length === 0 && md.status === "rejected" && vx.status === "rejected") {
+    if (results.length === 0 && md.status === "rejected" && vx.status === "rejected" && wc.status === "rejected") {
         return NextResponse.json({ error: "تعذّر البحث الآن، حاول بعد شوي" }, { status: 502 });
     }
     return NextResponse.json({ results });

@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { requireDean, MD_API, mdFetchJson, vxFetchJson } from "../_lib";
+import { requireDean, MD_API, WC_BASE, mdFetchJson, vxFetchJson, wcFetchText } from "../_lib";
 
 export const runtime = "nodejs";
 
@@ -26,18 +26,30 @@ async function vortexPages(chapterId: string): Promise<string[]> {
     return imgs.filter((u) => typeof u === "string");
 }
 
+async function weebPages(chapterId: string): Promise<string[]> {
+    if (!/^[A-Z0-9]{10,40}$/.test(chapterId)) throw new Error("معرّف فصل غير صالح");
+    const html = await wcFetchText(
+        `${WC_BASE}/chapters/${chapterId}/images?is_prev=False&current_page=1&reading_style=long_strip`,
+    );
+    const out: string[] = [];
+    const re = /src="(https?:\/\/[^"]+\.(?:webp|jpg|jpeg|png))"/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(html)) !== null) out.push(m[1]);
+    return out;
+}
+
 export async function GET(request: Request) {
     const denied = await requireDean(request);
     if (denied) return denied;
 
     const sp = new URL(request.url).searchParams;
-    const source = sp.get("source") === "vortex" ? "vortex" : "mangadex";
+    const source = sp.get("source") || "mangadex";
     const chapterId = sp.get("chapterId")?.trim() || "";
     if (!chapterId) return NextResponse.json({ error: "معرّف فصل غير صالح" }, { status: 400 });
 
     try {
-        const pages = source === "vortex"
-            ? await vortexPages(chapterId)
+        const pages = source === "vortex" ? await vortexPages(chapterId)
+            : source === "weeb" ? await weebPages(chapterId)
             : await mangadexPages(chapterId);
         if (pages.length === 0) return NextResponse.json({ error: "ما فيه صفحات لهذا الفصل" }, { status: 404 });
         return NextResponse.json({ pages, count: pages.length });

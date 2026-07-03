@@ -19,7 +19,12 @@ export const MD_API = "https://api.mangadex.org";
 export const VX_API = "https://vortexscans.vercel.app/api/v1";
 export const VX_UA = "Mozilla/5.0 (compatible; KingOfThursday/1.0)";
 
-export type MangaSource = "mangadex" | "vortex";
+// WeebCentral — huge manga/manhwa/manhua aggregator. No JSON API, so we scrape
+// its (stable) server-rendered HTML. Reachable from a datacenter (unlike Comick).
+export const WC_BASE = "https://weebcentral.com";
+export const WC_UA = "Mozilla/5.0 (compatible; KingOfThursday/1.0)";
+
+export type MangaSource = "mangadex" | "vortex" | "weeb";
 
 /** Gate every manga route behind the dean role. Returns null when allowed. */
 export async function requireDean(request: Request): Promise<NextResponse | null> {
@@ -41,7 +46,9 @@ export function isAllowedImageHost(rawUrl: string): boolean {
             h.endsWith(".mangadex.org") ||
             h.endsWith(".mangadex.network") ||
             h === "storage.vortexscans.org" ||
-            h.endsWith(".vortexscans.org")
+            h.endsWith(".vortexscans.org") ||
+            h.endsWith(".planeptune.us") ||        // WeebCentral page images
+            h.endsWith(".compsci88.com")           // WeebCentral covers
         );
     } catch {
         return false;
@@ -56,6 +63,16 @@ export async function vxFetchJson(path: string): Promise<any> {
     });
     if (!res.ok) throw new Error(`Vortex ${res.status}`);
     return res.json();
+}
+
+/** Fetch server-rendered HTML from WeebCentral. */
+export async function wcFetchText(url: string): Promise<string> {
+    const res = await fetch(url, {
+        headers: { "User-Agent": WC_UA, Referer: `${WC_BASE}/` },
+        signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) throw new Error(`WeebCentral ${res.status}`);
+    return res.text();
 }
 
 /** Fetch JSON from the MangaDex API with the UA header + a timeout. */
