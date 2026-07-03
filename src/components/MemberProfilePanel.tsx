@@ -56,10 +56,11 @@ export default function MemberProfilePanel({ isOpen, onClose, currentUserName }:
                 ) : (
                     <div className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <Item label="عدد المشاركات" value={`${profile.totalWeeksParticipated}`} />
-                            <Item label="نسبة الحضور" value={`${profile.attendanceRate}%`} />
-                            <Item label="حضور" value={`${profile.attendedCount}`} />
-                            <Item label="اعتذارات" value={`${profile.absentCount}`} />
+                            <Item label="إجمالي الطلعات" value={`${profile.totalWeeksParticipated}`} />
+                            <Item label="نسبة الحضور المؤكّد" value={`${profile.attendanceRate}%`} />
+                            <Item label="حضور مؤكّد" value={`${profile.attendedCount}`} />
+                            <Item label="اعتذارات مسجّلة" value={`${profile.absentCount}`} />
+                            <Item label="بدون تسجيل رد" value={`${profile.noResponseCount}`} />
                             <Item label="مرات الملك" value={`${profile.timesAsKing}`} />
                             <Item label="عدد التقييمات" value={`${profile.ratingsGiven}`} />
                             <Item label="متوسط التقييم المعطى" value={`${profile.averageRatingGiven} ⭐`} />

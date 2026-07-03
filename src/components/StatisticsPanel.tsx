@@ -162,13 +162,14 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                                                     <span>👑 ملك {m.timesAsKing}x</span>
                                                     <span>✅ حضور {m.attended}</span>
                                                     <span>❌ اعتذار {m.absent}</span>
+                                                    {m.noResponse > 0 && <span className="text-slate-500">⏳ بدون تسجيل {m.noResponse}</span>}
                                                 </div>
                                             </div>
                                             <div className="text-left flex-shrink-0">
                                                 <div className={`text-lg font-bold ${attendanceRate >= 80 ? 'text-emerald-400' : attendanceRate >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
                                                     {attendanceRate}%
                                                 </div>
-                                                <p className="text-[10px] text-slate-500">نسبة الحضور</p>
+                                                <p className="text-[10px] text-slate-500">حضور مؤكّد</p>
                                             </div>
                                         </div>
                                     );
@@ -762,7 +763,7 @@ function AttendanceTrendChart({ data }: { data: WeeklyTrendPoint[] }) {
 function MemberAttendanceBarChart({
     memberStats,
 }: {
-    memberStats: Record<string, { attended: number; absent: number; totalWeeks: number; timesAsKing: number }>;
+    memberStats: Record<string, { attended: number; absent: number; noResponse: number; totalWeeks: number; timesAsKing: number }>;
 }) {
     const rows = VALID_NAMES.map((name) => {
         const m = memberStats[name];

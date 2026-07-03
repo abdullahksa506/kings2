@@ -175,6 +175,7 @@ export interface MemberProfileData {
     attendanceRate: number;
     attendedCount: number;
     absentCount: number;
+    noResponseCount: number;
     timesAsKing: number;
     ratingsGiven: number;
     averageRatingGiven: number;
@@ -554,16 +555,20 @@ export const services = {
         // Only competitive outings count toward a member's attendance/participation
         // (random & junk weeks are organizational and must not pollute profiles).
         const completedWeeks = allWeeksWithAvg.map(w => w.week).filter(isCompetitiveWeek);
-        // Present-unless-absent over ALL completed outings (see getStatistics). Every
-        // member is part of every outing; they're PRESENT unless they excused
-        // themselves (in absentees). `responded` is a live-RSVP field only and is not
-        // used here — gating on it wrongly dropped members who came without tapping.
+        // Only count what was ACTUALLY recorded (see getStatistics). Three honest
+        // buckets: confirmed present / recorded absence / no record.
         const memberWeeks = completedWeeks; // denominator = every outing in the period
         const attendedWeeks = completedWeeks.filter(week =>
-            week.king === memberName || !(week.absentees || []).includes(memberName)
+            week.king === memberName ||
+            ((week.responded || []).includes(memberName) && !(week.absentees || []).includes(memberName))
         );
         const absentWeeks = completedWeeks.filter(week =>
             week.king !== memberName && (week.absentees || []).includes(memberName)
+        );
+        const noResponseWeeks = completedWeeks.filter(week =>
+            week.king !== memberName &&
+            !(week.absentees || []).includes(memberName) &&
+            !(week.responded || []).includes(memberName)
         );
         const attendanceRate = memberWeeks.length > 0 ? Math.round((attendedWeeks.length / memberWeeks.length) * 100) : 0;
 
@@ -613,6 +618,7 @@ export const services = {
         return {
             name: memberName,
             totalWeeksParticipated: memberWeeks.length,
+            noResponseCount: noResponseWeeks.length,
             attendanceRate,
             attendedCount: attendedWeeks.length,
             absentCount: absentWeeks.length,
@@ -881,10 +887,11 @@ export const services = {
         // (i.e. are in `absentees`). We do NOT gate on `responded` here — that field
         // only tracks live RSVP taps, so a member who came but never tapped "حاضر"
         // was wrongly dropped from the counts. The king is always present.
+        // Confirmed attendees only (king or tapped "حاضر"), consistent with memberStats.
         const attendedCountForWeek = (week: WeekSession): number => {
             return VALID_NAMES.filter((name) => {
                 if (week.king === name) return true;
-                return !(week.absentees || []).includes(name);
+                return (week.responded || []).includes(name) && !(week.absentees || []).includes(name);
             }).length;
         };
 
@@ -898,16 +905,24 @@ export const services = {
         }
 
         // --- Compute member stats ---
+        // We only ever count what was ACTUALLY recorded — the app can't know an
+        // absence that nobody registered. Three honest buckets per member/week:
+        //  attended  = confirmed present (king, or tapped "حاضر")
+        //  absent    = recorded absence  (tapped "معتذر" → in absentees)
+        //  noResponse= no record at all  (never tapped anything that week)
+        // This stops the old lie of "attended everything" for members whose real
+        // absences were never registered.
         const memberStats: Record<string, {
             timesAsKing: number;
             attended: number;
             absent: number;
+            noResponse: number;
             totalWeeks: number;
             ratingsGiven: number;
         }> = {};
 
         for (const name of VALID_NAMES) {
-            memberStats[name] = { timesAsKing: 0, attended: 0, absent: 0, totalWeeks: 0, ratingsGiven: 0 };
+            memberStats[name] = { timesAsKing: 0, attended: 0, absent: 0, noResponse: 0, totalWeeks: 0, ratingsGiven: 0 };
         }
 
         for (const week of completedWeeks) {
@@ -915,13 +930,15 @@ export const services = {
                 memberStats[week.king].timesAsKing++;
             }
             for (const name of VALID_NAMES) {
-                // Every member is part of every completed outing → present unless
-                // they excused themselves (absentees). King is always present.
                 memberStats[name].totalWeeks++;
-                if (name !== week.king && (week.absentees || []).includes(name)) {
-                    memberStats[name].absent++;
+                if (name === week.king) {
+                    memberStats[name].attended++;               // king is always present
+                } else if ((week.absentees || []).includes(name)) {
+                    memberStats[name].absent++;                 // recorded absence
+                } else if ((week.responded || []).includes(name)) {
+                    memberStats[name].attended++;               // confirmed present
                 } else {
-                    memberStats[name].attended++;
+                    memberStats[name].noResponse++;             // no record
                 }
             }
         }
@@ -1022,7 +1039,7 @@ export const services = {
         }
         for (const week of sortedWeeks) {
             for (const name of VALID_NAMES) {
-                const wasPresent = name === week.king || !(week.absentees || []).includes(name);
+                const wasPresent = name === week.king || ((week.responded || []).includes(name) && !(week.absentees || []).includes(name));
                 if (wasPresent) {
                     streaks[name].current++;
                     streaks[name].max = Math.max(streaks[name].max, streaks[name].current);
