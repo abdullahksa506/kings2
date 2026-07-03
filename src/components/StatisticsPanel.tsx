@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { services, VALID_NAMES, MemberActivityStat } from "@/lib/services";
 import {
     BarChart3, Eye, Castle, Users, UtensilsCrossed,
@@ -20,20 +22,32 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
 
     useEffect(() => {
         if (!isOpen) return;
+        let alive = true;
         setLoading(true);
-        services.getStatistics().then(data => {
-            setStats(data);
-            setLoading(false);
-        }).catch(e => {
-            console.error("Failed to load stats:", e);
-            setLoading(false);
-        });
+
+        const load = () => {
+            services.getStatistics().then(data => {
+                if (!alive) return;
+                setStats(data);
+                setLoading(false);
+            }).catch(e => {
+                console.error("Failed to load stats:", e);
+                if (alive) setLoading(false);
+            });
+        };
+
+        // Live: recompute whenever ANY week changes — new outing, attendance update,
+        // or completion — so the stats stay current after every طلعة without reopening.
+        const unsub = onSnapshot(collection(db, "weeks"), () => { if (alive) load(); }, () => load());
+
         services.getActivityStats().then(data => {
-            setActivityStats(data);
+            if (alive) setActivityStats(data);
         }).catch(e => {
             console.error("Failed to load activity stats:", e);
-            setActivityStats([]);
+            if (alive) setActivityStats([]);
         });
+
+        return () => { alive = false; unsub(); };
     }, [isOpen]);
 
     if (!isOpen) return null;
@@ -333,6 +347,40 @@ export default function StatisticsPanel({ isOpen, onClose }: StatisticsPanelProp
                                 {stats.restaurantIntelligence.avoidCandidates.map((r: any) => (
                                     <FunFactRow key={`avoid-${r.restaurant}`} icon="⚠️" label="مطعم يحتاج مراجعة" value={`${r.restaurant} (${r.avgScore}⭐)`} />
                                 ))}
+                            </div>
+                        </div>
+
+                        {/* Missed outings per member */}
+                        <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-red-500/20 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+                            <div className="absolute -left-8 -bottom-8 w-28 h-28 bg-red-500/10 rounded-full blur-2xl" />
+                            <div className="flex items-center gap-2 mb-4 relative z-10">
+                                <X className="w-5 h-5 text-red-400" />
+                                <h3 className="font-bold text-red-300 text-lg">الطلعات اللي ما حضرها كل واحد ❌</h3>
+                            </div>
+                            <p className="text-[11px] text-slate-500 mb-3 relative z-10">اعتذارات مسجّلة فقط (اللي ضغط فيها "معتذر")</p>
+                            <div className="space-y-3 relative z-10">
+                                {VALID_NAMES.map((name) => {
+                                    const missed = (stats.memberMissedOutings?.[name] || []) as any[];
+                                    return (
+                                        <div key={name} className="bg-slate-950/60 border border-slate-800/50 rounded-xl p-3">
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="font-bold text-white text-sm">{name}</span>
+                                                <span className={`text-xs font-bold ${missed.length === 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                    {missed.length === 0 ? 'ما تغيّب ولا طلعة مسجّلة ✅' : `غاب ${missed.length} طلعة`}
+                                                </span>
+                                            </div>
+                                            {missed.length > 0 && (
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {missed.map((o) => (
+                                                        <span key={o.weekId} className="text-[10px] bg-red-500/10 border border-red-500/20 text-red-200/90 rounded-lg px-2 py-1">
+                                                            دورة {o.cycleNumber} · {o.restaurant || o.king || '—'}{o.day ? ` · ${o.day}` : ''}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 

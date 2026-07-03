@@ -930,8 +930,13 @@ export const services = {
             ratingsGiven: number;
         }> = {};
 
+        // Per-member list of the actual outings they missed (recorded absence).
+        type MissedOuting = { weekId: string; weekNumber: number; cycleNumber: number; king: string | null; restaurant: string | null; day: string | null };
+        const memberMissedOutings: Record<string, MissedOuting[]> = {};
+
         for (const name of VALID_NAMES) {
             memberStats[name] = { timesAsKing: 0, attended: 0, absent: 0, noResponse: 0, totalWeeks: 0, ratingsGiven: 0 };
+            memberMissedOutings[name] = [];
         }
 
         for (const week of completedWeeks) {
@@ -944,12 +949,21 @@ export const services = {
                     memberStats[name].attended++;               // king is always present
                 } else if ((week.absentees || []).includes(name)) {
                     memberStats[name].absent++;                 // recorded absence
+                    memberMissedOutings[name].push({
+                        weekId: week.id, weekNumber: week.weekNumber, cycleNumber: week.cycleNumber,
+                        king: week.king, restaurant: week.restaurant, day: week.day,
+                    });
                 } else if ((week.responded || []).includes(name)) {
                     memberStats[name].attended++;               // confirmed present
                 } else {
                     memberStats[name].noResponse++;             // no record
                 }
             }
+        }
+
+        // Newest missed outing first.
+        for (const name of VALID_NAMES) {
+            memberMissedOutings[name].sort((a, b) => (b.cycleNumber - a.cycleNumber) || (b.weekNumber - a.weekNumber));
         }
 
         // Count ratings per user
@@ -1400,6 +1414,7 @@ export const services = {
             currentWeekActive: pendingWeeks.length > 0,
             totalCycles: maxCycle,
             memberStats,
+            memberMissedOutings,
             weeklyTrend,
             sortedRestaurants,
             uniqueRestaurants,
