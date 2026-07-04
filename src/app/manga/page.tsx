@@ -359,7 +359,11 @@ export default function MangaPage() {
                         {loadingChapters ? (
                             <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
                         ) : chapters.length === 0 ? (
-                            <p className="text-center text-sm text-slate-500 py-6">ما فيه فصول متاحة — جرّب عنوان ثاني{manga.source === "mangadex" ? " أو لغة ثانية" : ""}.</p>
+                            <div className="text-center text-sm text-slate-500 py-6 space-y-2">
+                                <p>ما فيه فصول قابلة للقراءة من هذا المصدر
+                                    {manga.source === "mangadex" ? " (غالباً مستضافة خارجياً)" : ""}.</p>
+                                <p className="text-xs text-emerald-400">💡 ارجع للبحث واختر نفس العنوان من المصدر الأخضر <span className="font-bold">WC</span> — عنده أكبر مكتبة وأكمل فصول.</p>
+                            </div>
                         ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[60vh] overflow-y-auto pr-1">
                                 {chapters.map((c) => (

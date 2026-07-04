@@ -83,11 +83,14 @@ export async function GET(request: Request) {
     if (q.length > 120) return NextResponse.json({ error: "البحث طويل" }, { status: 400 });
 
     // All sources in parallel; one failing doesn't sink the others.
+    // WeebCentral first: it has the biggest, most complete catalog — MangaDex often
+    // only has a few "external" (unreadable) chapters for licensed titles like One
+    // Piece, so leading with WC lands users on the version that actually has chapters.
     const [md, vx, wc] = await Promise.allSettled([searchMangaDex(q), searchVortex(q), searchWeeb(q)]);
     const results = [
+        ...(wc.status === "fulfilled" ? wc.value : []),
         ...(md.status === "fulfilled" ? md.value : []),
         ...(vx.status === "fulfilled" ? vx.value : []),
-        ...(wc.status === "fulfilled" ? wc.value : []),
     ];
 
     if (results.length === 0 && md.status === "rejected" && vx.status === "rejected" && wc.status === "rejected") {

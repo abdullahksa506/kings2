@@ -14,7 +14,7 @@ async function mangadexChapters(mangaId: string, lang: string) {
     const url =
         `${MD_API}/manga/${mangaId}/feed` +
         `?translatedLanguage[]=${encodeURIComponent(lang)}` +
-        `&order[chapter]=asc&limit=100&offset=0` +
+        `&order[chapter]=asc&limit=500&offset=0` +
         `&contentRating[]=safe&contentRating[]=suggestive&contentRating[]=erotica` +
         `&includes[]=scanlation_group`;
     const data = await mdFetchJson(url);
