@@ -145,6 +145,19 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
                 <ChevronRight className="w-5 h-5 text-indigo-300 rotate-180 group-hover:-translate-x-1 transition-transform" />
             </Link>
 
+            {/* ⚠️ REMOVABLE: أفلام ليلة الخميس (بيانات IMDb) — لحذف الميزة:
+                احذف هذا الـ Link + مجلد src/app/movies + مجلد src/app/api/movies. */}
+            <Link href="/movies" className="mb-6 flex items-center justify-between gap-3 bg-gradient-to-br from-amber-900/40 to-orange-900/30 border border-amber-500/30 hover:border-amber-400/60 rounded-2xl p-4 transition group">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-500/40 text-xl">🎬</div>
+                    <div className="text-right">
+                        <h3 className="text-sm font-bold text-amber-200">أفلام ليلة الخميس</h3>
+                        <p className="text-[11px] text-amber-300/60">ابحث · تقييمات IMDb · تريلر (بيانات فقط)</p>
+                    </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-amber-300 rotate-180 group-hover:-translate-x-1 transition-transform" />
+            </Link>
+
             {/* Cycle Organizer — fix cycles, week numbers, random flags, junk */}
             <CycleOrganizer />
 
