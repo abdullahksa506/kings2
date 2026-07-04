@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronRight, Search, Loader2, BookOpen, Upload, Languages, ArrowRight, Eye, EyeOff } from "lucide-react";
 
-type MangaSource = "mangadex" | "vortex" | "weeb";
+type MangaSource = "mangadex" | "vortex" | "weeb" | "pill";
 interface MangaResult { id: string; source: MangaSource; title: string; year: number | null; coverUrl: string | null; availableLangs: string[]; kind?: string; }
 interface Chapter { id: string; chapter: string | null; title: string; pages: number; }
 interface Block { ar: string; x: number; y: number; w: number; h: number; }
@@ -327,7 +327,7 @@ export default function MangaPage() {
                                 <div className="aspect-[3/4] rounded-xl overflow-hidden border border-slate-800 group-hover:border-indigo-500 transition relative">
                                     {m.coverUrl ? <AuthImg src={proxied(m.coverUrl)} alt={m.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-800 flex items-center justify-center"><BookOpen className="w-6 h-6 text-slate-600" /></div>}
                                     {m.kind && (
-                                        <span className={`absolute top-1 right-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white ${m.source === "vortex" ? "bg-fuchsia-600/90" : m.source === "weeb" ? "bg-emerald-600/90" : "bg-indigo-600/90"}`}>{m.kind}</span>
+                                        <span className={`absolute top-1 right-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white ${m.source === "vortex" ? "bg-fuchsia-600/90" : m.source === "weeb" ? "bg-emerald-600/90" : m.source === "pill" ? "bg-cyan-600/90" : "bg-indigo-600/90"}`}>{m.kind}</span>
                                     )}
                                 </div>
                                 <p className="text-[11px] mt-1 line-clamp-2 text-slate-300">{m.title}{m.year ? ` (${m.year})` : ""}</p>

@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { requireDean, MD_API, WC_BASE, mdFetchJson, vxFetchJson, wcFetchText } from "../_lib";
+import { requireDean, MD_API, WC_BASE, MP_BASE, mdFetchJson, vxFetchJson, wcFetchText, mpFetchText } from "../_lib";
 
 export const runtime = "nodejs";
 
@@ -44,6 +44,24 @@ async function weebChapters(seriesId: string) {
     return out.reverse();
 }
 
+async function pillChapters(mangaId: string) {
+    if (!/^[a-z0-9/-]+$/i.test(mangaId)) throw new Error("معرّف غير صالح");
+    const html = await mpFetchText(`${MP_BASE}/manga/${mangaId}`);
+    const seen = new Set<string>();
+    const out: any[] = [];
+    const re = /\/chapters\/([0-9-]+\/[a-z0-9-]+)/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(html)) !== null) {
+        const cid = m[1];
+        if (seen.has(cid)) continue;
+        seen.add(cid);
+        const numMatch = cid.match(/chapter-([0-9.]+)/i);
+        out.push({ id: cid, chapter: numMatch ? numMatch[1] : "؟", title: "", pages: 1 });
+    }
+    // MangaPill lists newest-first → ascending.
+    return out.reverse();
+}
+
 async function vortexChapters(slug: string) {
     const data = await vxFetchJson(`/manga/${encodeURIComponent(slug)}/chapters`);
     return (data?.data?.chapters || [])
@@ -71,6 +89,7 @@ export async function GET(request: Request) {
     try {
         const chapters = source === "vortex" ? await vortexChapters(mangaId)
             : source === "weeb" ? await weebChapters(mangaId)
+            : source === "pill" ? await pillChapters(mangaId)
             : await mangadexChapters(mangaId, lang);
         return NextResponse.json({ chapters, total: chapters.length });
     } catch (e) {

@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { requireDean, MD_UA, isAllowedImageHost } from "../_lib";
+import { requireDean, MD_UA, isAllowedImageHost, refererFor } from "../_lib";
 
 export const runtime = "nodejs";
 
@@ -58,7 +58,7 @@ function parseArray(text: string): any {
 }
 
 async function imageUrlToBase64(src: string): Promise<{ b64: string; mime: string }> {
-    const res = await fetch(src, { headers: { "User-Agent": MD_UA, Referer: "https://mangadex.org/" }, signal: AbortSignal.timeout(20000) });
+    const res = await fetch(src, { headers: { "User-Agent": MD_UA, Referer: refererFor(src) }, signal: AbortSignal.timeout(20000) });
     if (!res.ok) throw new Error(`image fetch ${res.status}`);
     const mime = res.headers.get("content-type") || "image/jpeg";
     const buf = Buffer.from(await res.arrayBuffer());

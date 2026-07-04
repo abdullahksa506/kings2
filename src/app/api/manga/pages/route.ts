@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { requireDean, MD_API, WC_BASE, mdFetchJson, vxFetchJson, wcFetchText } from "../_lib";
+import { requireDean, MD_API, WC_BASE, MP_BASE, mdFetchJson, vxFetchJson, wcFetchText, mpFetchText } from "../_lib";
 
 export const runtime = "nodejs";
 
@@ -24,6 +24,17 @@ async function vortexPages(chapterId: string): Promise<string[]> {
     const data = await vxFetchJson(`/chapter/${chapterId}`);
     const imgs: string[] = data?.data?.images || [];
     return imgs.filter((u) => typeof u === "string");
+}
+
+async function pillPages(chapterId: string): Promise<string[]> {
+    if (!/^[a-z0-9/-]+$/i.test(chapterId)) throw new Error("معرّف فصل غير صالح");
+    const html = await mpFetchText(`${MP_BASE}/chapters/${chapterId}`);
+    const out: string[] = [];
+    // MangaPill lazy-loads page images via data-src.
+    const re = /data-src="(https?:\/\/[^"]+\.(?:webp|jpg|jpeg|png))"/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(html)) !== null) out.push(m[1]);
+    return out;
 }
 
 async function weebPages(chapterId: string): Promise<string[]> {
@@ -50,6 +61,7 @@ export async function GET(request: Request) {
     try {
         const pages = source === "vortex" ? await vortexPages(chapterId)
             : source === "weeb" ? await weebPages(chapterId)
+            : source === "pill" ? await pillPages(chapterId)
             : await mangadexPages(chapterId);
         if (pages.length === 0) return NextResponse.json({ error: "ما فيه صفحات لهذا الفصل" }, { status: 404 });
         return NextResponse.json({ pages, count: pages.length });

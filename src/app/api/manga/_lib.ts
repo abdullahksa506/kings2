@@ -24,7 +24,22 @@ export const VX_UA = "Mozilla/5.0 (compatible; KingOfThursday/1.0)";
 export const WC_BASE = "https://weebcentral.com";
 export const WC_UA = "Mozilla/5.0 (compatible; KingOfThursday/1.0)";
 
-export type MangaSource = "mangadex" | "vortex" | "weeb";
+// MangaPill — another big manga aggregator (scraped HTML). Extra coverage/redundancy.
+export const MP_BASE = "https://mangapill.com";
+export const MP_UA = "Mozilla/5.0 (compatible; KingOfThursday/1.0)";
+
+export type MangaSource = "mangadex" | "vortex" | "weeb" | "pill";
+
+/** The Referer header a given image host requires (some CDNs hotlink-protect). */
+export function refererFor(rawUrl: string): string {
+    try {
+        const h = new URL(rawUrl).hostname.toLowerCase();
+        if (h.endsWith("readdetectiveconan.com")) return `${MP_BASE}/`;
+        if (h.endsWith("planeptune.us") || h.endsWith("compsci88.com")) return `${WC_BASE}/`;
+        if (h.endsWith("vortexscans.org")) return "https://vortexscans.org/";
+    } catch { /* fall through */ }
+    return "https://mangadex.org/";
+}
 
 /** Gate every manga route behind the dean role. Returns null when allowed. */
 export async function requireDean(request: Request): Promise<NextResponse | null> {
@@ -48,7 +63,8 @@ export function isAllowedImageHost(rawUrl: string): boolean {
             h === "storage.vortexscans.org" ||
             h.endsWith(".vortexscans.org") ||
             h.endsWith(".planeptune.us") ||        // WeebCentral page images
-            h.endsWith(".compsci88.com")           // WeebCentral covers
+            h.endsWith(".compsci88.com") ||        // WeebCentral covers
+            h.endsWith(".readdetectiveconan.com")  // MangaPill images + covers
         );
     } catch {
         return false;
@@ -72,6 +88,16 @@ export async function wcFetchText(url: string): Promise<string> {
         signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) throw new Error(`WeebCentral ${res.status}`);
+    return res.text();
+}
+
+/** Fetch server-rendered HTML from MangaPill. */
+export async function mpFetchText(url: string): Promise<string> {
+    const res = await fetch(url, {
+        headers: { "User-Agent": MP_UA, Referer: `${MP_BASE}/` },
+        signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) throw new Error(`MangaPill ${res.status}`);
     return res.text();
 }
 

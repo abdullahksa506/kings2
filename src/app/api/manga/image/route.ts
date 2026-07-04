@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { requireDean, MD_UA, isAllowedImageHost } from "../_lib";
+import { requireDean, MD_UA, isAllowedImageHost, refererFor } from "../_lib";
 
 export const runtime = "nodejs";
 
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
     try {
         const upstream = await fetch(src, {
-            headers: { "User-Agent": MD_UA, Referer: "https://mangadex.org/" },
+            headers: { "User-Agent": MD_UA, Referer: refererFor(src) },
             signal: AbortSignal.timeout(20000),
         });
         if (!upstream.ok || !upstream.body) {

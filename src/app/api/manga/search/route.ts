@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { requireDean, MD_API, WC_BASE, mdFetchJson, vxFetchJson, wcFetchText, pickTitle } from "../_lib";
+import { requireDean, MD_API, WC_BASE, MP_BASE, mdFetchJson, vxFetchJson, wcFetchText, mpFetchText, pickTitle } from "../_lib";
 
 export const runtime = "nodejs";
 
@@ -74,6 +74,36 @@ async function searchWeeb(q: string) {
     return out;
 }
 
+async function searchPill(q: string) {
+    const html = await mpFetchText(`${MP_BASE}/search?q=${encodeURIComponent(q)}`);
+    // Build id → cover map from the deterministic cover URLs in the page.
+    const coverMap = new Map<string, string>();
+    const cre = /\/file\/mangapill\/i\/(\d+)\.(jpe?g|png|webp)/g;
+    let cm: RegExpExecArray | null;
+    while ((cm = cre.exec(html)) !== null) {
+        if (!coverMap.has(cm[1])) coverMap.set(cm[1], `https://cdn.readdetectiveconan.com/file/mangapill/i/${cm[1]}.${cm[2]}`);
+    }
+    const seen = new Set<string>();
+    const out: any[] = [];
+    const re = /\/manga\/(\d+)\/([a-z0-9-]+)/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(html)) !== null && out.length < 12) {
+        const key = `${m[1]}/${m[2]}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({
+            id: key,                                  // "{id}/{slug}" — needed to build chapter URL
+            source: "pill" as const,
+            title: m[2].replace(/-/g, " ").trim(),
+            year: null,
+            coverUrl: coverMap.get(m[1]) || null,
+            availableLangs: [],
+            kind: "MP",
+        });
+    }
+    return out;
+}
+
 export async function GET(request: Request) {
     const denied = await requireDean(request);
     if (denied) return denied;
@@ -86,14 +116,15 @@ export async function GET(request: Request) {
     // WeebCentral first: it has the biggest, most complete catalog — MangaDex often
     // only has a few "external" (unreadable) chapters for licensed titles like One
     // Piece, so leading with WC lands users on the version that actually has chapters.
-    const [md, vx, wc] = await Promise.allSettled([searchMangaDex(q), searchVortex(q), searchWeeb(q)]);
+    const [md, vx, wc, mp] = await Promise.allSettled([searchMangaDex(q), searchVortex(q), searchWeeb(q), searchPill(q)]);
     const results = [
         ...(wc.status === "fulfilled" ? wc.value : []),
+        ...(mp.status === "fulfilled" ? mp.value : []),
         ...(md.status === "fulfilled" ? md.value : []),
         ...(vx.status === "fulfilled" ? vx.value : []),
     ];
 
-    if (results.length === 0 && md.status === "rejected" && vx.status === "rejected" && wc.status === "rejected") {
+    if (results.length === 0) {
         return NextResponse.json({ error: "تعذّر البحث الآن، حاول بعد شوي" }, { status: 502 });
     }
     return NextResponse.json({ results });
