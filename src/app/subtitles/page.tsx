@@ -60,18 +60,25 @@ export default function SubtitlesPage() {
     const [resultUrl, setResultUrl] = useState<string | null>(null);
     const [err, setErr] = useState("");
 
+    // Validate by CONTENT, not extension — iOS often can't select ".srt" when the
+    // input is restricted to that type, so we accept any file and check inside.
     const onUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (!/\.srt$/i.test(file.name)) { setErr("لازم ملف .srt"); return; }
-        setErr(""); setResultUrl(null); setDone(0);
+        setErr(""); setResultUrl(null); setDone(0); setCues([]);
         const reader = new FileReader();
         reader.onload = () => {
-            const parsed = parseSRT(String(reader.result || ""));
+            const raw = String(reader.result || "");
+            const parsed = parseSRT(raw);
+            if (parsed.length === 0) {
+                setErr("ما قدرنا نقرأ ملف ترجمة صحيح — تأكد إنه ملف .srt (فيه توقيتات -->).");
+                setFileName("");
+                return;
+            }
             setCues(parsed);
-            setFileName(file.name);
-            if (parsed.length === 0) setErr("ما قدرنا نقرأ الملف — تأكد إنه .srt صحيح");
+            setFileName(file.name || "subtitle.srt");
         };
+        reader.onerror = () => setErr("تعذّرت قراءة الملف");
         reader.readAsText(file, "utf-8");
     };
 
@@ -131,7 +138,7 @@ export default function SubtitlesPage() {
                     <Upload className="w-7 h-7 text-sky-400" />
                     <span className="font-bold">ارفع ملف الترجمة (.srt)</span>
                     <span className="text-[11px] text-slate-500">إنجليزي → عربي · كل سطر يُترجم</span>
-                    <input type="file" accept=".srt,text/plain" className="hidden" onChange={onUpload} />
+                    <input type="file" className="hidden" onChange={onUpload} />
                 </label>
 
                 {err && <p className="text-center text-sm text-rose-400">{err}</p>}
