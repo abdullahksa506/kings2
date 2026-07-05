@@ -43,7 +43,9 @@ function buildSRT(cues: Cue[], translated: string[]): string {
         .join("\n\n") + "\n";
 }
 
-const BATCH = 45;
+// Small batches (~under 500 chars) so every fallback provider can handle them,
+// incl. MyMemory. Requests are sequential + paced, gentle on rate limits.
+const BATCH = 8;
 
 export default function SubtitlesPage() {
     const { user, loading } = useAuth();

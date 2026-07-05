@@ -4,7 +4,7 @@
  * قال: "أترجم كل سطر... بس المشهد المحزن أترجمه وأنا أعيط بالداخل 😭🎬"
  *
  * ⚠️ ميزة معزولة — للعميد فقط. حذفها = حذف src/app/subtitles + src/app/api/subtitles + رابط العميد.
- * الترجمة عبر نقطة Google المجانية (نص فقط، بدون مفتاح ولا AI).
+ * الترجمة عبر خدمات مجانية (نص فقط، بدون مفتاح ولا AI) مع سلسلة احتياطية.
  */
 
 import { NextResponse } from "next/server";
@@ -12,8 +12,10 @@ import { authenticateServerRequest } from "@/lib/serverRequestAuth";
 
 export const runtime = "nodejs";
 
-const MAX_LINES = 50;         // per request
-const MAX_CHARS = 4000;       // guard the GET URL length
+const MAX_LINES = 60;
+const MAX_CHARS = 5000;
+const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
+const HDRS = { "User-Agent": UA, "Accept-Language": "ar,en;q=0.9", Accept: "*/*" };
 
 async function requireDean(request: Request): Promise<NextResponse | null> {
     const auth = await authenticateServerRequest(request, { allowedRoles: ["dean"] });
@@ -21,30 +23,66 @@ async function requireDean(request: Request): Promise<NextResponse | null> {
     return null;
 }
 
-// Translate a batch of lines EN→AR in one call using [[n]] markers so we can map
-// each translation back to its exact subtitle cue (Google preserves the markers).
-async function translateBatch(lines: string[]): Promise<string[]> {
-    const singleLine = lines.map((l) => l.replace(/\s*\n\s*/g, " ").trim());
-    const joined = singleLine.map((l, i) => `[[${i}]] ${l}`).join("\n");
+function flattenStrings(x: any): string {
+    if (typeof x === "string") return x;
+    if (Array.isArray(x)) return x.map(flattenStrings).join("");
+    return "";
+}
 
-    const url = new URL("https://translate.googleapis.com/translate_a/single");
-    url.search = new URLSearchParams({ client: "gtx", sl: "en", tl: "ar", dt: "t", q: joined }).toString();
-
-    const res = await fetch(url.toString(), {
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; KingOfThursday/1.0)" },
-        signal: AbortSignal.timeout(20000),
-    });
-    if (!res.ok) throw new Error(`translate ${res.status}`);
+// ── Free translation providers. Each returns the full translated text (with the
+// [[n]] markers preserved). We try them in order — datacenter IPs sometimes get
+// blocked by one but not another, so the fallback keeps the feature working. ──
+async function pGoogleSingle(q: string): Promise<string> {
+    const u = new URL("https://translate.googleapis.com/translate_a/single");
+    u.search = new URLSearchParams({ client: "gtx", sl: "en", tl: "ar", dt: "t", q }).toString();
+    const res = await fetch(u.toString(), { headers: HDRS, signal: AbortSignal.timeout(20000) });
+    if (!res.ok) throw new Error(`g1 ${res.status}`);
     const data = await res.json();
-    const full: string = (data?.[0] || []).map((s: any[]) => s?.[0] || "").join("");
+    return (data?.[0] || []).map((s: any[]) => s?.[0] || "").join("");
+}
 
-    // Split the translated text back by the [[n]] markers.
+async function pGoogleT(q: string): Promise<string> {
+    const u = new URL("https://clients5.google.com/translate_a/t");
+    u.search = new URLSearchParams({ client: "dict-chrome-ex", sl: "en", tl: "ar", q }).toString();
+    const res = await fetch(u.toString(), { headers: HDRS, signal: AbortSignal.timeout(20000) });
+    if (!res.ok) throw new Error(`g2 ${res.status}`);
+    const data = await res.json();
+    return flattenStrings(data?.[0] ?? data);
+}
+
+async function pMyMemory(q: string): Promise<string> {
+    const u = new URL("https://api.mymemory.translated.net/get");
+    const params: Record<string, string> = { q, langpair: "en|ar" };
+    if (process.env.MYMEMORY_EMAIL) params.de = process.env.MYMEMORY_EMAIL;
+    u.search = new URLSearchParams(params).toString();
+    const res = await fetch(u.toString(), { headers: HDRS, signal: AbortSignal.timeout(20000) });
+    if (!res.ok) throw new Error(`mm ${res.status}`);
+    const data = await res.json();
+    const t = data?.responseData?.translatedText;
+    if (!t || typeof t !== "string") throw new Error("mm empty");
+    return t;
+}
+
+async function translateJoined(q: string): Promise<string> {
+    const providers = [pGoogleSingle, pGoogleT, pMyMemory];
+    let lastErr = "";
+    for (const p of providers) {
+        try {
+            const out = await p(q);
+            if (out && out.trim()) return out;
+        } catch (e) { lastErr = (e as Error)?.message || "err"; }
+    }
+    throw new Error(`all providers failed: ${lastErr}`);
+}
+
+async function translateBatch(lines: string[]): Promise<string[]> {
+    const joined = lines.map((l, i) => `[[${i}]] ${l.replace(/\s*\n\s*/g, " ").trim()}`).join("\n");
+    const full = await translateJoined(joined);
+
     const parts: Record<number, string> = {};
     const re = /\[\[\s*(\d+)\s*\]\]\s*([\s\S]*?)(?=\[\[\s*\d+\s*\]\]|$)/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(full)) !== null) parts[Number(m[1])] = m[2].trim();
-
-    // Fallback to the original line if a marker went missing.
     return lines.map((orig, i) => parts[i] ?? orig);
 }
 
