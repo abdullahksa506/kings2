@@ -145,19 +145,6 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
                 <ChevronRight className="w-5 h-5 text-indigo-300 rotate-180 group-hover:-translate-x-1 transition-transform" />
             </Link>
 
-            {/* ⚠️ REMOVABLE: مترجم الترجمات SRT — لحذف الميزة:
-                احذف هذا الـ Link + مجلد src/app/subtitles + مجلد src/app/api/subtitles. */}
-            <Link href="/subtitles" className="mb-6 flex items-center justify-between gap-3 bg-gradient-to-br from-sky-900/40 to-cyan-900/30 border border-sky-500/30 hover:border-sky-400/60 rounded-2xl p-4 transition group">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-sky-500/20 border border-sky-500/40 text-xl">💬</div>
-                    <div className="text-right">
-                        <h3 className="text-sm font-bold text-sky-200">مترجم الترجمات (SRT)</h3>
-                        <p className="text-[11px] text-sky-300/60">ارفع ملف .srt إنجليزي → عربي · كل سطر</p>
-                    </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-sky-300 rotate-180 group-hover:-translate-x-1 transition-transform" />
-            </Link>
-
             {/* Cycle Organizer — fix cycles, week numbers, random flags, junk */}
             <CycleOrganizer />
 
