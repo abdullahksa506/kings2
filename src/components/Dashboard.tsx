@@ -14,7 +14,6 @@ import { services, WeekSession, VALID_NAMES, invokeRpc, PublicUserProfile } from
 import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users, KeyRound, LogOut, Palette, Brain } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { usePrankMode } from "@/hooks/usePrankMode";
 import RatingForm from "./RatingForm";
 const DeanDashboard = dynamic(() => import("./DeanDashboard"), { ssr: false });
 // Leaderboards — only the "leaderboard" tab uses these.
@@ -38,7 +37,6 @@ const OutingPlannerPanel = dynamic(() => import("./OutingPlannerPanel"), { ssr: 
 const FutureFeaturesVoting = dynamic(() => import("./FutureFeaturesVoting"), { ssr: false });
 const BentoWeekView = dynamic(() => import("./BentoWeekView"), { ssr: false });
 const TikTokFeedView = dynamic(() => import("./TikTokFeedView"), { ssr: false });
-const PrankEffects = dynamic(() => import("./PrankEffects"), { ssr: false });
 const TikTokSettings = dynamic(() => import("./TikTokSettings"), { ssr: false });
 const WhatsNewPopup = dynamic(() => import("./WhatsNewPopup"), { ssr: false });
 import { OrnamentalDivider, RoyalGoldFrame, CrownBadge } from "./RoyalDecor";
@@ -452,7 +450,6 @@ const THEME_META_COLOR: Record<ThemeKey, string> = {
 export default function Dashboard() {
     const WEEK_DAYS: Exclude<WeekSession["day"], null>[] = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
     const { user, logout, refreshUserProfile } = useAuth();
-    const prankConfig = usePrankMode(user?.name);
     const [currentWeek, setCurrentWeek] = useState<WeekSession | null>(null);
     const [pastWeek, setPastWeek] = useState<WeekSession | null>(null);
     const [hasRatedCurrentWeek, setHasRatedCurrentWeek] = useState(false);
@@ -1036,8 +1033,6 @@ export default function Dashboard() {
     return (
         <div data-theme={selectedTheme} className={`min-h-screen ${activeTheme.appBgClass} p-4 md:p-8 font-sans relative`}>
             <div className={`pointer-events-none absolute inset-0 ${activeThemeStyle.atmosphereClass}`} />
-            {/* Prank Effects — silent listener, only activates if dean enabled it for THIS user */}
-            <PrankEffects config={prankConfig} />
             {/* What's New popup — shows up to 4 times per member per VERSION */}
             <WhatsNewPopup userName={user?.name || ""} />
             {/* Version Badge & Secret Import */}
@@ -1516,6 +1511,31 @@ export default function Dashboard() {
                             >
                                 <Bell className="w-4 h-4" />
                                 تذكير الحاضرين بالتقييم
+                            </button>
+
+                            <button
+                                onClick={async () => {
+                                    if (!confirm("إرسال تنبيه أخير: التقييم يقفل بعد ٣٠ دقيقة؟ (يوصل فقط لمن لم يقيّم بعد)")) return;
+                                    setSaving(true);
+                                    try {
+                                        const res = await fetch("/api/reminders/rating-final-warning", {
+                                            method: "POST",
+                                            headers: getReminderAuthHeaders(),
+                                            body: JSON.stringify({ minutesUntilClose: 30 })
+                                        });
+                                        const data = await res.json();
+                                        alert(data.message || "تم إرسال التنبيه الأخير");
+                                    } catch (e) {
+                                        console.error("Failed to send final warning:", e);
+                                        alert("خطأ في إرسال التنبيه");
+                                    }
+                                    setSaving(false);
+                                }}
+                                disabled={saving || !(currentWeek?.ratingEnabled || pastWeek?.ratingEnabled)}
+                                className="bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 font-semibold py-2 px-4 rounded-xl flex items-center gap-2 transition-all w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Bell className="w-4 h-4" />
+                                تنبيه أخير: التقييم يقفل بعد ٣٠ دقيقة ⏰
                             </button>
 
                             <button

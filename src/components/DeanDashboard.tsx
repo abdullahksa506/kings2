@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import Link from "next/link";
 import ExportDataButton from "./ExportDataButton";
 import RestaurantNameCleanup from "./RestaurantNameCleanup";
-import DeanPrankPanel from "./DeanPrankPanel";
 import CycleOrganizer from "./CycleOrganizer";
 import DataIntegrityPanel from "./DataIntegrityPanel";
 import { canonRestaurant, deleteRestaurantLocation, listenToRestaurantLocations, RestaurantLocation } from "@/lib/mapServices";
@@ -153,8 +152,6 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
                 <DataIntegrityPanel />
             </div>
 
-            {/* Prank Mode — dean-only secret panel */}
-            <DeanPrankPanel deanName={user?.name || ""} />
 
             {orphanLocations.length > 0 && (
                 <div className="mb-6 bg-gradient-to-br from-rose-900/30 to-orange-900/30 border-2 border-rose-500/40 rounded-2xl p-5">
