@@ -9,6 +9,7 @@ import { adminDb } from "@/lib/firebase-admin";
 import * as admin from 'firebase-admin';
 import { hashPassword } from "@/lib/hash";
 import { sendPushNotification } from "@/lib/pushHelper";
+import { createNextWeek } from "@/lib/weekLifecycle.server";
 import { planOuting } from "@/lib/outingPlanner";
 
 const VALID_NAMES_RPC = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
@@ -232,75 +233,10 @@ export async function POST(request: Request) {
             // --- WEEKS ---
             case "startNewWeek": {
                 if (!isAdmin) throw new Error("Dean only");
-
-                // ── Server owns cycle + week numbering ── (client-passed numbers ignored)
-                const cfgSnap = await adminDb.collection("appConfig").doc("main").get();
-                let configuredCycle = Number(cfgSnap.exists ? (cfgSnap.data() as { currentCycle?: number } | undefined)?.currentCycle : undefined);
-                if (!Number.isInteger(configuredCycle) || configuredCycle <= 0) configuredCycle = 1;
-
-                // Scan every week once for: (a) clean max weekNumber, (b) lingering
-                // pending weeks to retire, (c) the newest completed week (to detect
-                // end-of-cycle).
-                const allWeeksSnap = await adminDb.collection("weeks").get();
-                let maxWeek = 0;
-                const stalePending: FirebaseFirestore.DocumentReference[] = [];
-                let newestCompleted: { ref: FirebaseFirestore.DocumentReference; isRandom: boolean; ms: number } | null = null;
-                allWeeksSnap.forEach((d) => {
-                    const w = d.data() as { weekNumber?: number; status?: string; isRandom?: boolean; createdAt?: FirebaseFirestore.Timestamp };
-                    const wn = Number(w?.weekNumber ?? 0);
-                    if (Number.isInteger(wn) && wn < 900 && wn > maxWeek) maxWeek = wn;
-                    if (w?.status === "pending") stalePending.push(d.ref);
-                    if (w?.status === "completed") {
-                        const ms = w.createdAt?.toMillis?.() ?? 0;
-                        if (!newestCompleted || ms > newestCompleted.ms) {
-                            newestCompleted = { ref: d.ref, isRandom: Boolean(w.isRandom), ms };
-                        }
-                    }
-                });
-                const weekNumber = maxWeek + 1;
-
-                // ── Auto-advance the cycle ── If the last completed outing was the
-                // random week, this new week opens the next cycle. The dead client-
-                // side "nextCycleNumber++" never worked because the server overrode it;
-                // now the server owns it and persists the advance to appConfig.
-                let cycleNumber = configuredCycle;
-                if (newestCompleted && (newestCompleted as { isRandom: boolean }).isRandom && !payload.isRandom) {
-                    cycleNumber = configuredCycle + 1;
-                    await adminDb.collection("appConfig").doc("main").set(
-                        { currentCycle: cycleNumber, updatedAt: Timestamp.now() },
-                        { merge: true },
-                    );
-                }
-
-                // ── Enforce a single pending week ── Any lingering pending weeks are
-                // stale duplicates (the just-finished week was already completed by the
-                // client). Retire them as "skipped" so they never pollute stats or get
-                // picked as the "current" week.
-                if (stalePending.length > 0) {
-                    const retireBatch = adminDb.batch();
-                    stalePending.forEach((ref) => retireBatch.update(ref, { status: "skipped" }));
-                    await retireBatch.commit();
-                }
-
-                const newWeekRef = adminDb.collection("weeks").doc();
-                const newWeek = {
-                    king: payload.kingName,
-                    isRandom: payload.isRandom,
-                    cycleNumber,
-                    weekNumber,
-                    day: null,
-                    dayVotingEnabled: true,
-                    dayVotes: {},
-                    restaurant: null,
-                    activity: null,
-                    status: "pending",
-                    ratingEnabled: false,
-                    absentees: [],
-                    responded: [],
-                    createdAt: Timestamp.now()
-                };
-                await newWeekRef.set(newWeek);
-                return NextResponse.json({ result: { id: newWeekRef.id, ...newWeek } });
+                // Shared logic (also used by the auto-advance automation) — single
+                // source of truth for cycle/week numbering + stale-pending cleanup.
+                const result = await createNextWeek(payload.kingName, payload.isRandom);
+                return NextResponse.json({ result });
             }
 
             case "setCurrentCycle": {

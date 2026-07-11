@@ -4,6 +4,7 @@ import { adminDb } from "@/lib/firebase-admin";
 import { sendPushNotification } from "@/lib/pushHelper";
 import * as admin from "firebase-admin";
 import { AutomationConfig, DEFAULT_AUTOMATION, mergeAutomation } from "@/lib/automation";
+import { createNextWeek, nextKingFor, daysSinceOuting } from "@/lib/weekLifecycle.server";
 
 /** Master automation config: stored doc merged over code defaults (default OFF). */
 async function getAutomationConfig(): Promise<AutomationConfig> {
@@ -277,6 +278,30 @@ async function handle(request: Request) {
                 // Write directly via admin (client SDK writes are blocked by rules).
                 await adminDb.collection("weeks").doc(week.id).update({ ratingEnabled: false });
                 log.push({ rule: ruleId, sent: 0, skipped: "rating-closed" });
+            }
+        }
+    }
+
+    // Rule 7: auto-start the NEXT week once this outing is fully done.
+    // Dean's rules: (1) only advance when the restaurant + day were actually chosen
+    // (the outing happened), (2) only after the real outing day (خميس/جمعة) has passed
+    // by N days — computed from createdAt so Thu/Fri never get confused, (3) rotation
+    // follows the CURRENT king so any manual king edit is respected.
+    if (
+        R.autoAdvanceWeek.on &&
+        week.status === "pending" &&
+        week.restaurant &&
+        week.day &&
+        !week.isRandom // random weeks have no restaurant decision; dean handles them
+    ) {
+        const since = daysSinceOuting((week as any).createdAt?.toMillis?.() ?? 0, week.day);
+        if (since !== null && since >= (R.autoAdvanceWeek.daysAfterOuting ?? 2)) {
+            const ruleId = `auto-advance-${week.id}`;
+            if (await shouldRunRule(ruleId, 24 * 60)) {
+                await adminDb.collection("weeks").doc(week.id).update({ status: "completed" });
+                const { kingName, isRandom } = nextKingFor(week);
+                const created = await createNextWeek(kingName, isRandom);
+                log.push({ rule: ruleId, sent: 0, skipped: `advanced→${kingName || "عشوائي"} (wk${created.weekNumber})` });
             }
         }
     }

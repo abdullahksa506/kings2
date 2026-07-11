@@ -12,8 +12,8 @@ export interface AutomationRule {
     day?: string;     // Riyadh weekday (الأربعاء…) — omit for "outing day" rules
     hourFrom?: number;// Riyadh hour window start (0-23)
     hourTo?: number;  // Riyadh hour window end (exclusive)
-    hoursAfterOpen?: number; // for autoCloseRating
-    minAttendees?: number;   // for autoPostpone
+    hoursAfterOpen?: number;   // for autoCloseRating
+    daysAfterOuting?: number;  // for autoAdvanceWeek
 }
 
 export interface AutomationConfig {
@@ -25,7 +25,7 @@ export interface AutomationConfig {
         ratingReminder: AutomationRule;
         ratingFinalWarning: AutomationRule;
         autoCloseRating: AutomationRule;
-        autoPostpone: AutomationRule;
+        autoAdvanceWeek: AutomationRule;  // تأجيل الطلعة يدوي فقط — هذا فقط بدء الأسبوع التالي
     };
 }
 
@@ -41,7 +41,9 @@ export const DEFAULT_AUTOMATION: AutomationConfig = {
         ratingReminder:     { on: true,  hourFrom: 19, hourTo: 21 },
         ratingFinalWarning: { on: true,  hourFrom: 22, hourTo: 23 },
         autoCloseRating:    { on: false, hoursAfterOpen: 48 },
-        autoPostpone:       { on: false, day: "الأربعاء", hourFrom: 22, hourTo: 23, minAttendees: 3 },
+        // بدء الأسبوع التالي تلقائياً بعد ما تخلص الطلعة (المطعم اختير + مرّ يوم الطلعة
+        // بـ daysAfterOuting). التدوير يتبع الملك الحالي فيحترم أي تعديل يدوي منك.
+        autoAdvanceWeek:    { on: false, daysAfterOuting: 2 },
     },
 };
 
