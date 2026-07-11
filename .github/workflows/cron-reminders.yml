@@ -1,0 +1,39 @@
+name: Reminder Cron
+
+# Pings the app's reminder engine on a schedule. The endpoint itself handles all
+# timing logic (Riyadh time, quiet hours 11pm-8am, per-rule dedupe), so a coarse
+# 10-minute tick is plenty — it does nothing outside the relevant windows.
+#
+# ⚙️ Setup (one time): add two repository secrets under
+#   Settings → Secrets and variables → Actions:
+#     - SITE_URL     e.g. https://king-thursday.online   (no trailing slash)
+#     - CRON_SECRET  the SAME value set in the app's Render env var CRON_SECRET
+#
+# Note: GitHub disables scheduled workflows after 60 days of repo inactivity.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *" # every 10 minutes (UTC)
+  workflow_dispatch: {} # allow manual runs for testing
+
+concurrency:
+  group: reminder-cron
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit reminder endpoint
+        run: |
+          if [ -z "${{ secrets.SITE_URL }}" ] || [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "⚠️ SITE_URL or CRON_SECRET secret not set — skipping."
+            exit 0
+          fi
+          code=$(curl -sS -X POST "${{ secrets.SITE_URL }}/api/cron/check-reminders" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -o /tmp/resp.json -w "%{http_code}" --max-time 60 || echo "000")
+          echo "HTTP $code"
+          cat /tmp/resp.json 2>/dev/null || true
+          # Don't fail the workflow on transient endpoint errors.
+          exit 0
