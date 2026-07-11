@@ -40,9 +40,11 @@ export function outingDate(week: WeekLike): Date | null {
     let outMs = ms;
     const target = week.day ? DAY_TO_IDX[week.day] : undefined;
     if (target !== undefined) {
+        // The week is created FIRST; the outing is the first خميس/جمعة on-or-after
+        // that (createdAt = week start, not the outing day). Snap FORWARD.
         const riyadhWeekday = new Date(ms + RIYADH_OFFSET_MS).getUTCDay();
-        const back = (riyadhWeekday - target + 7) % 7; // days to step back
-        outMs = ms - back * DAY_MS;
+        const forward = (target - riyadhWeekday + 7) % 7;
+        outMs = ms + forward * DAY_MS;
     }
     return new Date(outMs);
 }
