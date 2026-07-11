@@ -775,7 +775,7 @@ export async function POST(request: Request) {
                 if (!isAdmin) throw new Error("Dean only");
                 const adminWeekRef = adminDb.collection("weeks").doc(payload.weekId);
                 if (action === "secretlyChangeKing") await adminWeekRef.update({ king: payload.newKingName, isRandom: payload.newKingName === null });
-                if (action === "toggleRatingEnabled") await adminWeekRef.update({ ratingEnabled: payload.enabled });
+                if (action === "toggleRatingEnabled") await adminWeekRef.update({ ratingEnabled: payload.enabled, ...(payload.enabled ? { ratingEnabledAt: Timestamp.now() } : {}) });
                 if (action === "completeWeek") await adminWeekRef.update({ status: "completed" });
                 if (action === "uncompleteWeek") await adminWeekRef.update({ status: "pending" });
                 if (action === "resetCycleLeaderboard") await adminWeekRef.update({ cycleNumber: payload.newCycleNumber });

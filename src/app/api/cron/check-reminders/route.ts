@@ -3,6 +3,17 @@ import { services, VALID_NAMES } from "@/lib/services";
 import { adminDb } from "@/lib/firebase-admin";
 import { sendPushNotification } from "@/lib/pushHelper";
 import * as admin from "firebase-admin";
+import { AutomationConfig, DEFAULT_AUTOMATION, mergeAutomation } from "@/lib/automation";
+
+/** Master automation config: stored doc merged over code defaults (default OFF). */
+async function getAutomationConfig(): Promise<AutomationConfig> {
+    try {
+        const snap = await adminDb.collection("appConfig").doc("automation").get();
+        return mergeAutomation(snap.exists ? snap.data() : {});
+    } catch {
+        return DEFAULT_AUTOMATION;
+    }
+}
 
 /**
  * Cron endpoint: hit me every hour from a free service like cron-job.org.
@@ -67,6 +78,13 @@ async function handle(request: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // ── MASTER SWITCH ── everything below is dormant until the dean enables it.
+    const cfg = await getAutomationConfig();
+    if (!cfg.enabled) {
+        return NextResponse.json({ ok: true, skipped: "automation-disabled" });
+    }
+    const R = cfg.rules;
+
     const { hour, dayName } = riyadhNow();
 
     // Quiet hours: do not send between 11pm and 8am Riyadh time.
@@ -81,11 +99,12 @@ async function handle(request: Request) {
 
     const log: Array<{ rule: string; sent: number; skipped?: string }> = [];
 
-    // Rule 1: Wednesday 8pm-9pm window — remind king if no decision yet.
+    // Rule 1: remind king if no decision yet (default Wed 8-10pm).
     if (
-        dayName === "الأربعاء" &&
-        hour >= 20 &&
-        hour < 22 &&
+        R.kingDecision.on &&
+        dayName === R.kingDecision.day &&
+        hour >= (R.kingDecision.hourFrom ?? 20) &&
+        hour < (R.kingDecision.hourTo ?? 22) &&
         week.king &&
         (!week.day || !week.restaurant)
     ) {
@@ -108,11 +127,12 @@ async function handle(request: Request) {
         }
     }
 
-    // Rule 2: Wednesday 9pm — remind unresponded members about attendance.
+    // Rule 2: remind unresponded members about attendance (default Wed 9-11pm).
     if (
-        dayName === "الأربعاء" &&
-        hour >= 21 &&
-        hour < 23
+        R.attendancePending.on &&
+        dayName === R.attendancePending.day &&
+        hour >= (R.attendancePending.hourFrom ?? 21) &&
+        hour < (R.attendancePending.hourTo ?? 23)
     ) {
         const responded = new Set(week.responded || []);
         const targets = VALID_NAMES.filter(
@@ -137,11 +157,12 @@ async function handle(request: Request) {
         }
     }
 
-    // Rule 3: Outing day at 10am — "اليوم يوم الطلعة".
+    // Rule 3: outing-day morning — "اليوم يوم الطلعة" (default 10am-12pm).
     if (
+        R.outingMorning.on &&
         week.day === dayName &&
-        hour >= 10 &&
-        hour < 12
+        hour >= (R.outingMorning.hourFrom ?? 10) &&
+        hour < (R.outingMorning.hourTo ?? 12)
     ) {
         const absentees = new Set(week.absentees || []);
         const targets = VALID_NAMES.filter((name) => !absentees.has(name));
@@ -177,11 +198,12 @@ async function handle(request: Request) {
         "الجمعة": "السبت",
     };
     if (
+        R.ratingReminder.on &&
         week.ratingEnabled &&
         week.day &&
         dayAfterMap[week.day] === dayName &&
-        hour >= 19 &&
-        hour < 21
+        hour >= (R.ratingReminder.hourFrom ?? 19) &&
+        hour < (R.ratingReminder.hourTo ?? 21)
     ) {
         const absentees = new Set(week.absentees || []);
         const candidates = VALID_NAMES.filter(
@@ -207,6 +229,54 @@ async function handle(request: Request) {
                     { userNames: targets }
                 );
                 log.push({ rule: ruleId, sent: r.sentCount });
+            }
+        }
+    }
+
+    // Rule 5: FINAL rating warning — louder, later window; only unrated attendees.
+    if (
+        R.ratingFinalWarning.on &&
+        week.ratingEnabled &&
+        week.day &&
+        dayAfterMap[week.day] === dayName &&
+        hour >= (R.ratingFinalWarning.hourFrom ?? 22) &&
+        hour < (R.ratingFinalWarning.hourTo ?? 23)
+    ) {
+        const absentees = new Set(week.absentees || []);
+        const candidates = VALID_NAMES.filter((name) => name !== week.king && !absentees.has(name));
+        const targets: string[] = [];
+        for (const name of candidates) {
+            if (!(await services.hasUserRated(week.id, name))) targets.push(name);
+        }
+        if (targets.length > 0) {
+            const ruleId = `rating-final-warning-${week.id}`;
+            if (await shouldRunRule(ruleId, 24 * 60)) {
+                const r = await sendPushNotification(
+                    {
+                        title: "⏰ آخر تنبيه! التقييم يقفل قريباً",
+                        body: `آخر فرصة تقيّم "${week.restaurant || "الطلعة"}" — بعد شوي يقفل!`,
+                        type: "rating-unlocked",
+                        tag: `rating-final-warning-${week.id}`,
+                        url: "/?action=rate",
+                        payload: { weekId: week.id },
+                    },
+                    { userNames: targets }
+                );
+                log.push({ rule: ruleId, sent: r.sentCount });
+            }
+        }
+    }
+
+    // Rule 6: auto-close rating N hours after it opened (state change, reversible).
+    const ratingOpenedAt = (week as any).ratingEnabledAt;
+    if (R.autoCloseRating.on && week.ratingEnabled && ratingOpenedAt?.toMillis) {
+        const hoursOpen = (Date.now() - ratingOpenedAt.toMillis()) / 3_600_000;
+        if (hoursOpen >= (R.autoCloseRating.hoursAfterOpen ?? 48)) {
+            const ruleId = `auto-close-rating-${week.id}`;
+            if (await shouldRunRule(ruleId, 24 * 60)) {
+                // Write directly via admin (client SDK writes are blocked by rules).
+                await adminDb.collection("weeks").doc(week.id).update({ ratingEnabled: false });
+                log.push({ rule: ruleId, sent: 0, skipped: "rating-closed" });
             }
         }
     }
