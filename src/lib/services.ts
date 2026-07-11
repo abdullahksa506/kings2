@@ -11,6 +11,7 @@ import {
     Timestamp,
     onSnapshot
 } from "firebase/firestore";
+import { outingDateLabel } from "./outingDate";
 
 // Security verification helper
 export async function verifyIdentity(userName: string): Promise<boolean> {
@@ -176,7 +177,7 @@ export interface MemberProfileData {
     attendedCount: number;
     absentCount: number;
     noResponseCount: number;
-    missedOutings: { weekId: string; weekNumber: number; cycleNumber: number; king: string | null; restaurant: string | null; day: string | null }[];
+    missedOutings: { weekId: string; weekNumber: number; cycleNumber: number; king: string | null; restaurant: string | null; day: string | null; dateLabel: string }[];
     timesAsKing: number;
     ratingsGiven: number;
     averageRatingGiven: number;
@@ -636,6 +637,7 @@ export const services = {
                 .map((w) => ({
                     weekId: w.id, weekNumber: w.weekNumber, cycleNumber: w.cycleNumber,
                     king: w.king, restaurant: w.restaurant, day: w.day,
+                    dateLabel: outingDateLabel(w),
                 })),
             timesAsKing: kingWeeks.length,
             ratingsGiven: memberGivenRatings.length,
@@ -938,7 +940,7 @@ export const services = {
         }> = {};
 
         // Per-member list of the actual outings they missed (recorded absence).
-        type MissedOuting = { weekId: string; weekNumber: number; cycleNumber: number; king: string | null; restaurant: string | null; day: string | null };
+        type MissedOuting = { weekId: string; weekNumber: number; cycleNumber: number; king: string | null; restaurant: string | null; day: string | null; dateLabel: string };
         const memberMissedOutings: Record<string, MissedOuting[]> = {};
 
         for (const name of VALID_NAMES) {
@@ -959,6 +961,7 @@ export const services = {
                     memberMissedOutings[name].push({
                         weekId: week.id, weekNumber: week.weekNumber, cycleNumber: week.cycleNumber,
                         king: week.king, restaurant: week.restaurant, day: week.day,
+                        dateLabel: outingDateLabel(week),
                     });
                 } else if ((week.responded || []).includes(name)) {
                     memberStats[name].attended++;               // confirmed present

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { services } from "@/lib/services";
+import { outingDateLabel } from "@/lib/outingDate";
 import * as XLSX from "xlsx";
 import { Download } from "lucide-react";
 
@@ -19,7 +20,7 @@ export default function ExportDataButton() {
 
             // 2. Aggregate data
             for (const { week, averageScore } of completedWeeks) {
-                const dateHeader = week.createdAt ? new Date(week.createdAt.toMillis()).toLocaleDateString("ar-SA") : "غير معروف";
+                const dateHeader = outingDateLabel(week);
 
                 // Fetch Main Ratings
                 const ratings = await services.getAllRatingsForWeek(week.id);

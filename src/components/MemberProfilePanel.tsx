@@ -80,7 +80,7 @@ export default function MemberProfilePanel({ isOpen, onClose, currentUserName }:
                                 <div className="flex flex-wrap gap-1.5">
                                     {profile.missedOutings.map((o) => (
                                         <span key={o.weekId} className="text-[10px] bg-red-500/10 border border-red-500/20 text-red-200/90 rounded-lg px-2 py-1">
-                                            دورة {o.cycleNumber} · {o.restaurant || o.king || "—"}{o.day ? ` · ${o.day}` : ""}
+                                            {o.dateLabel} · {o.restaurant || o.king || "—"}
                                         </span>
                                     ))}
                                 </div>

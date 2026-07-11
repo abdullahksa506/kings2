@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ListFilter, Search, Star } from "lucide-react";
 import { PublicUserProfile, RatingExplorerWeek, services, VALID_NAMES } from "@/lib/services";
+import { outingDateLabel } from "@/lib/outingDate";
 
 type SortType = "newest" | "oldest" | "highest" | "lowest";
 
@@ -140,7 +141,7 @@ export default function RatingsExplorer() {
                                 );
                             })()}
                             <p className="text-[11px] text-slate-500 mt-2">
-                                تاريخ الطلعة: {new Date(row.week.createdAt.toMillis()).toLocaleDateString("ar-SA")}
+                                تاريخ الطلعة: {outingDateLabel(row.week)}
                             </p>
                         </div>
                     ))}
