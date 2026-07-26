@@ -10,6 +10,7 @@ import * as admin from 'firebase-admin';
 import { hashPassword } from "@/lib/hash";
 import { sendPushNotification } from "@/lib/pushHelper";
 import { createNextWeek } from "@/lib/weekLifecycle.server";
+import { CHANNEL_IDS } from "@/lib/chatChannels";
 import { planOuting } from "@/lib/outingPlanner";
 
 const VALID_NAMES_RPC = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
@@ -34,6 +35,7 @@ const RATE_LIMIT_RULES: Record<string, RateLimitRule> = {
     overrideRestaurantResult: { limit: 5, windowMs: 60 * 1000 },
     cancelRestaurantVoting: { limit: 5, windowMs: 60 * 1000 },
     submitFeatureVote: { limit: 30, windowMs: 60 * 1000 },
+    sendChatMessage: { limit: 40, windowMs: 60 * 1000 },
     setFeatureRemoved: { limit: 20, windowMs: 60 * 1000 },
     recordActivity: { limit: 40, windowMs: 60 * 1000 },
     setRestaurantLocation: { limit: 20, windowMs: 60 * 1000 },
@@ -1174,6 +1176,24 @@ export async function POST(request: Request) {
                 trustedDevices = trustedDevices.filter((d: any) => d.id !== payload.deviceId);
                 await deanRef.update({ trustedDevices });
                 return NextResponse.json({ result: true });
+
+            case "sendChatMessage": {
+                if (!authName) throw new Error("Unauthorized");
+                const text = asTrimmedString(payload?.text).slice(0, 2000);
+                if (!text) throw new Error("رسالة فارغة");
+                const channel = asTrimmedString(payload?.channel) || "عام";
+                if (!CHANNEL_IDS.includes(channel)) throw new Error("قناة غير صالحة");
+                await adminDb.collection("chatMessages").add({
+                    channel,
+                    userName: authName,
+                    nickName: typeof userDocData?.nickName === "string" ? userDocData.nickName : authName,
+                    profileImage: typeof userDocData?.profileImage === "string" ? userDocData.profileImage : null,
+                    showProfileImage: typeof userDocData?.showProfileImage === "boolean" ? userDocData.showProfileImage : true,
+                    text,
+                    createdAt: Timestamp.now(),
+                });
+                return NextResponse.json({ result: true });
+            }
 
             case "recordVisit":
                 const today = new Date().toISOString().split("T")[0];

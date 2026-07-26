@@ -94,6 +94,7 @@ export interface Suggestion {
 
 export interface ChatMessage {
     id: string;
+    channel?: string;
     userName: string;
     nickName?: string;
     profileImage?: string | null;
@@ -744,6 +745,26 @@ export const services = {
     async getUsersWithResetCodes(): Promise<{ id: string, name: string, resetCode: string }[]> {
         const result = await invokeRpc("getUsersWithResetCodes");
         return Array.isArray(result) ? result : [];
+    },
+
+    // --- Chat (Discord-style, real-time) ---
+    async sendChatMessage(channel: string, text: string) {
+        return invokeRpc("sendChatMessage", { channel, text });
+    },
+
+    listenToChannelMessages(channel: string, callback: (messages: ChatMessage[]) => void) {
+        const q = query(
+            collection(db, "chatMessages"),
+            where("channel", "==", channel),
+            orderBy("createdAt", "desc"),
+            limit(80),
+        );
+        return onSnapshot(q, (snap) => {
+            const messages = snap.docs
+                .map((doc) => ({ id: doc.id, ...doc.data() } as ChatMessage))
+                .reverse(); // oldest→newest for display
+            callback(messages);
+        });
     },
 
     listenToPublicUserProfiles(callback: (profiles: PublicUserProfile[]) => void) {
