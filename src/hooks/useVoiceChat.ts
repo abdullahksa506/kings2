@@ -222,14 +222,22 @@ export function useVoiceChat(channel: string | null, myName: string, peerNames: 
         if (joinedRef.current || !channel) return;
         setConnecting(true); setError(null);
         try {
+            if (!navigator.mediaDevices?.getUserMedia) {
+                throw Object.assign(new Error("unsupported"), { name: "NotSupportedError" });
+            }
             const stream = await navigator.mediaDevices.getUserMedia(AUDIO_CONSTRAINTS);
             localStreamRef.current = stream;
             joinedRef.current = true;
             setJoined(true); setMuted(false);
             await services.setVoiceState(channel, true, false);
             await connectToPeers();
-        } catch {
-            setError("تعذّر الوصول للميكروفون — تأكد من السماح بالإذن");
+        } catch (e: any) {
+            const name = e?.name || "";
+            let msg = "تعذّر الوصول للميكروفون — تأكد من الإذن، وجرّب Chrome على الكمبيوتر";
+            if (name === "NotSupportedError") msg = "متصفحك ما يدعم الميكروفون هنا — على الآيفون افتح الموقع في Safari (مو كتطبيق مثبّت) أو جرّب Chrome على الكمبيوتر";
+            else if (name === "NotAllowedError" || name === "SecurityError") msg = "رفضت إذن الميكروفون — اسمح به من إعدادات الموقع ثم أعد المحاولة 🎙️";
+            else if (name === "NotFoundError") msg = "ما لقينا ميكروفون في جهازك";
+            setError(msg);
             joinedRef.current = false; setJoined(false);
         } finally {
             setConnecting(false);
