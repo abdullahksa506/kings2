@@ -1,0 +1,218 @@
+"use client";
+
+/*
+ * 🤖 نكتة الذكاء الاصطناعي:
+ * سألوا كلود: "تسمع الفويس؟"
+ * قال: "أسمعكم كلكم... بس ما أعلّق لأن صوتي داتا مو ذبذبات 😂🎙️"
+ *
+ * فويس تشات mesh (WebRTC) للقنوات الصغيرة. الإشارات عبر Firestore/RPC.
+ * STUN مجاني + TURN عام (OpenRelay) — يمكن تغييره بمتغيّرات NEXT_PUBLIC_TURN_*.
+ */
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { services, VoiceSignal } from "@/lib/services";
+
+const TURN_USER = process.env.NEXT_PUBLIC_TURN_USERNAME || "openrelayproject";
+const TURN_CRED = process.env.NEXT_PUBLIC_TURN_CREDENTIAL || "openrelayproject";
+
+const ICE_SERVERS: RTCIceServer[] = [
+    { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] },
+    ...(process.env.NEXT_PUBLIC_TURN_URL
+        ? [{ urls: process.env.NEXT_PUBLIC_TURN_URL, username: TURN_USER, credential: TURN_CRED }]
+        : [
+              { urls: "turn:openrelay.metered.ca:80", username: TURN_USER, credential: TURN_CRED },
+              { urls: "turn:openrelay.metered.ca:80?transport=tcp", username: TURN_USER, credential: TURN_CRED },
+              { urls: "turn:openrelay.metered.ca:443", username: TURN_USER, credential: TURN_CRED },
+              { urls: "turns:openrelay.metered.ca:443?transport=tcp", username: TURN_USER, credential: TURN_CRED },
+          ]),
+];
+
+export interface UseVoiceChatResult {
+    joined: boolean;
+    muted: boolean;
+    connecting: boolean;
+    error: string | null;
+    remoteStreams: Record<string, MediaStream>;
+    join: () => Promise<void>;
+    leave: () => void;
+    toggleMute: () => void;
+}
+
+/**
+ * @param channel   voice room id (the text channel id)
+ * @param myName    my user name
+ * @param peerNames names of everyone currently JOINED to this voice channel (excl. me)
+ */
+export function useVoiceChat(channel: string | null, myName: string, peerNames: string[]): UseVoiceChatResult {
+    const [joined, setJoined] = useState(false);
+    const [muted, setMuted] = useState(false);
+    const [connecting, setConnecting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
+
+    const localStreamRef = useRef<MediaStream | null>(null);
+    const peersRef = useRef<Record<string, RTCPeerConnection>>({});
+    const processedSignals = useRef<Set<string>>(new Set());
+    const pendingCandidatesRef = useRef<Record<string, RTCIceCandidateInit[]>>({});
+    const peerNamesRef = useRef<string[]>(peerNames);
+    const joinedRef = useRef(false);
+
+    useEffect(() => { peerNamesRef.current = peerNames; }, [peerNames]);
+
+    const closePeer = useCallback((name: string) => {
+        const pc = peersRef.current[name];
+        if (pc) {
+            pc.onicecandidate = null; pc.ontrack = null; pc.onconnectionstatechange = null;
+            try { pc.close(); } catch { /* ignore */ }
+            delete peersRef.current[name];
+        }
+        delete pendingCandidatesRef.current[name];
+        setRemoteStreams((prev) => {
+            if (!prev[name]) return prev;
+            const next = { ...prev }; delete next[name]; return next;
+        });
+    }, []);
+
+    const createPeer = useCallback((remoteName: string): RTCPeerConnection => {
+        const existing = peersRef.current[remoteName];
+        if (existing) return existing;
+        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        peersRef.current[remoteName] = pc;
+        const local = localStreamRef.current;
+        if (local) local.getTracks().forEach((t) => pc.addTrack(t, local));
+
+        pc.onicecandidate = (e) => {
+            if (e.candidate && channel) {
+                void services.sendVoiceSignal(channel, remoteName, { kind: "candidate", candidate: e.candidate.toJSON() });
+            }
+        };
+        pc.ontrack = (e) => {
+            let stream = e.streams && e.streams[0];
+            if (!stream) { stream = new MediaStream(); stream.addTrack(e.track); }
+            setRemoteStreams((prev) => ({ ...prev, [remoteName]: stream as MediaStream }));
+        };
+        pc.onconnectionstatechange = () => { if (pc.connectionState === "closed") closePeer(remoteName); };
+        pc.oniceconnectionstatechange = () => { if (pc.iceConnectionState === "failed") { try { pc.restartIce(); } catch { /* */ } } };
+        return pc;
+    }, [channel, closePeer]);
+
+    // Initiator is the lexicographically smaller name (avoids offer glare).
+    const isInitiator = useCallback((other: string) => myName.localeCompare(other) < 0, [myName]);
+
+    const connectToPeers = useCallback(async () => {
+        if (!joinedRef.current || !channel) return;
+        for (const other of peerNamesRef.current) {
+            if (other === myName || peersRef.current[other]) continue;
+            const pc = createPeer(other);
+            if (isInitiator(other)) {
+                try {
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+                    await services.sendVoiceSignal(channel, other, { kind: "offer", sdp: pc.localDescription });
+                } catch { /* ignore */ }
+            }
+        }
+        for (const name of Object.keys(peersRef.current)) {
+            if (!peerNamesRef.current.includes(name)) closePeer(name);
+        }
+    }, [channel, myName, createPeer, isInitiator, closePeer]);
+
+    useEffect(() => { if (joined) void connectToPeers(); }, [joined, peerNames, connectToPeers]);
+
+    const flushCandidates = useCallback(async (from: string, pc: RTCPeerConnection) => {
+        const queued = pendingCandidatesRef.current[from];
+        if (!queued) return;
+        delete pendingCandidatesRef.current[from];
+        for (const c of queued) { try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch { /* */ } }
+    }, []);
+
+    const handleSignal = useCallback(async (sig: VoiceSignal) => {
+        if (!channel) return;
+        const from = sig.from; const data = sig.signal;
+        try {
+            if (data.kind === "offer") {
+                const pc = createPeer(from);
+                await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                await flushCandidates(from, pc);
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                await services.sendVoiceSignal(channel, from, { kind: "answer", sdp: pc.localDescription });
+            } else if (data.kind === "answer") {
+                const pc = peersRef.current[from];
+                if (pc) { await pc.setRemoteDescription(new RTCSessionDescription(data.sdp)); await flushCandidates(from, pc); }
+            } else if (data.kind === "candidate") {
+                const pc = peersRef.current[from];
+                if (data.candidate) {
+                    if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+                        try { await pc.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch { /* */ }
+                    } else {
+                        (pendingCandidatesRef.current[from] ||= []).push(data.candidate);
+                    }
+                }
+            }
+        } catch { /* ignore malformed */ }
+    }, [channel, createPeer, flushCandidates]);
+
+    // Inbound signals.
+    useEffect(() => {
+        if (!joined || !channel) return;
+        const unsub = services.listenToVoiceSignals(channel, myName, (signals) => {
+            const ordered = [...signals].sort((a, b) => a.atMs - b.atMs);
+            for (const sig of ordered) {
+                if (processedSignals.current.has(sig.id) || !sig.signal) continue;
+                processedSignals.current.add(sig.id);
+                void handleSignal(sig);
+            }
+        });
+        return unsub;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [joined, channel, myName]);
+
+    const join = useCallback(async () => {
+        if (joinedRef.current || !channel) return;
+        setConnecting(true); setError(null);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            localStreamRef.current = stream;
+            joinedRef.current = true;
+            setJoined(true); setMuted(false);
+            await services.setVoiceState(channel, true, false);
+            await connectToPeers();
+        } catch {
+            setError("تعذّر الوصول للميكروفون — تأكد من السماح بالإذن");
+            joinedRef.current = false; setJoined(false);
+        } finally {
+            setConnecting(false);
+        }
+    }, [channel, connectToPeers]);
+
+    const leave = useCallback(() => {
+        joinedRef.current = false; setJoined(false);
+        for (const name of Object.keys(peersRef.current)) closePeer(name);
+        if (localStreamRef.current) { localStreamRef.current.getTracks().forEach((t) => t.stop()); localStreamRef.current = null; }
+        setRemoteStreams({});
+        processedSignals.current.clear();
+        if (channel) void services.setVoiceState(channel, false, false);
+    }, [channel, closePeer]);
+
+    const toggleMute = useCallback(() => {
+        const stream = localStreamRef.current;
+        if (!stream) return;
+        const next = !muted;
+        stream.getAudioTracks().forEach((t) => (t.enabled = !next));
+        setMuted(next);
+        if (channel) void services.setVoiceState(channel, true, next);
+    }, [muted, channel]);
+
+    // Leave when the channel changes or on unmount.
+    useEffect(() => {
+        return () => {
+            for (const name of Object.keys(peersRef.current)) { try { peersRef.current[name].close(); } catch { /* */ } }
+            peersRef.current = {};
+            if (localStreamRef.current) { localStreamRef.current.getTracks().forEach((t) => t.stop()); localStreamRef.current = null; }
+            joinedRef.current = false;
+        };
+    }, [channel]);
+
+    return { joined, muted, connecting, error, remoteStreams, join, leave, toggleMute };
+}

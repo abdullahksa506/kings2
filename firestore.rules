@@ -27,6 +27,7 @@ service cloud.firestore {
     match /bathroomRatings/{document=**}     { allow read: if true; allow write: if false; }
     match /appConfig/{document=**}           { allow read: if true; allow write: if false; }
     match /chatMessages/{document=**}        { allow read: if true; allow write: if false; }
+    match /voiceRooms/{document=**}          { allow read: if true; allow write: if false; }
     match /suggestions/{document=**}         { allow read: if true; allow write: if false; }
     match /featureFeedback/{document=**}     { allow read: if true; allow write: if false; }
     match /restaurantLocations/{document=**} { allow read: if true; allow write: if false; }

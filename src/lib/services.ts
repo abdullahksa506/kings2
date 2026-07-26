@@ -103,6 +103,21 @@ export interface ChatMessage {
     createdAt: Timestamp;
 }
 
+export interface VoiceSignal {
+    id: string;
+    from: string;
+    to: string;
+    signal: any;
+    atMs: number;
+}
+
+export interface VoicePresence {
+    name: string;
+    joined: boolean;
+    muted: boolean;
+    atMs: number;
+}
+
 export interface PublicUserProfile {
     userName: string;
     nickName?: string;
@@ -750,6 +765,34 @@ export const services = {
     // --- Chat (Discord-style, real-time) ---
     async sendChatMessage(channel: string, text: string) {
         return invokeRpc("sendChatMessage", { channel, text });
+    },
+
+    // --- Voice chat signaling (WebRTC mesh over Firestore/RPC) ---
+    listenToVoicePresence(channel: string, cb: (presence: VoicePresence[]) => void) {
+        return onSnapshot(collection(db, "voiceRooms", channel, "voice"), (snap) => {
+            cb(snap.docs.map((d) => d.data() as VoicePresence));
+        });
+    },
+
+    listenToVoiceSignals(channel: string, myName: string, cb: (signals: VoiceSignal[]) => void) {
+        const q = query(collection(db, "voiceRooms", channel, "signals"), where("to", "==", myName));
+        return onSnapshot(q, (snap) => {
+            const signals: VoiceSignal[] = snap.docs.map((d) => {
+                const data = d.data() as any;
+                let parsed: any = null;
+                try { parsed = typeof data.signal === "string" ? JSON.parse(data.signal) : data.signal; } catch { parsed = null; }
+                return { id: d.id, from: data.from, to: data.to, signal: parsed, atMs: data.atMs };
+            });
+            cb(signals);
+        });
+    },
+
+    sendVoiceSignal(channel: string, to: string, signal: any) {
+        return invokeRpc("voiceSignal", { channel, to, signal });
+    },
+
+    setVoiceState(channel: string, joined: boolean, muted: boolean) {
+        return invokeRpc("voiceState", { channel, joined, muted });
     },
 
     listenToChannelMessages(channel: string, callback: (messages: ChatMessage[]) => void) {

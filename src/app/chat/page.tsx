@@ -9,9 +9,37 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { services, ChatMessage, VALID_NAMES, PublicUserProfile } from "@/lib/services";
+import { services, ChatMessage, VALID_NAMES, PublicUserProfile, VoicePresence } from "@/lib/services";
 import { CHAT_CHANNELS, DEFAULT_CHANNEL } from "@/lib/chatChannels";
-import { ChevronRight, Hash, Send, Loader2, Users, Crown } from "lucide-react";
+import { useVoiceChat } from "@/hooks/useVoiceChat";
+import { ChevronRight, Hash, Send, Loader2, Users, Crown, Mic, MicOff, Phone, PhoneOff, Volume2 } from "lucide-react";
+
+// Plays a remote peer's audio + reports whether they're currently speaking.
+function RemoteAudio({ stream, onSpeaking }: { stream: MediaStream; onSpeaking: (v: boolean) => void }) {
+    const ref = useRef<HTMLAudioElement>(null);
+    useEffect(() => {
+        if (ref.current) { ref.current.srcObject = stream; ref.current.play().catch(() => {}); }
+    }, [stream]);
+    useEffect(() => {
+        let raf = 0; let ac: AudioContext | null = null; let last = false;
+        try {
+            ac = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const src = ac.createMediaStreamSource(stream);
+            const an = ac.createAnalyser(); an.fftSize = 512; src.connect(an);
+            const buf = new Uint8Array(an.frequencyBinCount);
+            const loop = () => {
+                an.getByteFrequencyData(buf);
+                const avg = buf.reduce((a, b) => a + b, 0) / buf.length;
+                const v = avg > 12;
+                if (v !== last) { last = v; onSpeaking(v); }
+                raf = requestAnimationFrame(loop);
+            };
+            loop();
+        } catch { /* analyser unsupported */ }
+        return () => { cancelAnimationFrame(raf); try { ac?.close(); } catch { /* */ } };
+    }, [stream, onSpeaking]);
+    return <audio ref={ref} autoPlay playsInline className="hidden" />;
+}
 
 function timeLabel(ms: number): string {
     return new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Riyadh" });
@@ -47,7 +75,20 @@ export default function ChatPage() {
     const [input, setInput] = useState("");
     const [sending, setSending] = useState(false);
     const [profiles, setProfiles] = useState<Record<string, PublicUserProfile>>({});
+    const [voicePresence, setVoicePresence] = useState<VoicePresence[]>([]);
+    const [speaking, setSpeaking] = useState<Record<string, boolean>>({});
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Live voice presence for the current channel.
+    useEffect(() => {
+        setVoicePresence([]);
+        const unsub = services.listenToVoicePresence(channel, setVoicePresence);
+        return () => unsub();
+    }, [channel]);
+
+    const inVoice = voicePresence.filter((p) => p.joined);
+    const peerNames = inVoice.map((p) => p.name).filter((n) => n !== user?.name);
+    const voice = useVoiceChat(channel, user?.name || "", peerNames);
 
     // Live messages for the selected channel.
     useEffect(() => {
@@ -134,14 +175,59 @@ export default function ChatPage() {
                         </button>
                     ))}
                 </div>
+                {/* Voice channel */}
+                <div className="px-2 py-2 border-t border-black/20">
+                    <p className="text-[11px] font-bold text-slate-500 px-2 pb-1 uppercase flex items-center gap-1">
+                        <Volume2 className="w-3.5 h-3.5" /> صوت — {activeChannel.label}
+                    </p>
+                    {inVoice.length === 0 ? (
+                        <p className="text-[11px] text-slate-600 px-2 py-1">ما فيه أحد بالصوت</p>
+                    ) : (
+                        <div className="space-y-0.5">
+                            {inVoice.map((p) => (
+                                <div key={p.name} className={`flex items-center gap-2 px-2 py-1 rounded ${speaking[p.name] ? "bg-emerald-500/10" : ""}`}>
+                                    <span className={`w-2 h-2 rounded-full shrink-0 ${speaking[p.name] ? "bg-emerald-400" : "bg-slate-600"}`} />
+                                    <Avatar name={p.name} img={profiles[p.name]?.profileImage} size={22} />
+                                    <span className="text-xs text-slate-300 truncate flex-1">{profiles[p.name]?.nickName || p.name}</span>
+                                    {p.muted && <MicOff className="w-3 h-3 text-red-400 shrink-0" />}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {!voice.joined ? (
+                        <button onClick={voice.join} disabled={voice.connecting}
+                            className="w-full mt-1.5 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white text-xs font-bold rounded-lg py-2 transition">
+                            {voice.connecting ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> يتصل...</> : <><Phone className="w-3.5 h-3.5" /> دخول الصوت</>}
+                        </button>
+                    ) : (
+                        <div className="flex gap-1.5 mt-1.5">
+                            <button onClick={voice.toggleMute}
+                                className="flex-1 flex items-center justify-center gap-1 bg-white/10 hover:bg-white/15 text-slate-200 text-xs font-bold rounded-lg py-2 transition">
+                                {voice.muted ? <><MicOff className="w-3.5 h-3.5 text-red-400" /> مكتوم</> : <><Mic className="w-3.5 h-3.5 text-emerald-400" /> مفتوح</>}
+                            </button>
+                            <button onClick={voice.leave} title="خروج"
+                                className="flex items-center justify-center bg-red-600 hover:bg-red-500 text-white rounded-lg px-3 py-2 transition">
+                                <PhoneOff className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    )}
+                    {voice.error && <p className="text-[10px] text-amber-400 px-2 mt-1">{voice.error}</p>}
+                </div>
+
                 <div className="h-14 bg-[#232428] px-3 flex items-center gap-2">
                     <Avatar name={user.name} img={profiles[user.name]?.profileImage} size={32} />
                     <div className="min-w-0">
                         <p className="text-sm font-semibold truncate">{profiles[user.name]?.nickName || user.name}</p>
-                        <p className="text-[10px] text-emerald-400">متصل</p>
+                        <p className="text-[10px] text-emerald-400">{voice.joined ? "في الصوت 🎙️" : "متصل"}</p>
                     </div>
                 </div>
             </aside>
+
+            {/* Remote audio + a mobile voice button */}
+            {Object.entries(voice.remoteStreams).map(([name, stream]) => (
+                <RemoteAudio key={name} stream={stream}
+                    onSpeaking={(v) => setSpeaking((prev) => (prev[name] === v ? prev : { ...prev, [name]: v }))} />
+            ))}
 
             {/* ── Main chat area ── */}
             <section className="flex-1 flex flex-col min-w-0">
@@ -153,6 +239,27 @@ export default function ChatPage() {
                     <Hash className="w-5 h-5 text-slate-400" />
                     <span className="font-bold text-sm">{activeChannel.label}</span>
                     <span className="hidden sm:block text-xs text-slate-500 border-r border-slate-600 pr-2 mr-1">{activeChannel.desc}</span>
+
+                    <div className="mr-auto flex items-center gap-1.5">
+                        {inVoice.length > 0 && <span className="text-[11px] text-emerald-400 hidden sm:inline">🎙️ {inVoice.length}</span>}
+                        {!voice.joined ? (
+                            <button onClick={voice.join} disabled={voice.connecting}
+                                className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white text-xs font-bold rounded-full px-3 py-1.5">
+                                {voice.connecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Phone className="w-3.5 h-3.5" />}
+                                <span className="hidden xs:inline sm:inline">صوت</span>
+                            </button>
+                        ) : (
+                            <>
+                                <button onClick={voice.toggleMute} title={voice.muted ? "مكتوم" : "مفتوح"}
+                                    className="p-1.5 rounded-full bg-white/10 hover:bg-white/15 text-slate-200">
+                                    {voice.muted ? <MicOff className="w-4 h-4 text-red-400" /> : <Mic className="w-4 h-4 text-emerald-400" />}
+                                </button>
+                                <button onClick={voice.leave} title="خروج من الصوت" className="p-1.5 rounded-full bg-red-600 hover:bg-red-500 text-white">
+                                    <PhoneOff className="w-4 h-4" />
+                                </button>
+                            </>
+                        )}
+                    </div>
                 </header>
 
                 {/* mobile channel strip */}

@@ -36,6 +36,8 @@ const RATE_LIMIT_RULES: Record<string, RateLimitRule> = {
     cancelRestaurantVoting: { limit: 5, windowMs: 60 * 1000 },
     submitFeatureVote: { limit: 30, windowMs: 60 * 1000 },
     sendChatMessage: { limit: 40, windowMs: 60 * 1000 },
+    voiceSignal: { limit: 500, windowMs: 60 * 1000 },
+    voiceState: { limit: 60, windowMs: 60 * 1000 },
     setFeatureRemoved: { limit: 20, windowMs: 60 * 1000 },
     recordActivity: { limit: 40, windowMs: 60 * 1000 },
     setRestaurantLocation: { limit: 20, windowMs: 60 * 1000 },
@@ -1192,6 +1194,44 @@ export async function POST(request: Request) {
                     text,
                     createdAt: Timestamp.now(),
                 });
+                return NextResponse.json({ result: true });
+            }
+
+            case "voiceState": {
+                if (!authName) throw new Error("Unauthorized");
+                const channel = asTrimmedString(payload?.channel);
+                if (!CHANNEL_IDS.includes(channel)) throw new Error("قناة غير صالحة");
+                await adminDb.collection("voiceRooms").doc(channel).collection("voice").doc(authName).set({
+                    name: authName,
+                    joined: Boolean(payload?.joined),
+                    muted: Boolean(payload?.muted),
+                    atMs: Date.now(),
+                });
+                return NextResponse.json({ result: true });
+            }
+
+            case "voiceSignal": {
+                if (!authName) throw new Error("Unauthorized");
+                const channel = asTrimmedString(payload?.channel);
+                if (!CHANNEL_IDS.includes(channel)) throw new Error("قناة غير صالحة");
+                const to = asTrimmedString(payload?.to);
+                const signal = payload?.signal;
+                if (!to || !signal || typeof signal !== "object") throw new Error("إشارة غير صالحة");
+                const signalsCol = adminDb.collection("voiceRooms").doc(channel).collection("signals");
+                await signalsCol.add({
+                    from: authName,
+                    to,
+                    signal: JSON.stringify(signal).slice(0, 8000),
+                    atMs: Date.now(),
+                });
+                // Prune old signals so the subcollection stays small.
+                const cutoff = Date.now() - 2 * 60 * 1000;
+                const old = await signalsCol.where("atMs", "<", cutoff).limit(20).get();
+                if (!old.empty) {
+                    const batch = adminDb.batch();
+                    old.forEach((d) => batch.delete(d.ref));
+                    await batch.commit();
+                }
                 return NextResponse.json({ result: true });
             }
 
