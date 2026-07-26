@@ -27,6 +27,54 @@ const ICE_SERVERS: RTCIceServer[] = [
           ]),
 ];
 
+// High-quality mono voice from the mic: cancel echo, suppress noise, auto-gain,
+// full 48kHz — the browser's best audio-processing chain.
+const AUDIO_CONSTRAINTS: MediaStreamConstraints = {
+    audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,
+        sampleRate: 48000,
+    } as MediaTrackConstraints,
+    video: false,
+};
+
+// Tune the Opus codec in the SDP for voice quality: higher bitrate + in-band FEC
+// (recovers lost packets → less choppiness) + no DTX (steadier audio).
+function tuneOpus(sdp: string): string {
+    const m = sdp.match(/a=rtpmap:(\d+) opus\/48000/i);
+    if (!m) return sdp;
+    const pt = m[1];
+    const want: Record<string, string> = {
+        maxaveragebitrate: "64000", maxplaybackrate: "48000", stereo: "0", useinbandfec: "1", usedtx: "0",
+    };
+    const fmtpRe = new RegExp(`a=fmtp:${pt} ([^\\r\\n]*)`);
+    if (fmtpRe.test(sdp)) {
+        return sdp.replace(fmtpRe, (_full, existing: string) => {
+            const map: Record<string, string> = {};
+            existing.split(";").forEach((kv) => { const [k, v] = kv.split("="); if (k?.trim()) map[k.trim()] = v; });
+            Object.assign(map, want);
+            const merged = Object.entries(map).map(([k, v]) => (v === undefined ? k : `${k}=${v}`)).join(";");
+            return `a=fmtp:${pt} ${merged}`;
+        });
+    }
+    return sdp.replace(m[0], `${m[0]}\r\na=fmtp:${pt} ${Object.entries(want).map(([k, v]) => `${k}=${v}`).join(";")}`);
+}
+
+// Raise the audio sender's target bitrate (default WebRTC caps voice low).
+function bumpAudioBitrate(pc: RTCPeerConnection) {
+    pc.getSenders().forEach(async (s) => {
+        if (s.track?.kind !== "audio") return;
+        try {
+            const p = s.getParameters();
+            if (!p.encodings || p.encodings.length === 0) p.encodings = [{}];
+            p.encodings[0].maxBitrate = 64000;
+            await s.setParameters(p);
+        } catch { /* not supported */ }
+    });
+}
+
 export interface UseVoiceChatResult {
     joined: boolean;
     muted: boolean;
@@ -79,7 +127,7 @@ export function useVoiceChat(channel: string | null, myName: string, peerNames: 
         const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
         peersRef.current[remoteName] = pc;
         const local = localStreamRef.current;
-        if (local) local.getTracks().forEach((t) => pc.addTrack(t, local));
+        if (local) { local.getTracks().forEach((t) => pc.addTrack(t, local)); bumpAudioBitrate(pc); }
 
         pc.onicecandidate = (e) => {
             if (e.candidate && channel) {
@@ -107,6 +155,7 @@ export function useVoiceChat(channel: string | null, myName: string, peerNames: 
             if (isInitiator(other)) {
                 try {
                     const offer = await pc.createOffer();
+                    offer.sdp = tuneOpus(offer.sdp || "");
                     await pc.setLocalDescription(offer);
                     await services.sendVoiceSignal(channel, other, { kind: "offer", sdp: pc.localDescription });
                 } catch { /* ignore */ }
@@ -135,6 +184,7 @@ export function useVoiceChat(channel: string | null, myName: string, peerNames: 
                 await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
                 await flushCandidates(from, pc);
                 const answer = await pc.createAnswer();
+                answer.sdp = tuneOpus(answer.sdp || "");
                 await pc.setLocalDescription(answer);
                 await services.sendVoiceSignal(channel, from, { kind: "answer", sdp: pc.localDescription });
             } else if (data.kind === "answer") {
@@ -172,7 +222,7 @@ export function useVoiceChat(channel: string | null, myName: string, peerNames: 
         if (joinedRef.current || !channel) return;
         setConnecting(true); setError(null);
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            const stream = await navigator.mediaDevices.getUserMedia(AUDIO_CONSTRAINTS);
             localStreamRef.current = stream;
             joinedRef.current = true;
             setJoined(true); setMuted(false);
