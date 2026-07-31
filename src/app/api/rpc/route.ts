@@ -788,6 +788,20 @@ export async function POST(request: Request) {
                     if (s !== "completed" && s !== "pending" && s !== "skipped") throw new Error("حالة غير صالحة");
                     patch.status = s;
                 }
+                // Dean can override the restaurant/day of ANY week at ANY time —
+                // even after the choice deadline or once the week is completed.
+                if (u.restaurant !== undefined) {
+                    patch.restaurant = u.restaurant === null ? null : (asTrimmedString(u.restaurant).slice(0, 200) || null);
+                }
+                if (u.restaurantMapsUrl !== undefined) {
+                    patch.restaurantMapsUrl = u.restaurantMapsUrl === null ? null : (asTrimmedString(u.restaurantMapsUrl).slice(0, 600) || null);
+                }
+                if (u.day !== undefined) {
+                    const VALID_DAYS = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
+                    const dv = u.day === null ? null : asTrimmedString(u.day);
+                    if (dv !== null && !VALID_DAYS.includes(dv)) throw new Error("يوم غير صالح");
+                    patch.day = dv;
+                }
                 if (Object.keys(patch).length === 0) {
                     return NextResponse.json({ result: true });
                 }

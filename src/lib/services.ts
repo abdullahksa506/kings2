@@ -694,6 +694,9 @@ export const services = {
         isRandom?: boolean;
         king?: string | null;
         status?: "completed" | "pending" | "skipped";
+        restaurant?: string | null;
+        restaurantMapsUrl?: string | null;
+        day?: WeekSession["day"];
     }) {
         return invokeRpc("updateWeekMeta", { weekId, updates });
     },

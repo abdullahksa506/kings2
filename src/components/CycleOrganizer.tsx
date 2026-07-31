@@ -14,6 +14,7 @@ interface OrgRow {
     king: string | null;
     isRandom: boolean;
     status: "completed" | "pending" | "skipped";
+    restaurant: string;
 }
 
 function isJunk(w: WeekSession): boolean {
@@ -48,6 +49,7 @@ export default function CycleOrganizer() {
                     king: w.king ?? null,
                     isRandom: !!w.isRandom,
                     status: (w.status as OrgRow["status"]) ?? "completed",
+                    restaurant: w.restaurant ?? "",
                 })),
             );
         } catch (e) {
@@ -67,7 +69,8 @@ export default function CycleOrganizer() {
         r.weekNumber !== (r.week.weekNumber ?? 1) ||
         (r.king ?? null) !== (r.week.king ?? null) ||
         r.isRandom !== !!r.week.isRandom ||
-        r.status !== ((r.week.status as OrgRow["status"]) ?? "completed");
+        r.status !== ((r.week.status as OrgRow["status"]) ?? "completed") ||
+        r.restaurant.trim() !== (r.week.restaurant ?? "");
 
     const dirtyCount = rows.filter(isDirty).length;
 
@@ -85,6 +88,7 @@ export default function CycleOrganizer() {
                 isRandom: r.isRandom,
                 king: r.isRandom ? null : r.king,
                 status: r.status,
+                restaurant: r.restaurant.trim() || null,
             });
             // Update baseline so it's no longer dirty
             setRows((prev) =>
@@ -99,6 +103,7 @@ export default function CycleOrganizer() {
                                   king: r.isRandom ? null : r.king,
                                   isRandom: r.isRandom,
                                   status: r.status,
+                                  restaurant: r.restaurant.trim() || null,
                               },
                           }
                         : x,
@@ -378,6 +383,17 @@ function WeekRow({
                     </div>
                 </div>
             </div>
+            {/* Restaurant — dean can change it any time, even after the deadline */}
+            <label className="text-[10px] text-slate-500 block mt-2">
+                🍔 المطعم (يغيّره العميد في أي وقت — حتى بعد الديدلاين)
+                <input
+                    value={row.restaurant}
+                    onChange={(e) => onChange({ restaurant: e.target.value })}
+                    placeholder="اسم المطعم..."
+                    dir="rtl"
+                    className="w-full mt-0.5 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-white text-sm outline-none focus:border-sky-500"
+                />
+            </label>
         </div>
     );
 }
