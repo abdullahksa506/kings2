@@ -2,19 +2,66 @@
 
 import { useState, useEffect } from "react";
 import { services, BathroomRating, WeekSession } from "@/lib/services";
+import { useAuth } from "@/context/AuthContext";
 import { Bath } from "lucide-react";
 
+// Hisham's review for one bathroom — read-only for everyone, editable for Hisham.
+function ReviewSection({ label, review, isHisham }: { label: string; review?: string; isHisham: boolean }) {
+    const [draft, setDraft] = useState(review || "");
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+    useEffect(() => { setDraft(review || ""); }, [review]);
+    if (!isHisham && !review) return null;
+
+    const save = async () => {
+        setSaving(true);
+        try { await services.submitBathroomReview(label, draft.trim()); setSaved(true); setTimeout(() => setSaved(false), 2000); }
+        catch { /* ignore */ } finally { setSaving(false); }
+    };
+
+    return (
+        <div className="mt-3 pt-3 border-t border-slate-800">
+            {review && !isHisham && (
+                <p className="text-sm text-sky-100/90 leading-relaxed whitespace-pre-wrap">
+                    <span className="text-sky-400 font-bold">📝 ريفيو هشام: </span>{review}
+                </p>
+            )}
+            {isHisham && (
+                <div className="space-y-2">
+                    <p className="text-[11px] font-bold text-sky-400">📝 ريفيو هشام (يظهر للجميع)</p>
+                    <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={2} dir="rtl"
+                        placeholder="اكتب ريفيوك عن هذا الحمام..."
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-sm text-white outline-none focus:border-sky-500" />
+                    <button onClick={save} disabled={saving || draft.trim() === (review || "").trim()}
+                        className="text-xs bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold rounded-lg px-3 py-1.5">
+                        {saving ? "يحفظ..." : saved ? "تم الحفظ ✓" : "حفظ الريفيو"}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function BathroomRatingsDisplay() {
+    const { user } = useAuth();
+    const isHisham = user?.name === "هشام";
     const [bathroomRatings, setBathroomRatings] = useState<BathroomRating[]>([]);
     const [weeks, setWeeks] = useState<Map<string, WeekSession>>(new Map());
+    const [reviews, setReviews] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const allRatings = await services.getAllBathroomRatings();
+                const [allRatings, reviewList] = await Promise.all([
+                    services.getAllBathroomRatings(),
+                    services.getBathroomReviews().catch(() => []),
+                ]);
                 setBathroomRatings(allRatings);
+                const rmap: Record<string, string> = {};
+                reviewList.forEach((rv) => { if (rv?.label) rmap[rv.label.trim()] = rv.review || ""; });
+                setReviews(rmap);
 
                 // Fetch week data for restaurant names
                 const weekIds = [...new Set(allRatings.map(r => r.weekId))];
@@ -123,6 +170,7 @@ export default function BathroomRatingsDisplay() {
                                 </div>
                             ))}
                         </div>
+                        <ReviewSection label={group.label} review={reviews[group.label.trim()]} isHisham={isHisham} />
                     </div>
                 );
             })}

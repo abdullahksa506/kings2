@@ -86,6 +86,13 @@ export interface BathroomRating {
     createdAt: Timestamp;
 }
 
+export interface BathroomReview {
+    label: string;      // bathroom / restaurant name this review is about
+    review: string;
+    by: string;         // always "هشام"
+    updatedAt?: Timestamp;
+}
+
 export interface Suggestion {
     id: string;
     text: string;
@@ -461,6 +468,16 @@ export const services = {
         restaurantName?: string | null
     ) {
         return invokeRpc("submitBathroomRating", { weekId, userName, score, bathroomName, restaurantName });
+    },
+
+    // --- Bathroom reviews (Hisham, the official critic 🚽📝) ---
+    async submitBathroomReview(label: string, review: string) {
+        return invokeRpc("submitBathroomReview", { label, review });
+    },
+
+    async getBathroomReviews(): Promise<BathroomReview[]> {
+        const snap = await getDocs(collection(db, "bathroomReviews"));
+        return snap.docs.map((d) => d.data() as BathroomReview);
     },
 
     async getBathroomRatingsForWeek(weekId: string): Promise<BathroomRating[]> {

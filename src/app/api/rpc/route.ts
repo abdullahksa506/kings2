@@ -36,6 +36,7 @@ const RATE_LIMIT_RULES: Record<string, RateLimitRule> = {
     cancelRestaurantVoting: { limit: 5, windowMs: 60 * 1000 },
     submitFeatureVote: { limit: 30, windowMs: 60 * 1000 },
     sendChatMessage: { limit: 40, windowMs: 60 * 1000 },
+    submitBathroomReview: { limit: 30, windowMs: 60 * 1000 },
     voiceSignal: { limit: 500, windowMs: 60 * 1000 },
     voiceState: { limit: 60, windowMs: 60 * 1000 },
     setFeatureRemoved: { limit: 20, windowMs: 60 * 1000 },
@@ -1192,6 +1193,21 @@ export async function POST(request: Request) {
                 trustedDevices = trustedDevices.filter((d: any) => d.id !== payload.deviceId);
                 await deanRef.update({ trustedDevices });
                 return NextResponse.json({ result: true });
+
+            case "submitBathroomReview": {
+                // Hisham is the group's official bathroom critic 🚽📝
+                if (authName !== "هشام") throw new Error("ريفيوهات الحمامات لهشام فقط 🚽");
+                const label = asTrimmedString(payload?.label).slice(0, 200);
+                if (!label) throw new Error("اسم الحمام مطلوب");
+                const review = asTrimmedString(payload?.review).slice(0, 2000);
+                await adminDb.collection("bathroomReviews").doc(restaurantSlug(label)).set({
+                    label,
+                    review,
+                    by: authName,
+                    updatedAt: Timestamp.now(),
+                }, { merge: true });
+                return NextResponse.json({ result: true });
+            }
 
             case "sendChatMessage": {
                 if (!authName) throw new Error("Unauthorized");

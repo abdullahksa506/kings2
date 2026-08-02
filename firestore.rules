@@ -25,6 +25,7 @@ service cloud.firestore {
     match /weeks/{document=**}               { allow read: if true; allow write: if false; }
     match /ratings/{document=**}             { allow read: if true; allow write: if false; }
     match /bathroomRatings/{document=**}     { allow read: if true; allow write: if false; }
+    match /bathroomReviews/{document=**}     { allow read: if true; allow write: if false; }
     match /appConfig/{document=**}           { allow read: if true; allow write: if false; }
     match /chatMessages/{document=**}        { allow read: if true; allow write: if false; }
     match /voiceRooms/{document=**}          { allow read: if true; allow write: if false; }
