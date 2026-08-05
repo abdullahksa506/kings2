@@ -461,9 +461,12 @@ export async function POST(request: Request) {
                 if (!weekApplySnap.exists) throw new Error("Week not found");
 
                 const weekData = weekApplySnap.data() as any;
-                // Random outings: any signed-in member can apply. Otherwise, king-only.
-                const allowAny = Boolean(weekData?.isRandom);
-                if (!allowAny && weekData.king !== authName && !isAdmin) throw new Error("Only the King can apply the voting result");
+                // Approving the day is the dean's call alone. The button stays visible
+                // and pressable for everyone (the client just no-ops for non-deans);
+                // this is the real gate so it can't be bypassed via the API.
+                if (!isAdmin) {
+                    return NextResponse.json({ result: weekData?.day ?? null });
+                }
 
                 const responded = Array.isArray(weekData.responded) ? weekData.responded : [];
                 const absentees = Array.isArray(weekData.absentees) ? weekData.absentees : [];

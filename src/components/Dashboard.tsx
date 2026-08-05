@@ -839,6 +839,14 @@ export default function Dashboard() {
 
     const handleApplyDayVoteResult = async () => {
         if (!currentWeek) return;
+        // Only the dean actually approves the day. Everyone else still sees the
+        // button and can press it — it just goes through the motions and does
+        // nothing (no error, no change). Enforced server-side too.
+        if (user?.role !== "dean") {
+            setSaving(true);
+            setTimeout(() => setSaving(false), 700);
+            return;
+        }
         setSaving(true);
         try {
             await services.applyDayVoteResult(currentWeek.id, tieBreakDay);
