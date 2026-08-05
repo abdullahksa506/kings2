@@ -1462,6 +1462,35 @@ export default function Dashboard() {
                                 إرسال تذكير لمن لم يرد {currentWeek ? `(${VALID_NAMES.filter(n => !(currentWeek.responded || []).includes(n) && n !== currentWeek.king).length})` : ''}
                             </button>
 
+                            {/* Random week only — reopen day voting + ping everyone */}
+                            {currentWeek?.isRandom && (
+                                <button
+                                    onClick={async () => {
+                                        if (!confirm("فتح التصويت على يوم الأسبوع العشوائي وتنبيه الجميع؟\n(راح يُلغى اليوم المعتمد والأصوات القديمة)")) return;
+                                        setSaving(true);
+                                        try {
+                                            const res = await fetch("/api/reminders/random-day-vote", {
+                                                method: "POST",
+                                                headers: getReminderAuthHeaders(),
+                                                body: JSON.stringify({ weekId: currentWeek.id })
+                                            });
+                                            const data = await res.json();
+                                            alert(data.message || "تم فتح التصويت");
+                                            await fetchWeek();
+                                        } catch (e) {
+                                            console.error("Failed to open random day vote:", e);
+                                            alert("خطأ في فتح التصويت");
+                                        }
+                                        setSaving(false);
+                                    }}
+                                    disabled={saving}
+                                    className="bg-violet-500/20 hover:bg-violet-500/30 border border-violet-500/30 text-violet-300 font-semibold py-2 px-4 rounded-xl flex items-center gap-2 transition-all w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <Bell className="w-4 h-4" />
+                                    🎲 افتح تصويت اليوم + نبّه الجميع
+                                </button>
+                            )}
+
                             <button
                                 onClick={async () => {
                                     if (!currentWeek) return;
