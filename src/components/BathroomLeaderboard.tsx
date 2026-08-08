@@ -81,6 +81,7 @@ export default function BathroomLeaderboard() {
             <div className="space-y-4">
                 {stats.map((stat, index) => (
                     <div
+                        key={stat.restaurantName || `bathroom-${index}`}
                         className={`bg-slate-950/50 rounded-xl border transition-all ${index === 0 ? "border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)] relative overflow-hidden" :
                                 index === 1 ? "border-slate-400/50" :
                                     index === 2 ? "border-amber-700/50" : "border-slate-800"

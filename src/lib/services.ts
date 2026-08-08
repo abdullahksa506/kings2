@@ -815,19 +815,26 @@ export const services = {
         return invokeRpc("voiceState", { channel, joined, muted });
     },
 
-    listenToChannelMessages(channel: string, callback: (messages: ChatMessage[]) => void) {
-        const q = query(
-            collection(db, "chatMessages"),
-            where("channel", "==", channel),
-            orderBy("createdAt", "desc"),
-            limit(80),
+    // NOTE: we deliberately do NOT combine `where(channel)` with `orderBy(createdAt)`
+    // — that pairing requires a composite Firestore index and fails with
+    // FAILED_PRECONDITION until one is deployed (the chat silently showed nothing).
+    // Ordering by createdAt alone uses the built-in single-field index, and we
+    // filter per-channel on the client. Volume here is tiny (6 friends).
+    listenToRecentMessages(callback: (messages: ChatMessage[]) => void, onError?: (e: unknown) => void) {
+        const q = query(collection(db, "chatMessages"), orderBy("createdAt", "desc"), limit(300));
+        return onSnapshot(
+            q,
+            (snap) => {
+                const messages = snap.docs
+                    .map((doc) => ({ id: doc.id, ...doc.data() } as ChatMessage))
+                    .reverse(); // oldest→newest for display
+                callback(messages);
+            },
+            (err) => {
+                console.error("chat listener failed", err);
+                onError?.(err);
+            },
         );
-        return onSnapshot(q, (snap) => {
-            const messages = snap.docs
-                .map((doc) => ({ id: doc.id, ...doc.data() } as ChatMessage))
-                .reverse(); // oldest→newest for display
-            callback(messages);
-        });
     },
 
     listenToPublicUserProfiles(callback: (profiles: PublicUserProfile[]) => void) {

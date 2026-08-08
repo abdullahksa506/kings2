@@ -70,7 +70,6 @@ export default function ChatPage() {
     }, [loading, user, router]);
 
     const [channel, setChannel] = useState(DEFAULT_CHANNEL);
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [loadingMsgs, setLoadingMsgs] = useState(true);
     const [input, setInput] = useState("");
     const [sending, setSending] = useState(false);
@@ -90,15 +89,22 @@ export default function ChatPage() {
     const peerNames = inVoice.map((p) => p.name).filter((n) => n !== user?.name);
     const voice = useVoiceChat(channel, user?.name || "", peerNames);
 
-    // Live messages for the selected channel.
+    // Live messages — one listener for ALL channels (avoids a composite index);
+    // we filter per-channel below, so switching channels is instant.
+    const [allMessages, setAllMessages] = useState<ChatMessage[]>([]);
+    const [msgError, setMsgError] = useState("");
     useEffect(() => {
-        setLoadingMsgs(true); setMessages([]);
-        const unsub = services.listenToChannelMessages(channel, (msgs) => {
-            setMessages(msgs);
-            setLoadingMsgs(false);
-        });
+        const unsub = services.listenToRecentMessages(
+            (msgs) => { setAllMessages(msgs); setLoadingMsgs(false); setMsgError(""); },
+            () => { setLoadingMsgs(false); setMsgError("تعذّر تحميل الرسائل — حدّث الصفحة"); },
+        );
         return () => unsub();
-    }, [channel]);
+    }, []);
+
+    const messages = useMemo(
+        () => allMessages.filter((m) => (m.channel || DEFAULT_CHANNEL) === channel),
+        [allMessages, channel],
+    );
 
     // Member avatars/nicknames.
     useEffect(() => {
@@ -281,7 +287,9 @@ export default function ChatPage() {
 
                 {/* messages */}
                 <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-0.5">
-                    {loadingMsgs ? (
+                    {msgError ? (
+                        <div className="h-full flex items-center justify-center text-center text-amber-400 text-sm">{msgError}</div>
+                    ) : loadingMsgs ? (
                         <div className="h-full flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-400" /></div>
                     ) : grouped.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-center text-slate-500">

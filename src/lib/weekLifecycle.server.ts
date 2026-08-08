@@ -107,6 +107,9 @@ const DAY_IDX: Record<string, number> = {
 };
 export function daysSinceOuting(createdAtMs: number, day: string | null | undefined): number | null {
     if (!day || !(day in DAY_IDX)) return null;
+    // Guard a missing/zero timestamp: without this it would anchor to 1970 and
+    // report ~20000 days elapsed, auto-advancing the week instantly.
+    if (!Number.isFinite(createdAtMs) || createdAtMs <= 0) return null;
     const RIYADH = 3 * 60 * 60 * 1000;
     const DAY_MS = 24 * 60 * 60 * 1000;
     const target = DAY_IDX[day];
