@@ -3,6 +3,8 @@ import { authenticateServerRequest } from "@/lib/serverRequestAuth";
 import { SYSTEM_PROMPT, buildContextBlock, isLeakedResponse, SAFE_REFUSAL, KingAIContext } from "@/lib/kingAIPrompt";
 import { checkAndIncrement } from "@/lib/kingAILimits";
 import { services, VALID_NAMES } from "@/lib/services";
+import { outingDateLabel } from "@/lib/outingDate";
+import { adminDb } from "@/lib/firebase-admin";
 
 const MAX_INPUT_CHARS = 500;
 const MAX_HISTORY_TURNS = 8;
@@ -23,17 +25,18 @@ async function buildContext(userName: string): Promise<KingAIContext> {
         services.getAllCompletedWeeks().catch(() => []),
     ]);
 
-    // Sort completed by createdAt desc, take last 10
+    // Full history, newest first — with the REAL outing date and who excused themselves.
     const recent = [...completedRows]
         .sort((a, b) => b.week.createdAt.toMillis() - a.week.createdAt.toMillis())
-        .slice(0, 10)
         .map((r) => ({
             weekNumber: r.week.weekNumber,
             cycleNumber: r.week.cycleNumber,
             king: r.week.king,
             restaurant: r.week.restaurant,
             day: r.week.day,
+            dateLabel: outingDateLabel(r.week),
             avgRating: r.averageScore > 0 ? Math.round(r.averageScore * 10) / 10 : undefined,
+            absentees: (r.week.absentees || []).filter((a) => VALID_NAMES.includes(a)),
         }));
 
     // Per-member stats
@@ -89,6 +92,74 @@ async function buildContext(userName: string): Promise<KingAIContext> {
     const uniqueRestaurants = new Set<string>();
     for (const r of completedRows) if (r.week.restaurant) uniqueRestaurants.add(r.week.restaurant.trim());
 
+    // ── Restaurant ranking: visits + average rating (aggregate only) ──
+    const restAgg: Record<string, { visits: number; sum: number; rated: number }> = {};
+    for (const r of completedRows) {
+        const name = r.week.restaurant?.trim();
+        if (!name) continue;
+        if (!restAgg[name]) restAgg[name] = { visits: 0, sum: 0, rated: 0 };
+        restAgg[name].visits += 1;
+        if (r.averageScore > 0) { restAgg[name].sum += r.averageScore; restAgg[name].rated += 1; }
+    }
+    const restaurantRanking = Object.entries(restAgg)
+        .map(([name, a]) => ({
+            name,
+            visits: a.visits,
+            avgRating: a.rated > 0 ? Math.round((a.sum / a.rated) * 10) / 10 : undefined,
+        }))
+        .sort((a, b) => (b.avgRating ?? 0) - (a.avgRating ?? 0) || b.visits - a.visits);
+
+    // ── Bathrooms: averages + Hisham's written reviews ──
+    const [bathroomRatings, bathroomReviews, mapLocations, fullStats] = await Promise.all([
+        services.getAllBathroomRatings().catch(() => []),
+        services.getBathroomReviews().catch(() => []),
+        adminDb.collection("restaurantLocations").get()
+            .then((s) => s.docs.map((d) => d.data() as { name?: string; addedBy?: string }))
+            .catch(() => [] as { name?: string; addedBy?: string }[]),
+        services.getStatistics().catch(() => null as any),
+    ]);
+    const reviewByLabel: Record<string, string> = {};
+    for (const rv of bathroomReviews as { label?: string; review?: string }[]) {
+        if (rv?.label) reviewByLabel[rv.label.trim()] = rv.review || "";
+    }
+    // Most bathroom ratings only carry a weekId — resolve the name from that outing's
+    // restaurant, otherwise every rating would be dropped and the AI would see none.
+    const restaurantByWeekId: Record<string, string> = {};
+    for (const r of completedRows) {
+        if (r.week.restaurant) restaurantByWeekId[r.week.id] = r.week.restaurant.trim();
+    }
+    const bathAgg: Record<string, { sum: number; n: number }> = {};
+    for (const b of bathroomRatings as { bathroomName?: string; restaurantName?: string | null; weekId?: string; score: number }[]) {
+        const label = (b.bathroomName || b.restaurantName || (b.weekId ? restaurantByWeekId[b.weekId] : "") || "").trim();
+        if (!label) continue;
+        if (!bathAgg[label]) bathAgg[label] = { sum: 0, n: 0 };
+        bathAgg[label].sum += b.score;
+        bathAgg[label].n += 1;
+    }
+    const bathrooms = Object.entries(bathAgg)
+        .map(([name, a]) => ({
+            name,
+            avgScore: Math.round((a.sum / a.n) * 10) / 10,
+            count: a.n,
+            review: reviewByLabel[name] || undefined,
+        }))
+        .sort((a, b) => b.avgScore - a.avgScore);
+
+    // ── Richer per-member + global figures from the shared stats engine ──
+    const ms = fullStats?.memberStats as Record<string, { attended: number; absent: number; timesAsKing: number }> | undefined;
+    const memberAttended: Record<string, number> = {};
+    const memberAbsent: Record<string, number> = {};
+    if (ms) {
+        for (const n of VALID_NAMES) {
+            memberAttended[n] = ms[n]?.attended ?? 0;
+            memberAbsent[n] = ms[n]?.absent ?? 0;
+        }
+    }
+    const memberKingAvg: Record<string, number> = {};
+    for (const [name, { sum, n }] of Object.entries(kingScoreSum)) {
+        memberKingAvg[name] = Math.round((sum / n) * 10) / 10;
+    }
+
     return {
         currentWeek,
         recentWeeks: recent,
@@ -100,10 +171,27 @@ async function buildContext(userName: string): Promise<KingAIContext> {
                 completedRows.length > 0 ? Math.round((totalAttendees / completedRows.length) * 10) / 10 : 0,
             mostKingMember: mostKingMember && mostKingMember.count > 0 ? mostKingMember : null,
             highestRatedKing,
+            lowestRatedKing: fullStats?.funFacts?.lowestRatedKing
+                ? { name: fullStats.funFacts.lowestRatedKing.name, score: Math.round(fullStats.funFacts.lowestRatedKing.score * 10) / 10 }
+                : null,
             memberAttendance,
             memberTimesAsKing,
+            memberAttended: ms ? memberAttended : undefined,
+            memberAbsent: ms ? memberAbsent : undefined,
+            memberKingAvg,
+            streaks: fullStats?.streaks,
+            totalCycles: fullStats?.totalCycles,
+            thursdayCount: fullStats?.thursdayCount,
+            fridayCount: fullStats?.fridayCount,
+            globalAverage: fullStats?.globalAverageRating
+                ? Math.round(fullStats.globalAverageRating * 10) / 10
+                : undefined,
         },
-        knownRestaurants: [],
+        knownRestaurants: (mapLocations as { name?: string; addedBy?: string }[])
+            .map((l) => ({ name: l?.name || "", addedBy: l?.addedBy || "" }))
+            .filter((l) => l.name),
+        restaurantRanking,
+        bathrooms,
     };
 }
 
