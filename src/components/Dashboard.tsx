@@ -2075,18 +2075,6 @@ export default function Dashboard() {
                     {activeTab === "more" && !(selectedTheme === "tiktok" && !tiktokFullView) && (
                         <div className="space-y-4 max-w-2xl mx-auto">
 
-                            {/* Chat (Discord-style) */}
-                            <Link href="/chat" className="flex items-center justify-between gap-3 bg-gradient-to-br from-indigo-900/50 to-violet-900/40 border border-indigo-500/30 hover:border-indigo-400/60 rounded-3xl p-5 shadow-xl transition group">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2.5 rounded-xl bg-indigo-500/20 border border-indigo-500/40 text-2xl">💬</div>
-                                    <div className="text-right">
-                                        <h3 className="font-bold text-lg text-indigo-100">الشات</h3>
-                                        <p className="text-[11px] text-indigo-300/70">دردشة الشلة بالقنوات — وقت فعلي · أفضل على الكمبيوتر</p>
-                                    </div>
-                                </div>
-                                <ChevronRight className="w-6 h-6 text-indigo-300 rotate-180 group-hover:-translate-x-1 transition-transform" />
-                            </Link>
-
                             {/* Theme Selector */}
                             <div className={`bg-slate-900/90 border ${activeThemeStyle.accentBorderClass} rounded-3xl p-6 shadow-xl`}>
                                 <div className="flex items-center gap-3 mb-4">
