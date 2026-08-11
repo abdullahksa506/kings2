@@ -133,12 +133,18 @@ export default function AuthScreen() {
                                 <div className="space-y-1">
                                     <label className="text-sm font-medium text-slate-300">كود الاسترجاع (من العميد)</label>
                                     <div className="relative">
+                                        {/* The server issues a 6-digit code — this input used to
+                                            truncate to 4, so the code could never match and account
+                                            recovery was impossible. Keep these lengths in sync. */}
                                         <input
                                             type="text"
+                                            inputMode="numeric"
+                                            autoComplete="one-time-code"
+                                            maxLength={6}
                                             required
                                             value={resetCode}
-                                            onChange={(e) => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                                            placeholder="1234"
+                                            onChange={(e) => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                            placeholder="123456"
                                             className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 pr-10 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all text-white placeholder-slate-600 font-mono tracking-widest text-center"
                                         />
                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
