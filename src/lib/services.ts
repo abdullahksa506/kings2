@@ -285,6 +285,11 @@ function pickNewestPendingWeek(weeks: WeekSession[]): WeekSession | null {
 
 export const services = {
     // Get active week or create new one if none exists
+    /** Self-diagnostics for the signed-in member (users collection is locked down). */
+    async selfCheck(): Promise<{ name: string; role: string; registered: boolean; hasPushSubscription: boolean; serverTimeMs: number }> {
+        return invokeRpc("selfCheck");
+    },
+
     async getCurrentWeek(): Promise<WeekSession | null> {
         // Pick the NEWEST pending week. We sort client-side (not orderBy) so we
         // don't need a Firestore composite index. Without this, a stale pending

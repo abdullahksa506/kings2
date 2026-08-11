@@ -1208,6 +1208,22 @@ export async function POST(request: Request) {
                 return NextResponse.json({ result: true });
             }
 
+            // Self-diagnostics: lets a member verify their OWN account state without
+            // exposing the users collection (which is locked down in firestore.rules).
+            case "selfCheck": {
+                if (!authName || !userDocData) throw new Error("Unauthorized");
+                const sub = userDocData.pushSubscription;
+                return NextResponse.json({
+                    result: {
+                        name: authName,
+                        role: typeof userDocData.role === "string" ? userDocData.role : "member",
+                        registered: Boolean(userDocData.registered),
+                        hasPushSubscription: typeof sub === "string" && sub.length > 0,
+                        serverTimeMs: Date.now(),
+                    },
+                });
+            }
+
             case "recordVisit":
                 const today = new Date().toISOString().split("T")[0];
                 await adminDb.collection("siteVisits").add({ date: today, timestamp: Timestamp.now() });

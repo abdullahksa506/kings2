@@ -2333,6 +2333,18 @@ export default function Dashboard() {
                             <WhisperPanel userName={user?.name || ""} getAuthHeaders={getReminderAuthHeaders} />
 
                             {/* Security log — global requests + stats (anyone can view) */}
+                            {/* Self-diagnostics — every member checks their own device */}
+                            <Link href="/test-panel" className="flex items-center justify-between gap-3 bg-gradient-to-br from-emerald-900/40 to-teal-900/30 border border-emerald-500/30 hover:border-emerald-400/60 rounded-3xl p-5 shadow-xl transition group">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-2xl">🔍</div>
+                                    <div className="text-right">
+                                        <h3 className="font-bold text-lg text-emerald-100">فحص جهازك</h3>
+                                        <p className="text-[11px] text-emerald-300/70">تأكد إن كل شي يشتغل عندك — خصوصاً الإشعارات بعد إعادة التثبيت</p>
+                                    </div>
+                                </div>
+                                <ChevronRight className="w-6 h-6 text-emerald-300 rotate-180 group-hover:-translate-x-1 transition-transform" />
+                            </Link>
+
                             <SecurityLogPanel />
 
                             <div className="flex justify-center pt-2 pb-4">
