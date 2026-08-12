@@ -19,9 +19,16 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
     // current week). Self-discovered so it works regardless of data mess.
     const [selectedCycle, setSelectedCycle] = useState<number | null>(null);
 
+    // The cycle the group is actually IN right now (from the active week), which can
+    // be ahead of the newest cycle that has rated outings.
+    const [activeCycle, setActiveCycle] = useState<number | null>(null);
+
     useEffect(() => {
         const discover = async () => {
-            const all = await services.getAllCompletedWeeks();
+            const [all, current] = await Promise.all([
+                services.getAllCompletedWeeks(),
+                services.getCurrentWeek().catch(() => null),
+            ]);
             const cyc = new Set<number>();
             all.forEach((e) => {
                 const w = e.week as WeekSession & { historicalAverageRating?: number };
@@ -33,7 +40,13 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
                 }
             });
             const sorted = [...cyc].sort((a, b) => a - b);
-            setSelectedCycle(sorted.length > 0 ? sorted[sorted.length - 1] : (cycleNumber || 1));
+            const newestWithData = sorted.length > 0 ? sorted[sorted.length - 1] : null;
+
+            const cur = current?.cycleNumber;
+            setActiveCycle(typeof cur === "number" && cur > 0 && cur < 100 ? cur : (cycleNumber || null));
+            // Show the newest cycle that actually HAS rated outings; if none, fall
+            // back to the active cycle (renders the empty state).
+            setSelectedCycle(newestWithData ?? cur ?? cycleNumber ?? 1);
         };
         discover();
     }, [cycleNumber]);
@@ -95,8 +108,15 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
                     قائمة شرف المطاعم
                 </h3>
                 <p className="text-[11px] text-amber-400/70 mt-1.5 font-medium">
-                    {selectedCycle ? `أحدث دورة — الدورة ${selectedCycle}` : "أحدث دورة"}
+                    {selectedCycle ? `الدورة ${selectedCycle}` : "—"}
                 </p>
+                {/* Be honest when the group has already moved to a newer cycle that
+                    has no rated outings yet — otherwise this looks like stale data. */}
+                {activeCycle && selectedCycle && activeCycle > selectedCycle && (
+                    <p className="text-[10px] text-slate-400 mt-1">
+                        إحنا في الدورة {activeCycle} — لسا ما فيها طلعات مقيّمة، فنعرض آخر دورة مكتملة
+                    </p>
+                )}
             </div>
             <div className="mb-4 relative z-10"><OrnamentalDivider /></div>
             {isDean && onReset && (
