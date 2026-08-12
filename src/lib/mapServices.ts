@@ -1,6 +1,6 @@
 import { db } from "./firebase";
 import { collection, getDocs, onSnapshot, query, where } from "firebase/firestore";
-import { invokeRpc } from "./services";
+import { invokeRpc, services } from "./services";
 
 // --- Types ---
 
@@ -43,22 +43,20 @@ export function canonRestaurant(name: string): string {
 // --- Read: restaurant summaries (lightweight, 2 reads, keeps services.ts untouched) ---
 
 export async function getRestaurantSummaries(): Promise<RestaurantSummary[]> {
-    const [weeksSnap, ratingsSnap] = await Promise.all([
+    // Ratings are secret — the collection is closed to clients, so per-week
+    // sums/counts come from the server instead of raw rating docs.
+    const [weeksSnap, ratingsData] = await Promise.all([
         getDocs(query(collection(db, "weeks"), where("status", "==", "completed"))),
-        getDocs(collection(db, "ratings")),
+        services.getRatingsData().catch(() => null),
     ]);
 
     // Average rating per week.
     const weekScoreSum: Record<string, number> = {};
     const weekScoreCount: Record<string, number> = {};
-    ratingsSnap.forEach((doc) => {
-        const r = doc.data() as any;
-        const wid = r?.weekId;
-        const score = Number(r?.score);
-        if (!wid || !Number.isFinite(score)) return;
-        weekScoreSum[wid] = (weekScoreSum[wid] || 0) + score;
-        weekScoreCount[wid] = (weekScoreCount[wid] || 0) + 1;
-    });
+    for (const [wid, agg] of Object.entries(ratingsData?.weeks || {})) {
+        weekScoreSum[wid] = agg.sum;
+        weekScoreCount[wid] = agg.count;
+    }
 
     // Aggregate per restaurant.
     const agg: Record<

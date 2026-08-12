@@ -23,7 +23,10 @@ service cloud.firestore {
     // and smoke-test the app afterwards (leaderboards, chat, map, games, security log).
 
     match /weeks/{document=**}               { allow read: if true; allow write: if false; }
-    match /ratings/{document=**}             { allow read: if true; allow write: if false; }
+    // Ratings are SECRET: individual scores must never be readable by clients.
+    // Averages/aggregates are served by the server (RPC "getRatingsData"), and
+    // only the dean receives per-person scores.
+    match /ratings/{document=**}             { allow read, write: if false; }
     match /bathroomRatings/{document=**}     { allow read: if true; allow write: if false; }
     match /bathroomReviews/{document=**}     { allow read: if true; allow write: if false; }
     match /appConfig/{document=**}           { allow read: if true; allow write: if false; }

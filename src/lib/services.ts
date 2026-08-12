@@ -161,6 +161,15 @@ export const FUTURE_FEATURE_SEEDS: FutureFeatureSeed[] = [
     },
 ];
 
+/** Server-served ratings payload. Scores (`detail`) are dean-only. */
+export interface RatingsData {
+    weeks: Record<string, { sum: number; count: number; raters: string[] }>;
+    byUser: Record<string, { sum: number; count: number }>;
+    mine: { weekId: string; score: number }[];
+    isDean: boolean;
+    detail?: { weekId: string; userName: string; score: number }[];
+}
+
 export interface RatingExplorerWeek {
     week: WeekSession;
     averageScore: number;
@@ -283,6 +292,10 @@ function pickNewestPendingWeek(weeks: WeekSession[]): WeekSession | null {
     return [...weeks].sort((a, b) => ms(b) - ms(a))[0];
 }
 
+// One in-flight/resolved fetch of the ratings payload per page load — several
+// views need it and it's a single server round trip.
+let ratingsDataCache: Promise<RatingsData> | null = null;
+
 export const services = {
     // Get active week or create new one if none exists
     /** Self-diagnostics for the signed-in member (users collection is locked down). */
@@ -400,43 +413,59 @@ export const services = {
     },
 
     // Dean only
-    async getAllRatingsForWeek(weekId: string): Promise<Rating[]> {
-        const q = query(collection(db, "ratings"), where("weekId", "==", weekId));
-        const snap = await getDocs(q);
-        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Rating));
+    // ── Ratings are SECRET ──────────────────────────────────────────────────
+    // The `ratings` collection is denied to clients in firestore.rules, so all of
+    // these go through the server. Members receive aggregates + who-rated names;
+    // only the dean receives per-person scores.
+    async getRatingsData(): Promise<RatingsData> {
+        if (!ratingsDataCache) {
+            ratingsDataCache = invokeRpc("getRatingsData")
+                .then((r) => r as RatingsData)
+                .catch((e) => { ratingsDataCache = null; throw e; });
+        }
+        return ratingsDataCache;
     },
 
-    // Read the whole ratings collection ONCE and group by week. Callers that need
-    // ratings for many weeks use this instead of firing one query per week (N+1).
-    async getRatingsGroupedByWeek(): Promise<Map<string, Rating[]>> {
-        const snap = await getDocs(collection(db, "ratings"));
+    /** Clears the per-page ratings cache (call after submitting a rating). */
+    invalidateRatingsCache() {
+        ratingsDataCache = null;
+    },
+
+    async getAllRatingsForWeek(weekId: string): Promise<Rating[]> {
+        const data = await this.getRatingsData();
+        if (data.isDean && data.detail) {
+            return data.detail
+                .filter((d) => d.weekId === weekId)
+                .map((d, i) => ({ id: `${weekId}_${i}`, weekId, userName: d.userName, score: d.score } as Rating));
+        }
+        // Non-dean: names only — scores stay secret.
+        const raters = data.weeks?.[weekId]?.raters || [];
+        return raters.map((userName, i) => ({ id: `${weekId}_${i}`, weekId, userName } as Rating));
+    },
+
+    /** Per-week aggregates (sum/count/raters) — replaces reading every rating doc. */
+    async getRatingsGroupedByWeek(): Promise<Map<string, { sum: number; count: number; raters: string[] }>> {
+        const data = await this.getRatingsData();
+        return new Map(Object.entries(data.weeks || {}));
+    },
+
+    /** Dean only: real per-person scores grouped by week. Empty map for members. */
+    async getRatingsDetailByWeek(): Promise<Map<string, Rating[]>> {
+        const data = await this.getRatingsData();
         const map = new Map<string, Rating[]>();
-        snap.docs.forEach((d) => {
-            const r = { id: d.id, ...d.data() } as Rating;
-            const arr = map.get(r.weekId);
-            if (arr) arr.push(r);
-            else map.set(r.weekId, [r]);
+        if (!data.isDean || !data.detail) return map;
+        data.detail.forEach((d, i) => {
+            const row = { id: `${d.weekId}_${i}`, weekId: d.weekId, userName: d.userName, score: d.score } as Rating;
+            const arr = map.get(d.weekId);
+            if (arr) arr.push(row);
+            else map.set(d.weekId, [row]);
         });
         return map;
     },
 
-    listenToRatingsForWeek(weekId: string, callback: (ratings: Rating[]) => void) {
-        const q = query(collection(db, "ratings"), where("weekId", "==", weekId));
-        return onSnapshot(q, (snap) => {
-            const ratings = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Rating));
-            callback(ratings);
-        });
-    },
-
-    async hasUserRated(weekId: string, userName: string): Promise<boolean> {
-        const q = query(
-            collection(db, "ratings"),
-            where("weekId", "==", weekId),
-            where("userName", "==", userName),
-            limit(1)
-        );
-        const snap = await getDocs(q);
-        return !snap.empty;
+    async hasUserRated(weekId: string, _userName?: string): Promise<boolean> {
+        // Always about the signed-in user (server derives identity from the token).
+        return invokeRpc("haveIRated", { weekId }) as Promise<boolean>;
     },
 
     async submitBathroomRating(
@@ -520,10 +549,10 @@ export const services = {
         // One grouped ratings read instead of one query per week (was N+1).
         const grouped = await this.getRatingsGroupedByWeek();
         const leaderboard = activeWeeks.map((week) => {
-            const ratings = grouped.get(week.id) || [];
+            const agg = grouped.get(week.id);
             let averageScore = 0;
-            if (ratings.length > 0) {
-                averageScore = ratings.reduce((acc, curr) => acc + curr.score, 0) / ratings.length;
+            if (agg && agg.count > 0) {
+                averageScore = agg.sum / agg.count;
             }
             return { week, averageScore };
         });
@@ -545,12 +574,14 @@ export const services = {
 
         // One grouped ratings read instead of one query per week (was N+1).
         const grouped = await this.getRatingsGroupedByWeek();
+        const detailByWeek = await this.getRatingsDetailByWeek();
         const results = weeks.map((week) => {
-            const ratings = grouped.get(week.id) || [];
-            let averageScore = 0;
-            if (ratings.length > 0) {
-                averageScore = ratings.reduce((acc, curr) => acc + curr.score, 0) / ratings.length;
-            }
+            const agg = grouped.get(week.id);
+            const averageScore = agg && agg.count > 0 ? agg.sum / agg.count : 0;
+            // Dean gets real per-person scores; everyone else gets names only.
+            const ratings: Rating[] =
+                detailByWeek.get(week.id) ??
+                (agg?.raters || []).map((userName, i) => ({ id: `${week.id}_${i}`, weekId: week.id, userName } as Rating));
             return { week, averageScore, ratings };
         });
 
@@ -568,12 +599,16 @@ export const services = {
     },
 
     async getMemberProfile(memberName: string): Promise<MemberProfileData> {
-        const [allWeeksWithAvg, ratingsSnap] = await Promise.all([
+        const [allWeeksWithAvg, ratingsData] = await Promise.all([
             this.getAllCompletedWeeks(),
-            getDocs(collection(db, "ratings")),
+            this.getRatingsData(),
         ]);
 
-        const allRatings = ratingsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Rating));
+        // Ratings are secret: you only ever get YOUR OWN scores here (the dean has
+        // the full picture via the dean panel). Profiles are self-only in the UI.
+        const allRatings: Rating[] = (ratingsData.mine || []).map(
+            (m, i) => ({ id: `mine_${i}`, weekId: m.weekId, userName: memberName, score: m.score } as Rating),
+        );
         // Only competitive outings count toward a member's attendance/participation
         // (random & junk weeks are organizational and must not pollute profiles).
         const completedWeeks = allWeeksWithAvg.map(w => w.week).filter(isRealOuting);
@@ -902,9 +937,11 @@ export const services = {
         const completedWeeks = allWeeks.filter(w => w.status === "completed" && isRealOuting(w));
         const pendingWeeks = allWeeks.filter(w => w.status === "pending" && isRealOuting(w));
 
-        // 2. Get all ratings
-        const ratingsSnap = await getDocs(collection(db, "ratings"));
-        const allRatings = ratingsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Rating));
+        // 2. Ratings — aggregates only (the collection is closed to clients; individual
+        //    scores are secret). Everything below needs sums/counts, not who-gave-what.
+        const ratingsData = await this.getRatingsData();
+        const ratingWeeks = ratingsData.weeks || {};
+        const ratingByUser = ratingsData.byUser || {};
 
         // 3. Get suggestions count
         const suggestionsSnap = await getDocs(collection(db, "suggestions"));
@@ -931,9 +968,9 @@ export const services = {
         // Calculate Week Averages
         const weekAverages: Record<string, number> = {};
         for (const week of completedWeeks) {
-            const weekRt = allRatings.filter(r => r.weekId === week.id);
-            if (weekRt.length > 0) {
-                weekAverages[week.id] = weekRt.reduce((acc, r) => acc + r.score, 0) / weekRt.length;
+            const agg = ratingWeeks[week.id];
+            if (agg && agg.count > 0) {
+                weekAverages[week.id] = agg.sum / agg.count;
             }
         }
 
@@ -992,10 +1029,8 @@ export const services = {
         }
 
         // Count ratings per user
-        for (const rating of allRatings) {
-            if (rating.userName !== "System_Import" && memberStats[rating.userName]) {
-                memberStats[rating.userName].ratingsGiven++;
-            }
+        for (const [who, agg] of Object.entries(ratingByUser)) {
+            if (memberStats[who]) memberStats[who].ratingsGiven = agg.count;
         }
 
         // --- Restaurant stats ---
@@ -1052,16 +1087,11 @@ export const services = {
         // Calculate Rater Habits
         const raterPicky: Record<string, { sum: number; count: number }> = {};
         
-        for (const rating of allRatings) {
-            if (rating.userName !== "System_Import") {
-                if (VALID_NAMES.includes(rating.userName)) {
-                    if (!raterPicky[rating.userName]) raterPicky[rating.userName] = { sum: 0, count: 0 };
-                    raterPicky[rating.userName].sum += rating.score;
-                    raterPicky[rating.userName].count++;
-                }
+        for (const [who, agg] of Object.entries(ratingByUser)) {
+            if (VALID_NAMES.includes(who)) {
+                raterPicky[who] = { sum: agg.sum, count: agg.count };
             }
         }
-
         // Global outings average: each outing has equal weight (not each individual rating).
         const completedWeekAverages = Object.values(weekAverages);
         const globalAverageRating = completedWeekAverages.length > 0
@@ -1170,12 +1200,12 @@ export const services = {
         };
 
         const calcMemberGivenRating = (weeks: WeekSession[], name: string) => {
+            // Individual scores are secret, so we use the member's OVERALL average
+            // (server-provided aggregate) rather than a per-window recomputation.
             if (weeks.length === 0) return 0;
-            const weekIds = new Set(weeks.map((w) => w.id));
-            const given = allRatings.filter((r) => r.userName === name && weekIds.has(r.weekId));
-            if (given.length === 0) return 0;
-            const avg = given.reduce((sum, r) => sum + r.score, 0) / given.length;
-            return Math.round(avg * 10) / 10;
+            const agg = ratingByUser[name];
+            if (!agg || agg.count === 0) return 0;
+            return Math.round((agg.sum / agg.count) * 10) / 10;
         };
 
         for (const name of VALID_NAMES) {

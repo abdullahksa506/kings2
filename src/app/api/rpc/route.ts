@@ -1224,6 +1224,57 @@ export async function POST(request: Request) {
                 });
             }
 
+            // Ratings are SECRET: the client may no longer read the collection directly
+            // (firestore.rules denies it). Members get aggregates + who-rated names.
+            // Only the dean gets the per-person scores.
+            case "getRatingsData": {
+                if (!authName) throw new Error("Unauthorized");
+                const snap = await adminDb.collection("ratings").get();
+                const weeks: Record<string, { sum: number; count: number; raters: string[] }> = {};
+                const byUser: Record<string, { sum: number; count: number }> = {};
+                const detail: { weekId: string; userName: string; score: number }[] = [];
+                const mine: { weekId: string; score: number }[] = []; // your own — always allowed
+
+                snap.forEach((d) => {
+                    const r = d.data() as { weekId?: string; userName?: string; score?: number };
+                    const weekId = typeof r.weekId === "string" ? r.weekId : "";
+                    const who = typeof r.userName === "string" ? r.userName : "";
+                    const score = Number(r.score);
+                    if (!weekId || !Number.isFinite(score)) return;
+
+                    if (!weeks[weekId]) weeks[weekId] = { sum: 0, count: 0, raters: [] };
+                    weeks[weekId].sum += score;
+                    weeks[weekId].count += 1;
+                    if (who && !weeks[weekId].raters.includes(who)) weeks[weekId].raters.push(who);
+
+                    if (who && who !== "System_Import") {
+                        if (!byUser[who]) byUser[who] = { sum: 0, count: 0 };
+                        byUser[who].sum += score;
+                        byUser[who].count += 1;
+                    }
+                    if (who === authName) mine.push({ weekId, score });
+                    if (isAdmin) detail.push({ weekId, userName: who, score });
+                });
+
+                return NextResponse.json({
+                    result: { weeks, byUser, mine, isDean: isAdmin, detail: isAdmin ? detail : undefined },
+                });
+            }
+
+            // "Did I already rate this week?" — about YOURSELF only.
+            case "haveIRated": {
+                if (!authName) throw new Error("Unauthorized");
+                const weekId = asTrimmedString(payload?.weekId);
+                if (!weekId) throw new Error("weekId required");
+                const snap = await adminDb
+                    .collection("ratings")
+                    .where("weekId", "==", weekId)
+                    .where("userName", "==", authName)
+                    .limit(1)
+                    .get();
+                return NextResponse.json({ result: !snap.empty });
+            }
+
             case "recordVisit":
                 const today = new Date().toISOString().split("T")[0];
                 await adminDb.collection("siteVisits").add({ date: today, timestamp: Timestamp.now() });

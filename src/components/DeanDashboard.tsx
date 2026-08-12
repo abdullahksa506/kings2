@@ -38,9 +38,11 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
             setLoading(true);
             try {
                 if (weekId && weekId.length > 0) {
-                    unsubscribeRatings = services.listenToRatingsForWeek(weekId, (fetchedRatings) => {
-                        setRatings(fetchedRatings);
-                    });
+                    // Ratings now come from the server (the collection is closed to
+                    // clients), so this is a fetch instead of a live listener.
+                    services.invalidateRatingsCache();
+                    const fetched = await services.getAllRatingsForWeek(weekId);
+                    setRatings(fetched);
                 } else {
                     setRatings([]);
                 }
