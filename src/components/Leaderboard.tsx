@@ -19,34 +19,17 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
     // current week). Self-discovered so it works regardless of data mess.
     const [selectedCycle, setSelectedCycle] = useState<number | null>(null);
 
-    // The cycle the group is actually IN right now (from the active week), which can
-    // be ahead of the newest cycle that has rated outings.
-    const [activeCycle, setActiveCycle] = useState<number | null>(null);
-
     useEffect(() => {
         const discover = async () => {
-            const [all, current] = await Promise.all([
-                services.getAllCompletedWeeks(),
-                services.getCurrentWeek().catch(() => null),
-            ]);
-            const cyc = new Set<number>();
-            all.forEach((e) => {
-                const w = e.week as WeekSession & { historicalAverageRating?: number };
-                // Real competitive cycles only — ignore random, historical, and
-                // obvious junk cycle numbers (0 or >=100).
-                const c = w.cycleNumber ?? 1;
-                if (!w.isRandom && w.historicalAverageRating === undefined && c > 0 && c < 100) {
-                    cyc.add(c);
-                }
-            });
-            const sorted = [...cyc].sort((a, b) => a - b);
-            const newestWithData = sorted.length > 0 ? sorted[sorted.length - 1] : null;
-
-            const cur = current?.cycleNumber;
-            setActiveCycle(typeof cur === "number" && cur > 0 && cur < 100 ? cur : (cycleNumber || null));
-            // Show the newest cycle that actually HAS rated outings; if none, fall
-            // back to the active cycle (renders the empty state).
-            setSelectedCycle(newestWithData ?? cur ?? cycleNumber ?? 1);
+            // The dean-configured current cycle is the source of truth for WHICH
+            // cycle this board represents. We never fall back to an older cycle —
+            // showing last cycle's winners under "the current cycle" is misleading.
+            const configured = await services.getCurrentCycle().catch(() => null);
+            const cycle =
+                typeof configured === "number" && configured > 0 && configured < 100
+                    ? configured
+                    : (cycleNumber || 1);
+            setSelectedCycle(cycle);
         };
         discover();
     }, [cycleNumber]);
@@ -85,12 +68,15 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
     if (data.length === 0) {
         return (
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
-                <h3 className="font-semibold text-lg mb-3 text-slate-300 flex items-center gap-2 justify-center">
+                <h3 className="font-semibold text-lg mb-1 text-slate-300 flex items-center gap-2 justify-center">
                     <Trophy className="w-5 h-5 text-amber-500" />
-                    قائمة الشرف (المتصدرين)
+                    قائمة شرف المطاعم
                 </h3>
+                {selectedCycle && (
+                    <p className="text-[11px] text-amber-400/70 text-center font-medium">الدورة {selectedCycle}</p>
+                )}
                 <p className="text-sm text-slate-500 text-center py-6">
-                    لا يوجد طلعات سابقة مكتملة حتى الآن. شاركوا وقيّموا لتبدأ المنافسة!
+                    ما فيه طلعات مقيّمة في هذي الدورة بعد — أول ما تُقيَّم طلعة تظهر هنا 🍽️
                 </p>
             </div>
         );
@@ -110,13 +96,6 @@ export default function Leaderboard({ cycleNumber, isDean = false, onReset }: { 
                 <p className="text-[11px] text-amber-400/70 mt-1.5 font-medium">
                     {selectedCycle ? `الدورة ${selectedCycle}` : "—"}
                 </p>
-                {/* Be honest when the group has already moved to a newer cycle that
-                    has no rated outings yet — otherwise this looks like stale data. */}
-                {activeCycle && selectedCycle && activeCycle > selectedCycle && (
-                    <p className="text-[10px] text-slate-400 mt-1">
-                        إحنا في الدورة {activeCycle} — لسا ما فيها طلعات مقيّمة، فنعرض آخر دورة مكتملة
-                    </p>
-                )}
             </div>
             <div className="mb-4 relative z-10"><OrnamentalDivider /></div>
             {isDean && onReset && (
