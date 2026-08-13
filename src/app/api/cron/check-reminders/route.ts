@@ -5,6 +5,7 @@ import { sendPushNotification } from "@/lib/pushHelper";
 import * as admin from "firebase-admin";
 import { AutomationConfig, DEFAULT_AUTOMATION, mergeAutomation } from "@/lib/automation";
 import { createNextWeek, nextKingFor, daysSinceOuting } from "@/lib/weekLifecycle.server";
+import { SATURDAY_DEAN, currentSaturdayKey } from "@/lib/saturday";
 
 /** Master automation config: stored doc merged over code defaults (default OFF). */
 async function getAutomationConfig(): Promise<AutomationConfig> {
@@ -93,12 +94,42 @@ async function handle(request: Request) {
         return NextResponse.json({ ok: true, skipped: "quiet-hours", hour });
     }
 
-    const week = await services.getCurrentWeek();
-    if (!week) {
-        return NextResponse.json({ ok: true, skipped: "no-active-week" });
+    const log: Array<{ rule: string; sent: number; skipped?: string }> = [];
+
+    // ── طلعة السبت: تنبيه الجمعة العصر ──
+    // Runs BEFORE the Thursday-week check on purpose: the Saturday outing is a
+    // separate track and must fire even when no Thursday week is active.
+    if (
+        R.saturdayRsvp?.on &&
+        dayName === (R.saturdayRsvp.day ?? "الجمعة") &&
+        hour >= (R.saturdayRsvp.hourFrom ?? 16) &&
+        hour < (R.saturdayRsvp.hourTo ?? 18)
+    ) {
+        const satKey = currentSaturdayKey();
+        const ruleId = `saturday-rsvp-${satKey}`;
+        if (await shouldRunRule(ruleId, 24 * 60)) {
+            const cfgSnap = await adminDb.collection("saturdayConfig").doc("main").get();
+            const allowed = (cfgSnap.exists ? (cfgSnap.data()?.allowedMembers as string[]) : []) || [];
+            const targets = Array.from(new Set([SATURDAY_DEAN, ...allowed]));
+            const r = await sendPushNotification(
+                {
+                    title: "🤫 طلعة السبت — حدد موقفك",
+                    body: "بتجي ولا لا؟ وإذا بتجي، الساعة كم توصل؟ افتح وحدد.",
+                    type: "default",
+                    tag: `saturday-rsvp-${satKey}`,
+                    url: "/saturday",
+                    payload: { key: satKey },
+                },
+                { userNames: targets },
+            );
+            log.push({ rule: ruleId, sent: r.sentCount });
+        }
     }
 
-    const log: Array<{ rule: string; sent: number; skipped?: string }> = [];
+    const week = await services.getCurrentWeek();
+    if (!week) {
+        return NextResponse.json({ ok: true, skipped: "no-active-week", log });
+    }
 
     // Rule 1: remind king if no decision yet (default Wed 8-10pm).
     if (

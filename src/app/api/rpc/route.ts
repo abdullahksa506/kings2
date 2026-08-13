@@ -11,6 +11,7 @@ import { hashPassword } from "@/lib/hash";
 import { sendPushNotification } from "@/lib/pushHelper";
 import { createNextWeek } from "@/lib/weekLifecycle.server";
 import { planOuting } from "@/lib/outingPlanner";
+import { SATURDAY_DEAN, currentSaturdayKey, isValidTime } from "@/lib/saturday";
 
 const VALID_NAMES_RPC = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
 const WEEK_DAYS = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"] as const;
@@ -1273,6 +1274,129 @@ export async function POST(request: Request) {
                     .limit(1)
                     .get();
                 return NextResponse.json({ result: !snap.empty });
+            }
+
+            // ═══════════ طلعة السبت السرّية ═══════════
+            // Everything is server-gated: the collections are closed to clients, so
+            // a member with no access can't even read that an outing exists.
+            case "saturdayGetState": {
+                if (!authName) throw new Error("Unauthorized");
+                const cfgRef = adminDb.collection("saturdayConfig").doc("main");
+                const cfgSnap = await cfgRef.get();
+                const cfg = (cfgSnap.exists ? cfgSnap.data() : {}) as {
+                    allowedMembers?: string[]; constitution?: string; introSeenBy?: string[];
+                };
+                const allowedMembers = Array.isArray(cfg.allowedMembers) ? cfg.allowedMembers : [];
+                const isSaturdayDean = authName === SATURDAY_DEAN;
+                const hasAccess = isSaturdayDean || allowedMembers.includes(authName);
+
+                if (!hasAccess) {
+                    return NextResponse.json({
+                        result: { hasAccess: false, isSaturdayDean: false, allowedMembers: [], constitution: "", introSeen: true, current: null, history: [] },
+                    });
+                }
+
+                // Auto-create this week's Saturday (idempotent — the key IS the doc id).
+                const key = currentSaturdayKey();
+                const outRef = adminDb.collection("saturdayOutings").doc(key);
+                const outSnap = await outRef.get();
+                if (!outSnap.exists) {
+                    await outRef.set({ key, status: "open", responses: {}, note: "", createdAtMs: Date.now() });
+                }
+                const current = (await outRef.get()).data();
+
+                const histSnap = await adminDb.collection("saturdayOutings").get();
+                const history = histSnap.docs
+                    .map((d) => d.data())
+                    .filter((o) => o?.key && o.key !== key)
+                    .sort((a, b) => String(b.key).localeCompare(String(a.key)))
+                    .slice(0, 20);
+
+                return NextResponse.json({
+                    result: {
+                        hasAccess: true,
+                        isSaturdayDean,
+                        allowedMembers,
+                        constitution: typeof cfg.constitution === "string" ? cfg.constitution : "",
+                        introSeen: Array.isArray(cfg.introSeenBy) ? cfg.introSeenBy.includes(authName) : false,
+                        current,
+                        history,
+                    },
+                });
+            }
+
+            case "saturdaySetAccess": {
+                if (authName !== SATURDAY_DEAN) throw new Error("عميد السبت فقط");
+                const list = Array.isArray(payload?.allowedMembers) ? payload.allowedMembers : [];
+                const clean = list
+                    .map((n: unknown) => asTrimmedString(n))
+                    .filter((n: string) => VALID_NAMES_RPC.includes(n) && n !== SATURDAY_DEAN);
+                await adminDb.collection("saturdayConfig").doc("main").set(
+                    { allowedMembers: clean, updatedAt: Timestamp.now() }, { merge: true },
+                );
+                return NextResponse.json({ result: clean });
+            }
+
+            case "saturdaySetConstitution": {
+                if (authName !== SATURDAY_DEAN) throw new Error("عميد السبت فقط");
+                const text = asTrimmedString(payload?.constitution).slice(0, 8000);
+                await adminDb.collection("saturdayConfig").doc("main").set(
+                    { constitution: text, updatedAt: Timestamp.now() }, { merge: true },
+                );
+                return NextResponse.json({ result: true });
+            }
+
+            case "saturdayMarkIntroSeen": {
+                if (!authName) throw new Error("Unauthorized");
+                await adminDb.collection("saturdayConfig").doc("main").set(
+                    { introSeenBy: admin.firestore.FieldValue.arrayUnion(authName) }, { merge: true },
+                );
+                return NextResponse.json({ result: true });
+            }
+
+            // Each member says whether they're coming AND the time THEY will arrive.
+            case "saturdayRespond": {
+                if (!authName) throw new Error("Unauthorized");
+                const cfgSnap = await adminDb.collection("saturdayConfig").doc("main").get();
+                const allowed = (cfgSnap.exists ? (cfgSnap.data()?.allowedMembers as string[]) : []) || [];
+                if (authName !== SATURDAY_DEAN && !allowed.includes(authName)) throw new Error("ما عندك وصول لطلعة السبت");
+
+                const key = asTrimmedString(payload?.key) || currentSaturdayKey();
+                const coming = Boolean(payload?.coming);
+                const rawTime = payload?.time;
+                const time = coming && isValidTime(rawTime) ? rawTime : null;
+                if (coming && !time) throw new Error("حدد الساعة (مثال 20:30)");
+
+                // Nested-map merge (not a dotted key — that would create a literal
+                // field named "responses.NAME"), and set() also creates the doc if
+                // this is the first response of the week.
+                await adminDb.collection("saturdayOutings").doc(key).set(
+                    {
+                        key,
+                        status: "open",
+                        responses: { [authName]: { coming, time, atMs: Date.now() } },
+                    },
+                    { merge: true },
+                );
+                return NextResponse.json({ result: true });
+            }
+
+            case "saturdaySetNote": {
+                if (authName !== SATURDAY_DEAN) throw new Error("عميد السبت فقط");
+                const key = asTrimmedString(payload?.key);
+                if (!key) throw new Error("key required");
+                const note = asTrimmedString(payload?.note).slice(0, 2000);
+                await adminDb.collection("saturdayOutings").doc(key).set({ key, note }, { merge: true });
+                return NextResponse.json({ result: true });
+            }
+
+            case "saturdaySetStatus": {
+                if (authName !== SATURDAY_DEAN) throw new Error("عميد السبت فقط");
+                const key = asTrimmedString(payload?.key) || currentSaturdayKey();
+                const status = asTrimmedString(payload?.status);
+                if (status !== "open" && status !== "cancelled") throw new Error("حالة غير صالحة");
+                await adminDb.collection("saturdayOutings").doc(key).set({ key, status }, { merge: true });
+                return NextResponse.json({ result: true });
             }
 
             case "recordVisit":

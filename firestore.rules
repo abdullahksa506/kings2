@@ -27,6 +27,10 @@ service cloud.firestore {
     // Averages/aggregates are served by the server (RPC "getRatingsData"), and
     // only the dean receives per-person scores.
     match /ratings/{document=**}             { allow read, write: if false; }
+
+    // طلعة السبت السرّية — مغلقة تماماً. كل شي عبر السيرفر (RPC) لأن الوصول نفسه سرّي.
+    match /saturdayConfig/{document=**}      { allow read, write: if false; }
+    match /saturdayOutings/{document=**}     { allow read, write: if false; }
     match /bathroomRatings/{document=**}     { allow read: if true; allow write: if false; }
     match /bathroomReviews/{document=**}     { allow read: if true; allow write: if false; }
     match /appConfig/{document=**}           { allow read: if true; allow write: if false; }

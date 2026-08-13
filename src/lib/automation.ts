@@ -26,6 +26,7 @@ export interface AutomationConfig {
         ratingFinalWarning: AutomationRule;
         autoCloseRating: AutomationRule;
         autoAdvanceWeek: AutomationRule;  // تأجيل الطلعة يدوي فقط — هذا فقط بدء الأسبوع التالي
+        saturdayRsvp: AutomationRule;     // تنبيه الجمعة العصر لأصحاب الوصول لطلعة السبت
     };
 }
 
@@ -44,6 +45,8 @@ export const DEFAULT_AUTOMATION: AutomationConfig = {
         // بدء الأسبوع التالي تلقائياً بعد ما تخلص الطلعة (المطعم اختير + مرّ يوم الطلعة
         // بـ daysAfterOuting). التدوير يتبع الملك الحالي فيحترم أي تعديل يدوي منك.
         autoAdvanceWeek:    { on: false, daysAfterOuting: 2 },
+        // تنبيه طلعة السبت — الجمعة العصر (٤-٦م بتوقيت الرياض).
+        saturdayRsvp:       { on: true,  day: "الجمعة", hourFrom: 16, hourTo: 18 },
     },
 };
 

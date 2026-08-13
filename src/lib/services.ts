@@ -12,6 +12,7 @@ import {
     onSnapshot
 } from "firebase/firestore";
 import { outingDateLabel } from "./outingDate";
+import type { SaturdayState } from "./saturday";
 
 // Security verification helper
 export async function verifyIdentity(userName: string): Promise<boolean> {
@@ -298,6 +299,29 @@ let ratingsDataCache: Promise<RatingsData> | null = null;
 
 export const services = {
     // Get active week or create new one if none exists
+    // ── طلعة السبت السرّية ── (كل شي عبر السيرفر — المجموعات مقفلة على العميل)
+    async saturdayGetState(): Promise<SaturdayState> {
+        return invokeRpc("saturdayGetState") as Promise<SaturdayState>;
+    },
+    async saturdaySetAccess(allowedMembers: string[]) {
+        return invokeRpc("saturdaySetAccess", { allowedMembers });
+    },
+    async saturdaySetConstitution(constitution: string) {
+        return invokeRpc("saturdaySetConstitution", { constitution });
+    },
+    async saturdayRespond(key: string, coming: boolean, time: string | null) {
+        return invokeRpc("saturdayRespond", { key, coming, time });
+    },
+    async saturdaySetNote(key: string, note: string) {
+        return invokeRpc("saturdaySetNote", { key, note });
+    },
+    async saturdaySetStatus(key: string, status: "open" | "cancelled") {
+        return invokeRpc("saturdaySetStatus", { key, status });
+    },
+    async saturdayMarkIntroSeen() {
+        return invokeRpc("saturdayMarkIntroSeen");
+    },
+
     /** Self-diagnostics for the signed-in member (users collection is locked down). */
     async selfCheck(): Promise<{ name: string; role: string; registered: boolean; hasPushSubscription: boolean; serverTimeMs: number }> {
         return invokeRpc("selfCheck");

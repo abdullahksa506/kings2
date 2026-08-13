@@ -471,6 +471,9 @@ export default function Dashboard() {
     const [saving, setSaving] = useState(false);
     // Active cycle config — every new outing auto-lands in this cycle.
     const [currentCycle, setCurrentCycle] = useState<number>(1);
+    // Secret Saturday: the button only exists for members the Saturday dean allowed.
+    // The server decides — the client never learns anything about it otherwise.
+    const [hasSaturdayAccess, setHasSaturdayAccess] = useState(false);
     const [cycleInput, setCycleInput] = useState<string>("");
 
     // Change Password State
@@ -621,6 +624,16 @@ export default function Dashboard() {
         });
         return unsub;
     }, []);
+
+    // Ask the server whether this member may see the secret Saturday page.
+    useEffect(() => {
+        if (!user) { setHasSaturdayAccess(false); return; }
+        let alive = true;
+        services.saturdayGetState()
+            .then((s) => { if (alive) setHasSaturdayAccess(Boolean(s?.hasAccess)); })
+            .catch(() => { if (alive) setHasSaturdayAccess(false); });
+        return () => { alive = false; };
+    }, [user]);
 
     useEffect(() => {
         const storedTheme = localStorage.getItem("king_theme") as ThemeKey | null;
@@ -2334,6 +2347,20 @@ export default function Dashboard() {
 
                             {/* Security log — global requests + stats (anyone can view) */}
                             {/* Self-diagnostics — every member checks their own device */}
+                            {/* طلعة السبت السرّية — تظهر فقط لمن سمح لهم عميد السبت */}
+                            {hasSaturdayAccess && (
+                                <Link href="/saturday" className="flex items-center justify-between gap-3 bg-gradient-to-br from-violet-900/50 to-fuchsia-900/30 border border-violet-500/30 hover:border-violet-400/60 rounded-3xl p-5 shadow-xl transition group">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2.5 rounded-xl bg-violet-500/20 border border-violet-500/40 text-2xl">🤫</div>
+                                        <div className="text-right">
+                                            <h3 className="font-bold text-lg text-violet-100">طلعة السبت</h3>
+                                            <p className="text-[11px] text-violet-300/70">حدد بتجي ولا لا والساعة كم</p>
+                                        </div>
+                                    </div>
+                                    <ChevronRight className="w-6 h-6 text-violet-300 rotate-180 group-hover:-translate-x-1 transition-transform" />
+                                </Link>
+                            )}
+
                             <Link href="/test-panel" className="flex items-center justify-between gap-3 bg-gradient-to-br from-emerald-900/40 to-teal-900/30 border border-emerald-500/30 hover:border-emerald-400/60 rounded-3xl p-5 shadow-xl transition group">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-2xl">🔍</div>
