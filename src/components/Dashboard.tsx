@@ -713,7 +713,7 @@ export default function Dashboard() {
         await unlockNotificationSound();
         const played = await playNotificationSound();
         if (!played) {
-            alert("تعذر تشغيل الصوت. تأكد من إعدادات الصوت/الصلاحيات ووجود الملف public/notification-voice.mp3");
+            alert("تعذر تشغيل الصوت. تأكد من إعدادات الصوت/الصلاحيات على جهازك");
         }
     };
 

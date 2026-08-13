@@ -21,24 +21,38 @@ const urlBase64ToUint8Array = (base64String: string) => {
     return outputArray
 }
 
+// Pool of notification sounds — a random one plays each time (test button or a
+// real push) unless the caller/localStorage pins a specific one.
+const NOTIFICATION_SOUNDS = [
+    '/notification-voice.mp3',
+    '/notification-sound-2.m4a',
+    '/notification-sound-3.m4a',
+]
+
+function pickRandomSound(): string {
+    return NOTIFICATION_SOUNDS[Math.floor(Math.random() * NOTIFICATION_SOUNDS.length)]
+}
+
 export function usePushNotifications() {
     const [isSupported, setIsSupported] = useState(false)
     const [subscription, setSubscription] = useState<PushSubscription | null>(null)
     const [isSubscribed, setIsSubscribed] = useState(false)
     const audioContextRef = useRef<AudioContext | null>(null)
-    const audioBufferRef = useRef<AudioBuffer | null>(null)
+    // One decoded WebAudio buffer per sound URL — lets playback pick randomly
+    // among all of them without re-fetching/decoding on every notification.
+    const audioBuffersRef = useRef<Map<string, AudioBuffer>>(new Map())
 
     const resolveNotificationSoundUrl = useCallback((soundUrl?: string) => {
-        const fallback = '/notification-voice.mp3'
         const preferred = typeof window !== 'undefined'
             ? localStorage.getItem('king_notification_sound_url') || ''
             : ''
-        return soundUrl || preferred || fallback
+        // An explicit override (from the caller or a pinned localStorage choice)
+        // wins; otherwise randomize across the whole pool every time.
+        return soundUrl || preferred || pickRandomSound()
     }, [])
 
     const unlockNotificationSound = useCallback(async (soundUrl?: string) => {
         if (typeof window === 'undefined') return false
-        const finalSound = resolveNotificationSoundUrl(soundUrl)
 
         try {
             const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
@@ -52,11 +66,23 @@ export function usePushNotifications() {
                 await audioContextRef.current.resume()
             }
 
-            if (!audioBufferRef.current) {
-                const res = await fetch(finalSound)
-                const arr = await res.arrayBuffer()
-                audioBufferRef.current = await audioContextRef.current.decodeAudioData(arr)
-            }
+            // Decode the whole pool (plus any explicit/pinned sound) up front —
+            // this only runs once per session, on the user's first interaction,
+            // so later playback is instant with no per-notification fetch.
+            const preferred = localStorage.getItem('king_notification_sound_url') || ''
+            const urlsToDecode = Array.from(new Set([...NOTIFICATION_SOUNDS, preferred, soundUrl].filter(Boolean))) as string[]
+
+            await Promise.all(urlsToDecode.map(async (url) => {
+                if (audioBuffersRef.current.has(url)) return
+                try {
+                    const res = await fetch(url)
+                    const arr = await res.arrayBuffer()
+                    const buffer = await audioContextRef.current!.decodeAudioData(arr)
+                    audioBuffersRef.current.set(url, buffer)
+                } catch (error) {
+                    console.warn(`Failed to decode notification sound ${url}:`, error)
+                }
+            }))
 
             localStorage.setItem('king_notification_sound_unlocked', '1')
             return true
@@ -64,7 +90,7 @@ export function usePushNotifications() {
             console.warn('Failed to unlock notification sound:', error)
             return false
         }
-    }, [resolveNotificationSoundUrl])
+    }, [])
 
     // Refresh subscription status
     const refreshSubscription = useCallback(async (registration: ServiceWorkerRegistration) => {
@@ -139,12 +165,15 @@ export function usePushNotifications() {
     }, [refreshSubscription])
 
     const playNotificationSound = useCallback(async (soundUrl?: string) => {
+        // Each call re-resolves (and thus re-randomizes) unless a specific sound
+        // was requested, so consecutive notifications alternate between clips.
         const finalSound = resolveNotificationSoundUrl(soundUrl)
 
         try {
-            if (audioContextRef.current?.state === 'running' && audioBufferRef.current) {
+            const buffer = audioBuffersRef.current.get(finalSound)
+            if (audioContextRef.current?.state === 'running' && buffer) {
                 const source = audioContextRef.current.createBufferSource()
-                source.buffer = audioBufferRef.current
+                source.buffer = buffer
                 source.connect(audioContextRef.current.destination)
                 source.start(0)
                 return true
