@@ -41,6 +41,8 @@ export function usePushNotifications() {
     // One decoded WebAudio buffer per sound URL — lets playback pick randomly
     // among all of them without re-fetching/decoding on every notification.
     const audioBuffersRef = useRef<Map<string, AudioBuffer>>(new Map())
+    // Dedup for pushes announced on two channels (see playPushSoundOnce).
+    const recentPushSoundsRef = useRef<Map<string, number>>(new Map())
 
     const resolveNotificationSoundUrl = useCallback((soundUrl?: string) => {
         const preferred = typeof window !== 'undefined'
@@ -192,6 +194,24 @@ export function usePushNotifications() {
         }
     }, [resolveNotificationSoundUrl])
 
+    // The service worker announces each push TWICE (client.postMessage AND
+    // BroadcastChannel), so without this guard one notification would trigger two
+    // independent random picks — i.e. two different clips overlapping.
+    const playPushSoundOnce = useCallback((payload: any, soundUrl?: string) => {
+        const id = `${payload?.tag || payload?.title || 'push'}|${payload?.payload?.weekId || ''}`
+        const now = Date.now()
+        const lastAt = recentPushSoundsRef.current.get(id)
+        if (lastAt && now - lastAt < 3000) return   // same push, second channel — ignore
+        recentPushSoundsRef.current.set(id, now)
+        // Keep the map from growing forever.
+        if (recentPushSoundsRef.current.size > 30) {
+            for (const [key, at] of recentPushSoundsRef.current) {
+                if (now - at > 60000) recentPushSoundsRef.current.delete(key)
+            }
+        }
+        playNotificationSound(soundUrl)
+    }, [playNotificationSound])
+
     useEffect(() => {
         if ('serviceWorker' in navigator && 'PushManager' in window) {
             setIsSupported(true)
@@ -234,14 +254,14 @@ export function usePushNotifications() {
         const onServiceWorkerMessage = (event: MessageEvent) => {
             if (event.data?.type !== 'PUSH_RECEIVED') return
             const incomingSound = event.data?.payload?.soundUrl || event.data?.payload?.options?.soundUrl
-            playNotificationSound(incomingSound)
+            playPushSoundOnce(event.data?.payload, incomingSound)
         }
 
         navigator.serviceWorker.addEventListener('message', onServiceWorkerMessage)
         return () => {
             navigator.serviceWorker.removeEventListener('message', onServiceWorkerMessage)
         }
-    }, [playNotificationSound])
+    }, [playPushSoundOnce])
 
     useEffect(() => {
         if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') return
@@ -250,13 +270,13 @@ export function usePushNotifications() {
         channel.onmessage = (event) => {
             if (event.data?.type !== 'PUSH_RECEIVED') return
             const incomingSound = event.data?.payload?.soundUrl || event.data?.payload?.options?.soundUrl
-            playNotificationSound(incomingSound)
+            playPushSoundOnce(event.data?.payload, incomingSound)
         }
 
         return () => {
             channel.close()
         }
-    }, [playNotificationSound])
+    }, [playPushSoundOnce])
 
     const subscribeToPush = async () => {
         if (!isSupported) return null
