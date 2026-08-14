@@ -166,7 +166,9 @@ export const FUTURE_FEATURE_SEEDS: FutureFeatureSeed[] = [
 export interface RatingsData {
     weeks: Record<string, { sum: number; count: number; raters: string[] }>;
     byUser: Record<string, { sum: number; count: number }>;
-    mine: { weekId: string; score: number }[];
+    mine: { weekId: string; score: number; reviewText?: string }[];
+    /** Written reviews — anonymous for members, attributed for the dean. */
+    reviews: { weekId: string; text: string; userName?: string; score?: number }[];
     isDean: boolean;
     detail?: { weekId: string; userName: string; score: number }[];
 }
@@ -474,6 +476,19 @@ export const services = {
     },
 
     /** Dean only: real per-person scores grouped by week. Empty map for members. */
+    /** Written reviews grouped by week (anonymous unless you're the dean). */
+    async getReviewsByWeek(): Promise<Map<string, { text: string; userName?: string; score?: number }[]>> {
+        const data = await this.getRatingsData();
+        const map = new Map<string, { text: string; userName?: string; score?: number }[]>();
+        (data.reviews || []).forEach((r) => {
+            const arr = map.get(r.weekId);
+            const row = { text: r.text, userName: r.userName, score: r.score };
+            if (arr) arr.push(row);
+            else map.set(r.weekId, [row]);
+        });
+        return map;
+    },
+
     async getRatingsDetailByWeek(): Promise<Map<string, Rating[]>> {
         const data = await this.getRatingsData();
         const map = new Map<string, Rating[]>();

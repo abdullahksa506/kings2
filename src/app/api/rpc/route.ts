@@ -858,10 +858,14 @@ export async function POST(request: Request) {
                 await adminDb.runTransaction(async (tx) => {
                     const existing = await tx.get(ratingRef);
                     if (existing.exists) throw new Error("تم إرسال تقييمك مسبقاً");
+                    // reviewText was being collected by the form but silently dropped
+                    // here — that's why no reviews ever existed to display.
+                    const reviewText = asTrimmedString(payload?.reviewText).slice(0, 1000);
                     tx.set(ratingRef, {
                         weekId: payload.weekId,
                         userName: authName,
                         score: payload.score,
+                        reviewText: reviewText || null,
                         createdAt: Timestamp.now(),
                     });
                 });
@@ -1234,14 +1238,26 @@ export async function POST(request: Request) {
                 const weeks: Record<string, { sum: number; count: number; raters: string[] }> = {};
                 const byUser: Record<string, { sum: number; count: number }> = {};
                 const detail: { weekId: string; userName: string; score: number }[] = [];
-                const mine: { weekId: string; score: number }[] = []; // your own — always allowed
+                const mine: { weekId: string; score: number; reviewText?: string }[] = []; // your own — always allowed
+                // Written reviews. Members read them ANONYMOUSLY (no author, no score)
+                // so the "تقييمك سري" promise holds; the dean sees who wrote what.
+                const reviews: { weekId: string; text: string; userName?: string; score?: number }[] = [];
 
                 snap.forEach((d) => {
-                    const r = d.data() as { weekId?: string; userName?: string; score?: number };
+                    const r = d.data() as { weekId?: string; userName?: string; score?: number; reviewText?: string };
                     const weekId = typeof r.weekId === "string" ? r.weekId : "";
                     const who = typeof r.userName === "string" ? r.userName : "";
                     const score = Number(r.score);
+                    const review = typeof r.reviewText === "string" ? r.reviewText.trim() : "";
                     if (!weekId || !Number.isFinite(score)) return;
+
+                    if (review) {
+                        reviews.push(
+                            isAdmin
+                                ? { weekId, text: review, userName: who, score }
+                                : { weekId, text: review },
+                        );
+                    }
 
                     if (!weeks[weekId]) weeks[weekId] = { sum: 0, count: 0, raters: [] };
                     weeks[weekId].sum += score;
@@ -1253,12 +1269,12 @@ export async function POST(request: Request) {
                         byUser[who].sum += score;
                         byUser[who].count += 1;
                     }
-                    if (who === authName) mine.push({ weekId, score });
+                    if (who === authName) mine.push({ weekId, score, reviewText: review || undefined });
                     if (isAdmin) detail.push({ weekId, userName: who, score });
                 });
 
                 return NextResponse.json({
-                    result: { weeks, byUser, mine, isDean: isAdmin, detail: isAdmin ? detail : undefined },
+                    result: { weeks, byUser, mine, reviews, isDean: isAdmin, detail: isAdmin ? detail : undefined },
                 });
             }
 

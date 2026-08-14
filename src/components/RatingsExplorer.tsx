@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ListFilter, Search, Star } from "lucide-react";
+import { ListFilter, Search, Star, MessageSquare } from "lucide-react";
 import { PublicUserProfile, RatingExplorerWeek, services, VALID_NAMES } from "@/lib/services";
 import { outingDateLabel } from "@/lib/outingDate";
 
@@ -16,12 +16,18 @@ export default function RatingsExplorer() {
     const [minScore, setMinScore] = useState("all");
     const [searchText, setSearchText] = useState("");
     const [publicProfilesMap, setPublicProfilesMap] = useState<Record<string, PublicUserProfile>>({});
+    // Written reviews per week (anonymous for members, attributed for the dean).
+    const [reviewsByWeek, setReviewsByWeek] = useState<Map<string, { text: string; userName?: string; score?: number }[]>>(new Map());
 
     useEffect(() => {
         const run = async () => {
             setLoading(true);
-            const rows = await services.getRatingsExplorerData();
+            const [rows, reviews] = await Promise.all([
+                services.getRatingsExplorerData(),
+                services.getReviewsByWeek().catch(() => new Map()),
+            ]);
             setData(rows);
+            setReviewsByWeek(reviews);
             setLoading(false);
         };
         run();
@@ -143,6 +149,26 @@ export default function RatingsExplorer() {
                             <p className="text-[11px] text-slate-500 mt-2">
                                 تاريخ الطلعة: {outingDateLabel(row.week)}
                             </p>
+
+                            {/* المراجعات المكتوبة — مجهولة للأعضاء، وباسم الكاتب للعميد */}
+                            {(reviewsByWeek.get(row.week.id) || []).length > 0 && (
+                                <div className="mt-2 pt-2 border-t border-slate-800 space-y-1.5">
+                                    <p className="text-[11px] font-bold text-sky-400 flex items-center gap-1">
+                                        <MessageSquare className="w-3 h-3" />
+                                        المراجعات ({(reviewsByWeek.get(row.week.id) || []).length})
+                                    </p>
+                                    {(reviewsByWeek.get(row.week.id) || []).map((rv, i) => (
+                                        <div key={i} className="bg-slate-900/70 border border-slate-800 rounded-lg px-2.5 py-2">
+                                            <p className="text-[13px] text-slate-200 whitespace-pre-wrap leading-relaxed">{rv.text}</p>
+                                            <p className="text-[10px] text-slate-500 mt-1">
+                                                {rv.userName
+                                                    ? `— ${rv.userName}${rv.score ? ` · ${rv.score}⭐` : ""}`
+                                                    : "— مراجعة مجهولة"}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
