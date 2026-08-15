@@ -21,16 +21,30 @@ const urlBase64ToUint8Array = (base64String: string) => {
     return outputArray
 }
 
-// Pool of notification sounds — a random one plays each time (test button or a
-// real push) unless the caller/localStorage pins a specific one.
-const NOTIFICATION_SOUNDS = [
-    '/notification-voice.mp3',
-    '/notification-sound-2.m4a',
-    '/notification-sound-3.m4a',
+// Pool of notification sounds. `weight` sets how often each one is picked, and
+// `gain` boosts quiet clips at playback time (WebAudio can amplify past 1.0,
+// which plain HTMLAudio volume cannot).
+const NOTIFICATION_SOUNDS: { url: string; weight: number; gain: number }[] = [
+    { url: '/notification-voice.mp3',    weight: 0.4, gain: 2.2 }, // الأصلي — أعلى نسبة + رفع صوت
+    { url: '/notification-sound-2.m4a',  weight: 0.3, gain: 1.0 },
+    { url: '/notification-sound-3.m4a',  weight: 0.3, gain: 1.0 },
 ]
 
+const SOUND_URLS = NOTIFICATION_SOUNDS.map((s) => s.url)
+
+function gainFor(url: string): number {
+    return NOTIFICATION_SOUNDS.find((s) => s.url === url)?.gain ?? 1
+}
+
+/** Weighted pick: 40% the original clip, 30% each for the two newer ones. */
 function pickRandomSound(): string {
-    return NOTIFICATION_SOUNDS[Math.floor(Math.random() * NOTIFICATION_SOUNDS.length)]
+    const total = NOTIFICATION_SOUNDS.reduce((sum, s) => sum + s.weight, 0)
+    let roll = Math.random() * total
+    for (const s of NOTIFICATION_SOUNDS) {
+        roll -= s.weight
+        if (roll <= 0) return s.url
+    }
+    return NOTIFICATION_SOUNDS[0].url
 }
 
 export function usePushNotifications() {
@@ -72,7 +86,7 @@ export function usePushNotifications() {
             // this only runs once per session, on the user's first interaction,
             // so later playback is instant with no per-notification fetch.
             const preferred = localStorage.getItem('king_notification_sound_url') || ''
-            const urlsToDecode = Array.from(new Set([...NOTIFICATION_SOUNDS, preferred, soundUrl].filter(Boolean))) as string[]
+            const urlsToDecode = Array.from(new Set([...SOUND_URLS, preferred, soundUrl].filter(Boolean))) as string[]
 
             await Promise.all(urlsToDecode.map(async (url) => {
                 if (audioBuffersRef.current.has(url)) return
@@ -174,9 +188,20 @@ export function usePushNotifications() {
         try {
             const buffer = audioBuffersRef.current.get(finalSound)
             if (audioContextRef.current?.state === 'running' && buffer) {
-                const source = audioContextRef.current.createBufferSource()
+                const ctx = audioContextRef.current
+                const source = ctx.createBufferSource()
                 source.buffer = buffer
-                source.connect(audioContextRef.current.destination)
+                // Per-clip volume boost — quiet clips get amplified above 1.0,
+                // which is only possible through WebAudio.
+                const gainValue = gainFor(finalSound)
+                if (gainValue !== 1) {
+                    const gainNode = ctx.createGain()
+                    gainNode.gain.value = gainValue
+                    source.connect(gainNode)
+                    gainNode.connect(ctx.destination)
+                } else {
+                    source.connect(ctx.destination)
+                }
                 source.start(0)
                 return true
             }
