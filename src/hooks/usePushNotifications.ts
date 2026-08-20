@@ -25,9 +25,11 @@ const urlBase64ToUint8Array = (base64String: string) => {
 // `gain` boosts quiet clips at playback time (WebAudio can amplify past 1.0,
 // which plain HTMLAudio volume cannot).
 const NOTIFICATION_SOUNDS: { url: string; weight: number; gain: number }[] = [
-    { url: '/notification-voice.mp3',    weight: 0.4, gain: 2.2 }, // الأصلي — أعلى نسبة + رفع صوت
-    { url: '/notification-sound-2.m4a',  weight: 0.3, gain: 1.0 },
-    { url: '/notification-sound-3.m4a',  weight: 0.3, gain: 1.0 },
+    // نسب متساوية (٢٥٪ لكل واحد) — بس الصوت الأصلي أعلى شوي بالمستوى.
+    { url: '/notification-voice.mp3',    weight: 0.25, gain: 2.2 },
+    { url: '/notification-sound-2.m4a',  weight: 0.25, gain: 1.0 },
+    { url: '/notification-sound-3.m4a',  weight: 0.25, gain: 1.0 },
+    { url: '/notification-sound-4.m4a',  weight: 0.25, gain: 1.0 },
 ]
 
 const SOUND_URLS = NOTIFICATION_SOUNDS.map((s) => s.url)
