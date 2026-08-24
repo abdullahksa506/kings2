@@ -298,6 +298,8 @@ function pickNewestPendingWeek(weeks: WeekSession[]): WeekSession | null {
 // One in-flight/resolved fetch of the ratings payload per page load — several
 // views need it and it's a single server round trip.
 let ratingsDataCache: Promise<RatingsData> | null = null;
+let ratingsDataCacheAt = 0;
+const RATINGS_CACHE_TTL_MS = 30_000;
 
 export const services = {
     // Get active week or create new one if none exists
@@ -430,12 +432,17 @@ export const services = {
         // The backend expects `score` and `userName` in the payload.
         // `invokeRpc` automatically adds `userName` from auth context.
         const { weekId, rating, reviewText, restaurantName } = payload;
-        return invokeRpc("submitRating", {
+        const result = await invokeRpc("submitRating", {
             weekId,
             score: rating, // Translate from client-facing 'rating' to backend 'score'
             reviewText,
             restaurantName,
         });
+        // Drop the cached aggregates so the new rating shows up immediately
+        // instead of after the next cold start.
+        ratingsDataCache = null;
+        ratingsDataCacheAt = 0;
+        return result;
     },
 
     // Dean only
@@ -444,7 +451,13 @@ export const services = {
     // these go through the server. Members receive aggregates + who-rated names;
     // only the dean receives per-person scores.
     async getRatingsData(): Promise<RatingsData> {
-        if (!ratingsDataCache) {
+        // The cache MUST expire. It used to live for the whole page session, which
+        // in an installed PWA can be days — a freshly submitted rating then stayed
+        // invisible until the app cold-started ("my rating didn't show up, then it
+        // appeared a day later"). A short TTL keeps the dedupe win without staleness.
+        const now = Date.now();
+        if (!ratingsDataCache || now - ratingsDataCacheAt > RATINGS_CACHE_TTL_MS) {
+            ratingsDataCacheAt = now;
             ratingsDataCache = invokeRpc("getRatingsData")
                 .then((r) => r as RatingsData)
                 .catch((e) => { ratingsDataCache = null; throw e; });
@@ -452,9 +465,10 @@ export const services = {
         return ratingsDataCache;
     },
 
-    /** Clears the per-page ratings cache (call after submitting a rating). */
+    /** Clears the ratings cache (called automatically after submitting a rating). */
     invalidateRatingsCache() {
         ratingsDataCache = null;
+        ratingsDataCacheAt = 0;
     },
 
     async getAllRatingsForWeek(weekId: string): Promise<Rating[]> {
