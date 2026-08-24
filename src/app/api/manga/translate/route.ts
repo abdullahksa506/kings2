@@ -91,7 +91,7 @@ async function callOpenRouter(b64: string, mime: string, key: string): Promise<B
         headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${key}`,
-            "HTTP-Referer": "https://king-thursday.online",
+            "HTTP-Referer": "https://www.kingthursday.online",
             "X-Title": "King of Thursday Manga",
         },
         body: JSON.stringify({
