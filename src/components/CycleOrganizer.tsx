@@ -144,13 +144,22 @@ export default function CycleOrganizer() {
     };
 
     // Auto-normalize weekNumber: assign 1,2,3… by creation order (local buffer only).
+    // يرقّم كل دورة من 1 لوحدها (حسب تاريخ الإنشاء). قبل كان يرقّم كل الأسابيع
+    // 1..N عبر الدورات كلها، فالدورة الخامسة تطلع بأرقام 25، 26، 27...
     const normalizeWeekNumbers = () => {
-        const sorted = [...rows].sort(
-            (a, b) => (a.week.createdAt?.toMillis?.() ?? 0) - (b.week.createdAt?.toMillis?.() ?? 0),
-        );
-        const order = new Map(sorted.map((r, i) => [r.week.id, i + 1]));
+        const order = new Map<string, number>();
+        const byCycle = new Map<number, OrgRow[]>();
+        for (const r of rows) {
+            if (!byCycle.has(r.cycleNumber)) byCycle.set(r.cycleNumber, []);
+            byCycle.get(r.cycleNumber)!.push(r);
+        }
+        for (const cycleRows of byCycle.values()) {
+            [...cycleRows]
+                .sort((a, b) => (a.week.createdAt?.toMillis?.() ?? 0) - (b.week.createdAt?.toMillis?.() ?? 0))
+                .forEach((r, i) => order.set(r.week.id, i + 1));
+        }
         setRows((prev) => prev.map((r) => ({ ...r, weekNumber: order.get(r.week.id) ?? r.weekNumber })));
-        toast("تم اقتراح ترقيم تسلسلي — راجع واحفظ", { icon: "✨" });
+        toast("تم اقتراح ترقيم تسلسلي داخل كل دورة — راجع واحفظ", { icon: "✨" });
     };
 
     // Group rows by their (edited) cycle number for the display.
