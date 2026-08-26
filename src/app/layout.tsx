@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import "./theme-overrides.css";
 import { AuthProvider } from "@/context/AuthContext";
+// 🔧 بوابة الصيانة — تغطي كل الروابط. للحذف: REMOVED_FEATURES.md
+import MaintenanceGate from "@/components/MaintenanceGate";
 import { Toaster } from "sonner";
 import { Viewport } from "next";
 
@@ -81,7 +83,9 @@ export default function RootLayout({
       <body suppressHydrationWarning className={`${inter.className} bg-slate-950 text-slate-50 min-h-screen selection:bg-amber-500/30 pb-safe pt-safe pl-safe pr-safe`}>
         <Toaster position="top-center" theme="dark" />
         <AuthProvider>
-          {children}
+          <MaintenanceGate>
+            {children}
+          </MaintenanceGate>
         </AuthProvider>
       </body>
     </html>

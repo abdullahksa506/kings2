@@ -1294,6 +1294,26 @@ export async function POST(request: Request) {
                 return NextResponse.json({ result: !snap.empty });
             }
 
+            // ═══════════ 🔧 وضع الصيانة ═══════════
+            // العلم يُخزَّن في appConfig/main.maintenance — وهي مقروءة من العميل
+            // (بقواعد Firestore) عشان الصفحة تتحدّث فوراً عند كل واحد بدون تحديث.
+            // الكتابة للعميد فقط عبر هنا. 🗑️ للحذف: REMOVED_FEATURES.md
+            case "setMaintenance": {
+                if (!isAdmin) throw new Error("Dean only");
+                const active = Boolean(payload?.active);
+                const note = asTrimmedString(payload?.note).slice(0, 300);
+                await adminDb.collection("appConfig").doc("main").set({
+                    maintenance: {
+                        active,
+                        note: note || null,
+                        startedAt: active ? Timestamp.now() : null,
+                        startedBy: active ? (authName || "شوكا") : null,
+                    },
+                    updatedAt: Timestamp.now(),
+                }, { merge: true });
+                return NextResponse.json({ result: { active } });
+            }
+
             // ═══════════ 💾 النسخ الاحتياطية للتقييمات ═══════════
             // للعميد فقط. 🗑️ للحذف: REMOVED_FEATURES.md
             case "backupCreate": {

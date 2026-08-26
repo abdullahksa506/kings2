@@ -11,6 +11,7 @@ import RestaurantNameCleanup from "./RestaurantNameCleanup";
 import CycleOrganizer from "./CycleOrganizer";
 import DataIntegrityPanel from "./DataIntegrityPanel";
 import RatingsBackupPanel from "./RatingsBackupPanel";
+import MaintenanceToggle from "./MaintenanceToggle";
 import { canonRestaurant, deleteRestaurantLocation, listenToRestaurantLocations, RestaurantLocation } from "@/lib/mapServices";
 
 export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWeekId?: string, pastWeekId?: string }) {
@@ -158,6 +159,11 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
             {/* 💾 نسخ التقييمات الاحتياطية — احفظ الوضع الحالي وارجع له بضغطة زر */}
             <div className="mb-6">
                 <RatingsBackupPanel />
+            </div>
+
+            {/* 🔧 وضع الصيانة — يقفل الموقع على الكل ويترك صفحة الحضور فقط */}
+            <div className="mb-6">
+                <MaintenanceToggle />
             </div>
 
 

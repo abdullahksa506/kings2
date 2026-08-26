@@ -4,7 +4,9 @@ import { authenticateServerRequest } from "@/lib/serverRequestAuth";
 import { sendPushNotification } from "@/lib/pushHelper";
 
 export async function POST(request: Request) {
-    const auth = await authenticateServerRequest(request, { allowedRoles: ["dean"], allowAdminKey: true });
+    // العميد أو ملك الأسبوع الحالي. الملك يحتاجها في وضع الصيانة عشان ينبّه
+    // الشلة يحددون. التحقق من هوية الملك يصير بعد ما نجيب الأسبوع تحت.
+    const auth = await authenticateServerRequest(request, { allowAdminKey: true });
     if (!auth.ok) {
         return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
@@ -20,6 +22,12 @@ export async function POST(request: Request) {
         const week = await services.getCurrentWeek();
         if (!week || week.id !== weekId) {
             return NextResponse.json({ message: "Week not active or mismatch." }, { status: 400 });
+        }
+
+        const isAllowedCaller =
+            auth.user.viaAdminKey || auth.user.role === "dean" || auth.user.name === week.king;
+        if (!isAllowedCaller) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
         const responded = new Set(week.responded || []);

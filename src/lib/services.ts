@@ -297,6 +297,14 @@ function pickNewestPendingWeek(weeks: WeekSession[]): WeekSession | null {
 
 // One in-flight/resolved fetch of the ratings payload per page load — several
 // views need it and it's a single server round trip.
+/** حالة وضع الصيانة. */
+export type MaintenanceState = {
+    active: boolean;
+    note: string | null;
+    startedAt: number | null;
+    startedBy: string | null;
+};
+
 /** بيانات نسخة احتياطية للتقييمات (العميد فقط). */
 export type RatingsBackupMeta = {
     id: string;
@@ -370,6 +378,34 @@ export const services = {
 
     async setWeekChoices(weekId: string, day: WeekSession["day"], restaurant: string | null, activity: string | null) {
         return invokeRpc("setWeekChoices", { weekId, day, restaurant, activity });
+    },
+
+    // ── 🔧 وضع الصيانة ──
+    // 🗑️ للحذف الكامل: REMOVED_FEATURES.md — قسم «وضع الصيانة».
+    listenToMaintenance(cb: (m: MaintenanceState) => void) {
+        const off: MaintenanceState = { active: false, note: null, startedAt: null, startedBy: null };
+        return onSnapshot(
+            doc(db, "appConfig", "main"),
+            (snap) => {
+                const m = (snap.exists() ? (snap.data() as { maintenance?: Record<string, unknown> })?.maintenance : null) as
+                    | { active?: boolean; note?: string; startedAt?: { toMillis?: () => number }; startedBy?: string }
+                    | null
+                    | undefined;
+                if (!m) return cb(off);
+                cb({
+                    active: Boolean(m.active),
+                    note: typeof m.note === "string" ? m.note : null,
+                    startedAt: m.startedAt?.toMillis?.() ?? null,
+                    startedBy: typeof m.startedBy === "string" ? m.startedBy : null,
+                });
+            },
+            // لو فشلت القراءة لأي سبب، ما نقفل الموقع على الناس.
+            () => cb(off),
+        );
+    },
+
+    async setMaintenance(active: boolean, note = "") {
+        return invokeRpc("setMaintenance", { active, note });
     },
 
     // ── Current cycle config (auto-assigns every new outing to this cycle) ──

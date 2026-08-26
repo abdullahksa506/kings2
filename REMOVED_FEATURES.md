@@ -157,3 +157,32 @@ rm src/components/RatingsBackupPanel.tsx
 
 **تأكيد:** الميزة **معزولة تماماً** — ما تلمس منطق `submitRating` ولا
 `getRatingsData` ولا أي حساب معدلات. لو حذفتها كل شي يشتغل زي ما هو.
+
+---
+
+## 🔧 وضع الصيانة — دليل الحذف
+
+> ⚠️ ميزة **موجودة حالياً**. القسم يشرح كيف تحذفها كاملة بدون ما تأثر على شي.
+
+**الملفات (احذفها كلها):**
+```bash
+rm src/components/MaintenanceGate.tsx
+rm src/components/MaintenanceScreen.tsx
+rm src/components/MaintenanceToggle.tsx
+```
+
+**التعديلات اللي تُشال يدوياً:**
+
+| الملف | وش تشيل |
+|---|---|
+| `src/app/layout.tsx` | سطر `import MaintenanceGate ...` + غلاف `<MaintenanceGate>` (خلّ `{children}` مباشرة داخل `<AuthProvider>`) |
+| `src/app/api/rpc/route.ts` | كتلة `case "setMaintenance"` تحت تعليق `═══ 🔧 وضع الصيانة ═══` |
+| `src/lib/services.ts` | النوع `MaintenanceState` + `listenToMaintenance` + `setMaintenance` |
+| `src/components/DeanDashboard.tsx` | سطر `import MaintenanceToggle ...` + الـ `<div>` اللي فيه `<MaintenanceToggle />` |
+| `src/app/api/reminders/attendance-pending/route.ts` | (اختياري) رجّع الصلاحية للعميد فقط: بدّل `{ allowAdminKey: true }` بـ `{ allowedRoles: ["dean"], allowAdminKey: true }` واحذف فحص `isAllowedCaller` |
+
+**البيانات:** الحقل `maintenance` داخل `appConfig/main` يبقى في Firestore — غير مؤذي.
+خلّه أو امسحه من الكونسول.
+
+**تأكيد:** البوابة تفشل **مفتوحة** — لو تعذّرت قراءة الإعداد لأي سبب، الموقع
+يشتغل عادي وما ينقفل على أحد.
