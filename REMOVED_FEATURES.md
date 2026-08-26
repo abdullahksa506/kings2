@@ -129,3 +129,31 @@ git checkout 8a34ddd~1 -- src/components/CoupArena.tsx src/lib/coupServices.ts s
 
 ### ✅ بعد أي استرجاع
 شغّل `npx tsc --noEmit` ثم `npx next build` للتأكد إن كل التوصيلات رجعت صح.
+
+---
+
+## 💾 النسخ الاحتياطية للتقييمات — دليل الحذف
+
+> ⚠️ هذي ميزة **موجودة حالياً** (مو محذوفة). القسم هذا يشرح كيف تحذفها كاملة
+> لو ما عجبتك — بدون ما تأثر على أي شي ثاني.
+
+**الملفات (احذفها كلها):**
+```bash
+rm src/lib/ratingsBackup.server.ts
+rm src/components/RatingsBackupPanel.tsx
+```
+
+**التعديلات اللي لازم تُشال يدوياً:**
+
+| الملف | وش تشيل |
+|---|---|
+| `src/app/api/rpc/route.ts` | سطر `import { createBackup, ... } from "@/lib/ratingsBackup.server";` + كتلة الحالات تحت تعليق `═══ 💾 النسخ الاحتياطية للتقييمات ═══` (٤ حالات: backupCreate / backupList / backupRestore / backupDelete) |
+| `src/lib/services.ts` | النوع `RatingsBackupMeta` + كتلة الدوال تحت تعليق `═══ 💾 نسخ احتياطية للتقييمات ═══` (٤ دوال) |
+| `src/components/DeanDashboard.tsx` | سطر `import RatingsBackupPanel ...` + الـ `<div>` اللي فيه `<RatingsBackupPanel />` |
+| `firestore.rules` | سطر `match /ratingsBackups/{document=**}` (اختياري — الـ catch-all يمنعها أصلاً) |
+
+**البيانات:** مجموعة `ratingsBackups` في Firestore ما تنحذف مع الكود. امسحها من
+الكونسول لو تبي، أو خلّها كأرشيف — ما تأثر على أي شي.
+
+**تأكيد:** الميزة **معزولة تماماً** — ما تلمس منطق `submitRating` ولا
+`getRatingsData` ولا أي حساب معدلات. لو حذفتها كل شي يشتغل زي ما هو.

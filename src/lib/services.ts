@@ -297,6 +297,16 @@ function pickNewestPendingWeek(weeks: WeekSession[]): WeekSession | null {
 
 // One in-flight/resolved fetch of the ratings payload per page load — several
 // views need it and it's a single server round trip.
+/** بيانات نسخة احتياطية للتقييمات (العميد فقط). */
+export type RatingsBackupMeta = {
+    id: string;
+    label: string;
+    createdAt: number | null;
+    createdBy: string | null;
+    count: number;
+    auto: boolean;
+};
+
 let ratingsDataCache: Promise<RatingsData> | null = null;
 let ratingsDataCacheAt = 0;
 const RATINGS_CACHE_TTL_MS = 30_000;
@@ -469,6 +479,23 @@ export const services = {
     invalidateRatingsCache() {
         ratingsDataCache = null;
         ratingsDataCacheAt = 0;
+    },
+
+    // ═══════════ 💾 نسخ احتياطية للتقييمات (العميد فقط) ═══════════
+    // 🗑️ للحذف الكامل: REMOVED_FEATURES.md
+    async backupCreate(label: string): Promise<RatingsBackupMeta> {
+        return invokeRpc("backupCreate", { label }) as Promise<RatingsBackupMeta>;
+    },
+    async backupList(): Promise<RatingsBackupMeta[]> {
+        return invokeRpc("backupList") as Promise<RatingsBackupMeta[]>;
+    },
+    async backupRestore(backupId: string): Promise<{ restored: number; safetyBackupId: string }> {
+        const r = await invokeRpc("backupRestore", { backupId });
+        this.invalidateRatingsCache();
+        return r as { restored: number; safetyBackupId: string };
+    },
+    async backupDelete(backupId: string): Promise<{ deleted: number }> {
+        return invokeRpc("backupDelete", { backupId }) as Promise<{ deleted: number }>;
     },
 
     async getAllRatingsForWeek(weekId: string): Promise<Rating[]> {

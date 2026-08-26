@@ -10,6 +10,7 @@ import ExportDataButton from "./ExportDataButton";
 import RestaurantNameCleanup from "./RestaurantNameCleanup";
 import CycleOrganizer from "./CycleOrganizer";
 import DataIntegrityPanel from "./DataIntegrityPanel";
+import RatingsBackupPanel from "./RatingsBackupPanel";
 import { canonRestaurant, deleteRestaurantLocation, listenToRestaurantLocations, RestaurantLocation } from "@/lib/mapServices";
 
 export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWeekId?: string, pastWeekId?: string }) {
@@ -152,6 +153,11 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
             {/* Data-integrity scanner — surfaces silent problems before the friends hit them */}
             <div className="mb-6">
                 <DataIntegrityPanel />
+            </div>
+
+            {/* 💾 نسخ التقييمات الاحتياطية — احفظ الوضع الحالي وارجع له بضغطة زر */}
+            <div className="mb-6">
+                <RatingsBackupPanel />
             </div>
 
 

@@ -10,6 +10,8 @@ import * as admin from 'firebase-admin';
 import { hashPassword } from "@/lib/hash";
 import { sendPushNotification } from "@/lib/pushHelper";
 import { createNextWeek } from "@/lib/weekLifecycle.server";
+// 💾 نسخ احتياطية للتقييمات. للحذف الكامل: REMOVED_FEATURES.md
+import { createBackup, listBackups, restoreBackup, deleteBackup } from "@/lib/ratingsBackup.server";
 import { planOuting } from "@/lib/outingPlanner";
 import { SATURDAY_DEAN, currentSaturdayKey, isValidTime } from "@/lib/saturday";
 
@@ -1290,6 +1292,33 @@ export async function POST(request: Request) {
                     .limit(1)
                     .get();
                 return NextResponse.json({ result: !snap.empty });
+            }
+
+            // ═══════════ 💾 النسخ الاحتياطية للتقييمات ═══════════
+            // للعميد فقط. 🗑️ للحذف: REMOVED_FEATURES.md
+            case "backupCreate": {
+                if (!isAdmin) throw new Error("Dean only");
+                const label = asTrimmedString(payload?.label) || "نسخة يدوية";
+                return NextResponse.json({ result: await createBackup(authName || "شوكا", label) });
+            }
+
+            case "backupList": {
+                if (!isAdmin) throw new Error("Dean only");
+                return NextResponse.json({ result: await listBackups() });
+            }
+
+            case "backupRestore": {
+                if (!isAdmin) throw new Error("Dean only");
+                const id = asTrimmedString(payload?.backupId);
+                if (!id) throw new Error("Missing backupId");
+                return NextResponse.json({ result: await restoreBackup(id, authName || "شوكا") });
+            }
+
+            case "backupDelete": {
+                if (!isAdmin) throw new Error("Dean only");
+                const id = asTrimmedString(payload?.backupId);
+                if (!id) throw new Error("Missing backupId");
+                return NextResponse.json({ result: await deleteBackup(id) });
             }
 
             // ═══════════ طلعة السبت السرّية ═══════════

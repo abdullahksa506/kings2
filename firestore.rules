@@ -28,6 +28,9 @@ service cloud.firestore {
     // only the dean receives per-person scores.
     match /ratings/{document=**}             { allow read, write: if false; }
 
+    // نسخ التقييمات الاحتياطية — مغلقة تماماً (تحتوي تقييمات بالأسماء).
+    match /ratingsBackups/{document=**}      { allow read, write: if false; }
+
     // طلعة السبت السرّية — مغلقة تماماً. كل شي عبر السيرفر (RPC) لأن الوصول نفسه سرّي.
     match /saturdayConfig/{document=**}      { allow read, write: if false; }
     match /saturdayOutings/{document=**}     { allow read, write: if false; }
