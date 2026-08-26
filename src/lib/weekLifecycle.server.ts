@@ -44,13 +44,20 @@ export async function createNextWeek(kingName: string | null, isRandom: boolean)
     if (!Number.isInteger(configuredCycle) || configuredCycle <= 0) configuredCycle = 1;
 
     const allWeeksSnap = await adminDb.collection("weeks").get();
-    let maxWeek = 0;
+    // أعلى رقم أسبوع داخل كل دورة على حِدة. كان قبل رقم واحد عالمي، فالدورة
+    // الجديدة كانت ترث أعلى رقم من دورة قديمة (الدورة 5 بدأت بـ 9 لأن الدورة 2
+    // وصلت لـ 8) والمشكلة تتراكم كل أسبوع.
+    const maxWeekInCycle = new Map<number, number>();
     const stalePending: FirebaseFirestore.DocumentReference[] = [];
     let newestCompleted: { ref: FirebaseFirestore.DocumentReference; isRandom: boolean; ms: number } | null = null;
     allWeeksSnap.forEach((d) => {
-        const w = d.data() as { weekNumber?: number; status?: string; isRandom?: boolean; createdAt?: FirebaseFirestore.Timestamp };
+        const w = d.data() as { weekNumber?: number; cycleNumber?: number; status?: string; isRandom?: boolean; createdAt?: FirebaseFirestore.Timestamp };
         const wn = Number(w?.weekNumber ?? 0);
-        if (Number.isInteger(wn) && wn < 900 && wn > maxWeek) maxWeek = wn;
+        const cyc = Number(w?.cycleNumber ?? 0);
+        // 900+ = أسابيع خردة/مستوردة، ما تدخل في الترقيم.
+        if (Number.isInteger(wn) && wn > 0 && wn < 900 && Number.isInteger(cyc) && cyc > 0) {
+            if (wn > (maxWeekInCycle.get(cyc) ?? 0)) maxWeekInCycle.set(cyc, wn);
+        }
         if (w?.status === "pending") stalePending.push(d.ref);
         if (w?.status === "completed") {
             const ms = w.createdAt?.toMillis?.() ?? 0;
@@ -59,8 +66,8 @@ export async function createNextWeek(kingName: string | null, isRandom: boolean)
             }
         }
     });
-    const weekNumber = maxWeek + 1;
 
+    // الدورة تُحسب أولاً لأن ترقيم الأسبوع صار يعتمد عليها.
     let cycleNumber = configuredCycle;
     if (newestCompleted && (newestCompleted as { isRandom: boolean }).isRandom && !isRandom) {
         cycleNumber = configuredCycle + 1;
@@ -69,6 +76,9 @@ export async function createNextWeek(kingName: string | null, isRandom: boolean)
             { merge: true },
         );
     }
+
+    // كل دورة تبدأ من 1 من جديد.
+    const weekNumber = (maxWeekInCycle.get(cycleNumber) ?? 0) + 1;
 
     if (stalePending.length > 0) {
         const retireBatch = adminDb.batch();
