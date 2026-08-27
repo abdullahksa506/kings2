@@ -105,38 +105,39 @@ const CHART={showLegend:false, catAxisLabelColor:MU, valAxisLabelColor:MU,
   s.addNotes("عرض مبني بالكامل على بيانات التطبيق الحقيقية، لا على انطباعات.");
 }
 /* ══ المقدمة ══ */ {
-  const s=dark();
-  // زخرفة هادئة: قوسان ذهبيان خافتان في الطرفين
-  s.addShape(p.ShapeType.ellipse,{x:-4.6,y:-3.6,w:8.0,h:8.0,fill:{color:"241E16"}});
-  s.addShape(p.ShapeType.ellipse,{x:W-2.0,y:4.6,w:7.0,h:7.0,fill:{color:"241E16"}});
+  const s=p.addSlide(); s.background={color:"F7F1E3"};      // لون الرقّ
+  // ختم ذهبي في الزاوية
+  s.addShape(p.ShapeType.ellipse,{x:W-M-1.15,y:0.5,w:1.15,h:1.15,fill:{color:"F3E3BE"},line:{color:"C9A227",width:2}});
+  s.addText("عرش\nالخميس", {x:W-M-1.15,y:0.5,w:1.15,h:1.15,fontSize:11,bold:true,color:"9A7B12",
+    align:"center",valign:"middle",fontFace:F,isTextBox:true,margin:0,lineSpacingMultiple:1.1});
 
-  s.addText("مقدّمة", R({x:M,y:0.62,w:CW,h:0.45,fontSize:15,bold:true,color:GOLD}));
+  const TX="3B2F1E", GOLDD="9A7B12", MID="6B5B45";
+  const TW = CW-1.6;                                        // نترك مكان الختم
 
-  s.addText("لم تكن لعبة… حتى صارت دولة",
-    R({x:M,y:1.18,w:CW,h:0.85,fontSize:40,bold:true,color:TXL}));
+  s.addText("مِن عميدِ الدستور شوكا، إلى ملوكِ عرشِ الخميس",
+    R({x:M,y:0.72,w:TW,h:0.5,fontSize:19,bold:true,color:GOLDD}));
 
-  s.addText("في مساء خميسٍ عادي، اجتمع ستة على مائدة. لم يخطر لأحدهم أن اختيار مطعمٍ قد يصير عرشاً يتناوبون عليه، وله ملوكٌ ودورات وقائمة شرف.",
-    R({x:M,y:2.25,w:CW-0.2,h:0.95,fontSize:17,color:"D6D3D1",lineSpacingMultiple:1.45}));
+  s.addText("السلامُ على مَنِ اتّبعَ الهُدى",
+    R({x:M,y:1.55,w:CW,h:0.95,fontSize:44,bold:true,color:TX}));
 
-  // شريط الأرقام الثلاثة
-  const bw=(CW-0.6)/3, BX=i=>M+(2-i)*(bw+0.3);
-  [["31","طلعة"],["26","مطعماً"],["94","تقييماً"]].forEach(([n,l],i)=>{
-    s.addShape(p.ShapeType.roundRect,{x:BX(i),y:3.42,w:bw,h:1.15,rectRadius:0.1,
-      fill:{color:"241F1B"}, line:{color:"4A3F2E",width:1}});
-    s.addText(n, {x:BX(i),y:3.55,w:bw,h:0.6,fontSize:32,bold:true,color:GOLD,
-      align:"center",valign:"middle",fontFace:F,isTextBox:true,margin:0});
-    s.addText(l, {x:BX(i),y:4.12,w:bw,h:0.34,fontSize:13,color:MU,
-      align:"center",valign:"middle",fontFace:F,isTextBox:true,margin:0});
-  });
+  s.addText("أمّا بعد،",
+    R({x:M,y:2.62,w:CW,h:0.45,fontSize:20,bold:true,color:GOLDD}));
 
-  s.addText("وحين كبرت اللعبة كبرت معها خلافاتها، فلم يعد الذوق وحده يكفي. صار لا بدّ من ميزانٍ يرضاه الجميع قبل أن يعرفوا لمن سيميل.",
-    R({x:M,y:4.92,w:CW-0.2,h:0.95,fontSize:17,color:"D6D3D1",lineSpacingMultiple:1.45}));
+  s.addText("فإنّا جمعنا إحدى وثلاثين طلعةً وأربعةً وتسعين تقييماً، ونظرنا فيها نظرَ المُنصِف، فوجدنا الميزانَ يميلُ بغير ما يشتهي أصحابُه: مقياسٌ عند هذا غيرُ مقياسِ ذاك، وطلعةٌ واحدةٌ تَهدِمُ عاماً كاملاً، وخصومةٌ بين اثنين يدفعُ ثمنَها الستة.",
+    R({x:M,y:3.15,w:CW,h:1.15,fontSize:16,color:TX,lineSpacingMultiple:1.5}));
 
-  s.addText("هذا الدستور ليس قيداً على أحد — بل ضمانٌ ألّا يُظلم أحد.",
-    R({x:M,y:6.05,w:CW,h:0.6,fontSize:23,bold:true,color:GOLD}));
+  s.addText("وإنّا ندعوكم إلى ميزانٍ واحدٍ ترضونه قبل أن تعلموا لمن سيميل. فإن قَبِلتُم سَلِمَت الشِّلّةُ وبقيت الطلعات، وإن أبَيتُم فما بعد الأرقامِ حُجّة.",
+    R({x:M,y:4.45,w:CW,h:0.95,fontSize:16,color:TX,lineSpacingMultiple:1.5}));
 
-  s.addText("عميد الدستور  ·  شوكا", R({x:M,y:6.78,w:CW,h:0.4,fontSize:13,color:MU}));
-  s.addNotes("مقدّمة العرض — عدّل النص كما تشاء، التنسيق يتكيّف.");
+  // خط فاصل رفيع قبل الخاتمة
+  s.addShape(p.ShapeType.rect,{x:W-M-2.6,y:5.62,w:2.6,h:0.015,fill:{color:"D6C7A1"}});
+
+  s.addText("وقد أَعذَرَ مَن أَنذَر.",
+    R({x:M,y:5.85,w:CW,h:0.65,fontSize:30,bold:true,color:GOLDD}));
+
+  s.addText("حُرِّرَ في شهر أغسطس من عام 2026  ·  النسخة الثانية عشرة",
+    R({x:M,y:6.68,w:CW,h:0.45,fontSize:12.5,color:MID}));
+  s.addNotes("مقدّمة بأسلوب المخاطبات — عدّل النص كما تشاء.");
 }
 /* ══ نداء المعركة ══ */ {
   const s=p.addSlide(); s.background={color:"120C0C"};
