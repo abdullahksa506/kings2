@@ -104,6 +104,40 @@ const CHART={showLegend:false, catAxisLabelColor:MU, valAxisLabelColor:MU,
   s.addText("أغسطس 2026", R({x:M,y:4.7,w:CW,h:0.4,fontSize:12,color:MU}));
   s.addNotes("عرض مبني بالكامل على بيانات التطبيق الحقيقية، لا على انطباعات.");
 }
+/* ══ المقدمة ══ */ {
+  const s=dark();
+  // زخرفة هادئة: قوسان ذهبيان خافتان في الطرفين
+  s.addShape(p.ShapeType.ellipse,{x:-4.6,y:-3.6,w:8.0,h:8.0,fill:{color:"241E16"}});
+  s.addShape(p.ShapeType.ellipse,{x:W-2.0,y:4.6,w:7.0,h:7.0,fill:{color:"241E16"}});
+
+  s.addText("مقدّمة", R({x:M,y:0.62,w:CW,h:0.45,fontSize:15,bold:true,color:GOLD}));
+
+  s.addText("لم تكن لعبة… حتى صارت دولة",
+    R({x:M,y:1.18,w:CW,h:0.85,fontSize:40,bold:true,color:TXL}));
+
+  s.addText("في مساء خميسٍ عادي، اجتمع ستة على مائدة. لم يخطر لأحدهم أن اختيار مطعمٍ قد يصير عرشاً يتناوبون عليه، وله ملوكٌ ودورات وقائمة شرف.",
+    R({x:M,y:2.25,w:CW-0.2,h:0.95,fontSize:17,color:"D6D3D1",lineSpacingMultiple:1.45}));
+
+  // شريط الأرقام الثلاثة
+  const bw=(CW-0.6)/3, BX=i=>M+(2-i)*(bw+0.3);
+  [["31","طلعة"],["26","مطعماً"],["94","تقييماً"]].forEach(([n,l],i)=>{
+    s.addShape(p.ShapeType.roundRect,{x:BX(i),y:3.42,w:bw,h:1.15,rectRadius:0.1,
+      fill:{color:"241F1B"}, line:{color:"4A3F2E",width:1}});
+    s.addText(n, {x:BX(i),y:3.55,w:bw,h:0.6,fontSize:32,bold:true,color:GOLD,
+      align:"center",valign:"middle",fontFace:F,isTextBox:true,margin:0});
+    s.addText(l, {x:BX(i),y:4.12,w:bw,h:0.34,fontSize:13,color:MU,
+      align:"center",valign:"middle",fontFace:F,isTextBox:true,margin:0});
+  });
+
+  s.addText("وحين كبرت اللعبة كبرت معها خلافاتها، فلم يعد الذوق وحده يكفي. صار لا بدّ من ميزانٍ يرضاه الجميع قبل أن يعرفوا لمن سيميل.",
+    R({x:M,y:4.92,w:CW-0.2,h:0.95,fontSize:17,color:"D6D3D1",lineSpacingMultiple:1.45}));
+
+  s.addText("هذا الدستور ليس قيداً على أحد — بل ضمانٌ ألّا يُظلم أحد.",
+    R({x:M,y:6.05,w:CW,h:0.6,fontSize:23,bold:true,color:GOLD}));
+
+  s.addText("عميد الدستور  ·  شوكا", R({x:M,y:6.78,w:CW,h:0.4,fontSize:13,color:MU}));
+  s.addNotes("مقدّمة العرض — عدّل النص كما تشاء، التنسيق يتكيّف.");
+}
 /* ══ من نحن ══ */ {
   const s=light(); title(s,"عرش الخميس — من نحن");
   s.addText("ست أشخاص، طلعة كل أسبوع، وملك يتناوب على اختيار المطعم",
