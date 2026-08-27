@@ -17,7 +17,7 @@ export default function ConstitutionModal({
                 <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-800 bg-slate-900/50">
                     <h2 className="text-xl sm:text-2xl font-bold text-amber-500 flex items-center gap-3">
                         <ScrollText className="w-6 h-6 sm:w-8 sm:h-8" />
-                        دستور عرش الخميس لسنة 2026 (v2)
+                        دستور عرش الخميس لسنة 2026 (v12)
                     </h2>
                     <button
                         onClick={onClose}
@@ -190,6 +190,103 @@ export default function ConstitutionModal({
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-500 mt-2 shrink-0"></div>
                                 <p>في حال وجود مناسبة خاصة (ترقية، زواج، مولود.. إلخ)، يحق لصاحب المناسبة "الاستيلاء" على الأسبوع وتأجيل الدورة كاملة أسبوعاً للوراء، لضمان عدم ضياع دور أحد.</p>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {/* ═══ تعديلات v12: بنود إنصاف الترتيب ═══ */}
+                    <div className="bg-slate-800/50 border border-slate-700 p-4 sm:p-5 rounded-xl space-y-3">
+                        <h3 className="font-bold text-slate-200 flex items-start gap-2 sm:gap-3 text-base sm:text-lg">
+                            <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400 shrink-0 mt-0.5" />
+                            <span className="leading-snug">المادة (12): الطلعة المعفوّة</span>
+                        </h3>
+                        <ul className="space-y-3 list-none pl-0 pr-2 sm:pr-8">
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></div>
+                                <p>تُسقَط من سجل كل ملك <strong className="text-emerald-200">أسوأ طلعة واحدة</strong> عند احتساب ترتيب ملك السنة، ولا تُحتسب ضمن معدّله.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></div>
+                                <p>شرط التطبيق: أن يكون في سجل الملك <strong className="text-emerald-200">أربع طلعات فأكثر</strong>، حتى لا يُحتسب أحد على طلعتين فقط.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></div>
+                                <p>الحكمة: أي طلعة تتعرّض لظرف طارئ أو استهداف منسّق تسقط تلقائياً، فلا يُحاسَب الملك عمراً كاملاً على ليلة واحدة.</p>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div className="bg-slate-800/50 border border-slate-700 p-4 sm:p-5 rounded-xl space-y-3">
+                        <h3 className="font-bold text-slate-200 flex items-start gap-2 sm:gap-3 text-base sm:text-lg">
+                            <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-sky-400 shrink-0 mt-0.5" />
+                            <span className="leading-snug">المادة (13): التنحّي لتعارض المصالح</span>
+                        </h3>
+                        <ul className="space-y-3 list-none pl-0 pr-2 sm:pr-8">
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-sky-500 mt-2 shrink-0"></div>
+                                <p>إذا ثبت وجود <strong className="text-sky-200">خصومة قائمة</strong> بين عضوين، يجوز للعميد بموافقة عضوين آخرين إعلانهما "متعارضَين"، فلا يُحتسب تقييم أيٍّ منهما على طلعة الآخر.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-sky-500 mt-2 shrink-0"></div>
+                                <p><strong className="text-sky-200">شرط الحماية:</strong> لا يُطبَّق التنحّي إذا كان سيُبقي الطلعة بأقل من <strong className="text-sky-200">ثلاثة مقيّمين</strong>؛ ففي هذي الحالة يبقى التقييم محتسباً، لأن رأي شخص أو شخصين لا يصلح معدّلاً.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-sky-500 mt-2 shrink-0"></div>
+                                <p>التنحّي <strong className="text-sky-200">متبادل دائماً</strong> — لا يجوز أن يتنحّى طرف دون الآخر.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-sky-500 mt-2 shrink-0"></div>
+                                <p>يُراجَع كل تعارض في نهاية كل دورة، ويُلغى تلقائياً ما لم يُجدَّد.</p>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div className="bg-slate-800/50 border border-slate-700 p-4 sm:p-5 rounded-xl space-y-3">
+                        <h3 className="font-bold text-slate-200 flex items-start gap-2 sm:gap-3 text-base sm:text-lg">
+                            <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-violet-400 shrink-0 mt-0.5" />
+                            <span className="leading-snug">المادة (14): ترجيح الدورة الأخيرة</span>
+                        </h3>
+                        <ul className="space-y-3 list-none pl-0 pr-2 sm:pr-8">
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500 mt-2 shrink-0"></div>
+                                <p>تُحتسب <strong className="text-violet-200">الدورة المكتملة الأخيرة بوزن ١.٥</strong>، وباقي الدورات بوزن ١، مكافأةً للمستوى الحالي لا للأمجاد القديمة.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500 mt-2 shrink-0"></div>
+                                <p><strong className="text-violet-200">لا تدخل دورة في الحساب إلا بعد أن يلعبها الأعضاء الستة كاملين.</strong> الدورة الناقصة تُستثنى حتى تكتمل، منعاً لمحاسبة البعض بمقياس لم يخضع له الباقون.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500 mt-2 shrink-0"></div>
+                                <p>لا يجوز رفع الوزن فوق ١.٥ إلا بإجماع الأعضاء الستة — لأن الوزن المرتفع يضاعف أثر أي تصويت انتقامي بدلاً من أن يخففه.</p>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div className="bg-slate-800/50 border border-slate-700 p-4 sm:p-5 rounded-xl space-y-3">
+                        <h3 className="font-bold text-slate-200 flex items-start gap-2 sm:gap-3 text-base sm:text-lg">
+                            <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-rose-400 shrink-0 mt-0.5" />
+                            <span className="leading-snug">المادة (15): بطلان التواطؤ</span>
+                        </h3>
+                        <ul className="space-y-3 list-none pl-0 pr-2 sm:pr-8">
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-rose-500 mt-2 shrink-0"></div>
+                                <p>التواطؤ هو: <strong className="text-rose-200">اتفاق مسبق بين عضوين أو أكثر على منح تقييم محدّد لشخص بعينه بصرف النظر عن تجربة الطلعة.</strong></p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-rose-500 mt-2 shrink-0"></div>
+                                <p>كل اتفاق يُعقد "من تحت لتحت" حول التقييمات <strong className="text-rose-200">باطل ولا أثر له</strong>، سواء أُبرم قبل هذا الدستور أو بعده.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-rose-500 mt-2 shrink-0"></div>
+                                <p><strong className="text-rose-200">الجزاء:</strong> يُلغى تقييم المتواطئ على تلك الطلعة ويُحتسب المعدّل بدونه. وعند التكرار يُلغى تقييمه لبقية الدورة.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-rose-500 mt-2 shrink-0"></div>
+                                <p><strong className="text-rose-200">الإثبات:</strong> اعتراف صريح (مكتوب أو مسموع) أو إقرار من أحد أطراف الاتفاق. الشذوذ الإحصائي وحده <strong className="text-rose-200">لا يكفي</strong> دليلاً — لأن القسوة في التقييم حق مشروع، والمحظور هو الاتفاق المسبق لا الدرجة المنخفضة.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-rose-500 mt-2 shrink-0"></div>
+                                <p><strong className="text-rose-200">القرار:</strong> بيد العميد وموافقة عضوين، وفق آلية المادة (1). ولمن صدر ضده القرار حق عرض دفاعه على المجموعة أولاً.</p>
                             </li>
                         </ul>
                     </div>
