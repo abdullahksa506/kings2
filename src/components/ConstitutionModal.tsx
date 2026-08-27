@@ -249,7 +249,7 @@ export default function ConstitutionModal({
                         <ul className="space-y-3 list-none pl-0 pr-2 sm:pr-8">
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500 mt-2 shrink-0"></div>
-                                <p>تُحتسب <strong className="text-violet-200">الدورة المكتملة الأخيرة بوزن ١.٥</strong>، وباقي الدورات بوزن ١، مكافأةً للمستوى الحالي لا للأمجاد القديمة.</p>
+                                <p>تُحتسب <strong className="text-violet-200">الدورة المكتملة الأخيرة بوزن ٢.٥</strong> — أي كأنها دورتان ونصف عادية — وباقي الدورات بوزن ١، مكافأةً للمستوى الحالي لا للأمجاد القديمة.</p>
                             </li>
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500 mt-2 shrink-0"></div>
@@ -257,7 +257,7 @@ export default function ConstitutionModal({
                             </li>
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500 mt-2 shrink-0"></div>
-                                <p>لا يجوز رفع الوزن فوق ١.٥ إلا بإجماع الأعضاء الستة — لأن الوزن المرتفع يضاعف أثر أي تصويت انتقامي بدلاً من أن يخففه.</p>
+                                <p>الأثر العملي: الدورة الجارية تحسم الترتيب أكثر من كل ما سبقها، فمن تحسّن يصعد بسرعة ومن تراجع ينزل بسرعة.</p>
                             </li>
                         </ul>
                     </div>
@@ -282,7 +282,6 @@ export default function ConstitutionModal({
                             </li>
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-rose-500 mt-2 shrink-0"></div>
-                                <p><strong className="text-rose-200">الإثبات:</strong> اعتراف صريح (مكتوب أو مسموع) أو إقرار من أحد أطراف الاتفاق. الشذوذ الإحصائي وحده <strong className="text-rose-200">لا يكفي</strong> دليلاً — لأن القسوة في التقييم حق مشروع، والمحظور هو الاتفاق المسبق لا الدرجة المنخفضة.</p>
                             </li>
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-rose-500 mt-2 shrink-0"></div>
