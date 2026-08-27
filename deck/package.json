@@ -1,0 +1,10 @@
+{
+  "name": "kings-deck",
+  "private": true,
+  "description": "مولّد عرض دستور عرش الخميس",
+  "scripts": {
+    "photos": "node fetch-app-photos.js",
+    "build": "node gen.js"
+  },
+  "dependencies": { "pptxgenjs": "^3.12.0" }
+}
