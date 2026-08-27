@@ -138,6 +138,43 @@ const CHART={showLegend:false, catAxisLabelColor:MU, valAxisLabelColor:MU,
   s.addText("عميد الدستور  ·  شوكا", R({x:M,y:6.78,w:CW,h:0.4,fontSize:13,color:MU}));
   s.addNotes("مقدّمة العرض — عدّل النص كما تشاء، التنسيق يتكيّف.");
 }
+/* ══ نداء المعركة ══ */ {
+  const s=p.addSlide(); s.background={color:"120C0C"};
+  // وهج قرمزي خافت من الطرفين
+  s.addShape(p.ShapeType.ellipse,{x:-4.2,y:-3.2,w:9.0,h:9.0,fill:{color:"2A1114"}});
+  s.addShape(p.ShapeType.ellipse,{x:W-3.4,y:3.0,w:8.2,h:8.2,fill:{color:"2A1114"}});
+
+  s.addText("الدورة السادسة", R({x:M,y:0.55,w:CW,h:0.45,fontSize:15,bold:true,color:"F43F5E"}));
+
+  s.addText("لم يبقَ إلا فصلٌ واحد",
+    R({x:M,y:1.05,w:CW,h:1.0,fontSize:48,bold:true,color:"FAFAF9"}));
+
+  s.addText("ستة ملوك.  عرشٌ واحد.  ودورةٌ أخيرة تزن ضعفين ونصفاً.",
+    R({x:M,y:2.15,w:CW,h:0.55,fontSize:20,color:GOLD}));
+
+  // ثلاث حقائق للمعركة
+  const bw=(CW-0.6)/3, BX=i=>M+(2-i)*(bw+0.3);
+  [["0.007","يفصل الأول عن الثاني","F43F5E"],
+   ["+0.90","ما تمنحه عزيمة البيت","10B981"],
+   ["×2.5","وزن هذه الدورة وحدها","F59E0B"]].forEach(([n,l,c],i)=>{
+    s.addShape(p.ShapeType.roundRect,{x:BX(i),y:2.95,w:bw,h:1.5,rectRadius:0.1,
+      fill:{color:"1C1414"}, line:{color:"3F2426",width:1}});
+    s.addText(n, {x:BX(i),y:3.12,w:bw,h:0.68,fontSize:34,bold:true,color:c,
+      align:"center",valign:"middle",fontFace:F,isTextBox:true,margin:0});
+    s.addText(l, {x:BX(i)+0.15,y:3.82,w:bw-0.3,h:0.46,fontSize:12.5,color:"A8A29E",
+      align:"center",valign:"middle",fontFace:F,isTextBox:true,margin:0});
+  });
+
+  s.addText("من عزم في بيته تُوِّج.  ومن كرّر مطعماً سقط.  ومن تأخّر عن الحسم خسر دوره.",
+    R({x:M,y:4.75,w:CW,h:0.6,fontSize:18,color:"D6D3D1",lineSpacingMultiple:1.4}));
+
+  s.addText("لا تُورَث هذه السنة — تُنتزَع.",
+    R({x:M,y:5.55,w:CW,h:0.75,fontSize:34,bold:true,color:"F43F5E"}));
+
+  s.addText("الميدان مفتوح  ·  والحساب يبدأ من الطلعة القادمة",
+    R({x:M,y:6.5,w:CW,h:0.5,fontSize:15,color:MU}));
+  s.addNotes("نداء المعركة — يُعرض قبل الدخول في الأرقام، أو يُستخدم كشريحة افتتاح بديلة.");
+}
 /* ══ من نحن ══ */ {
   const s=light(); title(s,"عرش الخميس — من نحن");
   s.addText("ست أشخاص، طلعة كل أسبوع، وملك يتناوب على اختيار المطعم",
