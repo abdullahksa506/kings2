@@ -297,6 +297,29 @@ const CHART={showLegend:false, catAxisLabelColor:MU, valAxisLabelColor:MU,
   s.addText("متوسط المشاركة اليوم 3.9 من 5. رفعه إلى 5 يقلّص قوة أي تصويت انتقامي بنسبة 40%.",
     R({x:M+0.35,y:5.35,w:CW-0.7,h:0.5,fontSize:12.5,color:"065F46"}));
 }
+/* ══ استراحة: إحصائيات على الهامش ══ */ {
+  const s=light(); title(s,"إحصائيات ما لها داعي… بس حلوة");
+  s.addText("استراحة قصيرة قبل ما نرجع للجد", R({x:M,y:1.2,w:CW,h:0.4,fontSize:14,color:MU}));
+  const cw=(CW-0.5)/3, ch=2.32, X=(i)=>M+(2-i%3)*(cw+0.25), Y=(i)=>1.85+Math.floor(i/3)*(ch+0.28);
+  const FACTS=[
+    ["4.77","عزائم البيوت","مقابل 3.87 للمطاعم. ثلاث عزائم بيوت فقط، وكلها في قمة السجل. الخلاصة: بيوتكم أطيب من مطاعم الرياض",EM,"FEF3C7"],
+    ["الجمعة","أفضل من الخميس","4.15 مقابل 3.94. اسم المجموعة «ملك الخميس» ويومكم الأحلى هو الجمعة. نفكّر في تغيير الاسم",SK,"E0F2FE"],
+    ["81%","من أصوات شوكا خمسات","العميد لم يمنح درجة 3 ولا مرة في تاريخه — ثلاث عشرة خمسة من ست عشرة. تقييم أم مجاملة؟",GOLD,"FEF3C7"],
+    ["14","اعتذار لنواف","ضعف أي عضو آخر (طلال وحكير 6 لكل واحد). حضوره نادر، لكن أثر غيابه على الترتيب ليس نادراً",RO,"FFE4E6"],
+    ["80%","من المطاعم المكرّرة نزلت","أربعة من خمسة. Buffalo هبط من 4.67 إلى 3.25، وكوجة من 4.60 إلى 3.60. التكرار يقتل الحماس",VI,"EDE9FE"],
+    ["3.56","معدّل الدورة الخامسة","كان 4.00 في الثانية والثالثة. ليست المطاعم التي ساءت — نحن الذين صرنا أقسى",RO,"FFE4E6"],
+  ];
+  FACTS.forEach(([big,lab,txt,col,bg],i)=>{
+    const x=X(i), y=Y(i);
+    card(s,x,y,cw,ch,{fill:bg});
+    s.addText(big, {x:x+0.25,y:y+0.22,w:cw-0.5,h:0.62,fontSize: big.length>5?24:34, bold:true,
+      color:col, align:"center", valign:"middle", fontFace:F, isTextBox:true, margin:0});
+    s.addText(lab, {x:x+0.25,y:y+0.86,w:cw-0.5,h:0.36,fontSize:14, bold:true,
+      color:TXD, align:"center", valign:"middle", fontFace:F, isTextBox:true, margin:0});
+    s.addText(txt, R({x:x+0.28,y:y+1.28,w:cw-0.56,h:0.92,fontSize:11,color:MU,align:"center",lineSpacingMultiple:1.28}));
+  });
+  s.addNotes("شريحة استراحة — تخفّف الجو بعد قسم الحرب وقبل الترتيب.");
+}
 /* ══ 9 ══ */ {
   const s=dark();
   badge(s,M,2.25,"2",{d:0.7});
