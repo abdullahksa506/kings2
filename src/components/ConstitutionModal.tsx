@@ -211,6 +211,10 @@ export default function ConstitutionModal({
                             </li>
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></div>
+                                <p><strong className="text-emerald-200">قيد مانع للتلاعب:</strong> لا تُسقَط الطلعة المعفوّة إذا كانت الطلعة الوحيدة في الدورة المرجّحة (المادة 14)؛ ويُسقَط بدلاً منها ثاني أسوأ طلعة. بدون هذا القيد يستطيع الملك أن يطلب من أصدقائه إفساد طلعته الأخيرة عمداً لتسقط ومعها وزن الدورة كله، فيرتفع معدّله بدل أن ينخفض.</p>
+                            </li>
+                            <li className="flex items-start gap-2 sm:gap-3">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></div>
                                 <p>الحكمة: أي طلعة تتعرّض لظرف طارئ أو استهداف منسّق تسقط تلقائياً، فلا يُحاسَب الملك عمراً كاملاً على ليلة واحدة.</p>
                             </li>
                         </ul>
