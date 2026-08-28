@@ -12,6 +12,7 @@ import CycleOrganizer from "./CycleOrganizer";
 import DataIntegrityPanel from "./DataIntegrityPanel";
 import RatingsBackupPanel from "./RatingsBackupPanel";
 import MaintenanceToggle from "./MaintenanceToggle";
+import RecusedPairsPanel from "./RecusedPairsPanel";
 import { canonRestaurant, deleteRestaurantLocation, listenToRestaurantLocations, RestaurantLocation } from "@/lib/mapServices";
 
 export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWeekId?: string, pastWeekId?: string }) {
@@ -161,6 +162,10 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
                 <RatingsBackupPanel />
             </div>
 
+            {/* 🤝 التنحّي لتعارض المصالح — المادة (13) */}
+            <div className="mb-6">
+                <RecusedPairsPanel />
+            </div>
             {/* 🔧 وضع الصيانة — يقفل الموقع على الكل ويترك صفحة الحضور فقط */}
             <div className="mb-6">
                 <MaintenanceToggle />

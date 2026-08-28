@@ -206,6 +206,9 @@ rm src/components/CorrectedLeaderboard.tsx
 | `src/app/api/rpc/route.ts` | سطر `import { computeCorrectedRanking } ...` + كتلة `═══ 📊 القائمة المصححة ═══` (حالتان: getCorrectedLeaderboard و setRecusedPairs) |
 | `src/lib/services.ts` | النوعان `CorrectedRow` و `CorrectedResult` + `getCorrectedLeaderboard` و `setRecusedPairs` |
 | `src/components/Dashboard.tsx` | سطر `const CorrectedLeaderboard = dynamic(...)` + `<CorrectedLeaderboard />` |
+| `src/components/DeanDashboard.tsx` | سطر `import RecusedPairsPanel ...` + الـ `<div>` اللي فيه `<RecusedPairsPanel />` |
+
+**ملف إضافي:** `rm src/components/RecusedPairsPanel.tsx`
 
 **البيانات:** الحقل `recusedPairs` في `appConfig/main` — غير مؤذٍ، خلّه أو امسحه.
 
