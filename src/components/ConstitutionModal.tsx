@@ -253,7 +253,7 @@ export default function ConstitutionModal({
                         <ul className="space-y-3 list-none pl-0 pr-2 sm:pr-8">
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500 mt-2 shrink-0"></div>
-                                <p>تُحتسب <strong className="text-violet-200">الدورة المكتملة الأخيرة بوزن ٢.٥</strong> — أي كأنها دورتان ونصف عادية — وباقي الدورات بوزن ١، مكافأةً للمستوى الحالي لا للأمجاد القديمة.</p>
+                                <p>تُحتسب <strong className="text-violet-200">الدورة الختامية للسنة (السادسة) بوزن ٢.٥</strong> — أي كأنها دورتان ونصف عادية — وباقي الدورات بوزن ١. أما قبل اكتمالها فتتساوى الدورات كلها، فلا تُرجَّح دورةٌ ليست ختام السنة.</p>
                             </li>
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500 mt-2 shrink-0"></div>

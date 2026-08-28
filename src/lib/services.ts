@@ -308,6 +308,7 @@ export type CorrectedRow = {
 export type CorrectedResult = {
     rows: CorrectedRow[];
     weightedCycle: number | null;
+    finalCycle: number;
     excludedCycles: number[];
     recusedPairs: string[][];
 };

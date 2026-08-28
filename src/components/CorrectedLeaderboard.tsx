@@ -60,10 +60,10 @@ export default function CorrectedLeaderboard() {
                 <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-3 mb-3 space-y-2 text-[12px] text-slate-300 leading-relaxed">
                     <p><span className="text-emerald-400 font-bold">المادة (12)</span> — تُسقط أسوأ طلعة من سجل كل ملك (بأربع طلعات فأكثر)، فلا تهدم ليلةٌ واحدة عاماً كاملاً.</p>
                     <p><span className="text-sky-400 font-bold">المادة (13)</span> — المتخاصمان المعلنان لا يُحتسب تقييم أيٍّ منهما على طلعة الآخر، ما لم يهبط عدد المقيّمين تحت ثلاثة.</p>
-                    <p><span className="text-violet-400 font-bold">المادة (14)</span> — الدورة المكتملة الأخيرة تزن ٢.٥، وباقي الدورات ١، والدورة الناقصة لا تدخل الحساب.</p>
+                    <p><span className="text-violet-400 font-bold">المادة (14)</span> — الدورة الختامية للسنة تزن ٢.٥، وباقي الدورات ١، والدورة الناقصة لا تدخل الحساب.</p>
                     {data && (
                         <p className="text-slate-500 pt-1 border-t border-slate-800">
-                            {data.weightedCycle ? `الدورة المرجّحة حالياً: ${data.weightedCycle}` : "لا توجد دورة مكتملة بعد"}
+                            {data.weightedCycle ? `الدورة المرجّحة: ${data.weightedCycle} (الختامية)` : `كل الدورات متساوية — الترجيح يبدأ عند اكتمال الدورة ${data.finalCycle}`}
                             {data.excludedCycles.length > 0 && ` · مستثناة لعدم اكتمالها: ${data.excludedCycles.join("، ")}`}
                             {data.recusedPairs.length > 0
                                 ? ` · تنحٍّ معلن: ${data.recusedPairs.map((p) => p.join(" ↔ ")).join("، ")}`

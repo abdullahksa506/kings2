@@ -10,7 +10,7 @@
  *
  * المادة (12) الطلعة المعفوّة  — تُسقط أسوأ طلعة من أي دورة (بأربع طلعات فأكثر)
  * المادة (13) التنحّي          — المتخاصمان لا يقيّم أحدهما الآخر (بشرط بقاء ٣ مقيّمين)
- * المادة (14) ترجيح الدورة     — الدورة المكتملة الأخيرة ×2.5، والناقصة تُستثنى
+ * المادة (14) ترجيح الدورة     — الدورة الختامية (السادسة) ×2.5، والناقصة تُستثنى
  *
  * تُحسب في السيرفر لأن التنحّي يحتاج هوية المقيّمين، وهي سرّية.
  * المُخرَج أرقام مجمّعة فقط — لا يُسرَّب أي تقييم فردي.
@@ -21,7 +21,8 @@
 import { adminDb } from "@/lib/firebase-admin";
 
 export const KING_NAMES = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
-const LAST_CYCLE_WEIGHT = 2.5;   // المادة (14)
+const FINAL_CYCLE_WEIGHT = 2.5;  // المادة (14)
+const DEFAULT_FINAL_CYCLE = 6;   // الدورة الختامية للسنة
 const MIN_RATERS_AFTER_RECUSAL = 3;  // المادة (13) شرط الحماية
 const MIN_WEEKS_TO_DROP = 4;     // المادة (12) شرط التطبيق
 
@@ -35,18 +36,29 @@ export type CorrectedRow = {
 
 export type CorrectedResult = {
     rows: CorrectedRow[];
-    weightedCycle: number | null;   // الدورة المرجّحة
+    weightedCycle: number | null;   // الدورة المرجّحة (الختامية إن اكتملت)
+    finalCycle: number;             // رقم الدورة الختامية
     excludedCycles: number[];       // دورات ناقصة استُثنيت
     recusedPairs: string[][];
 };
 
 const mean = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length;
 
-/** أزواج التنحّي المعلنة (المادة 13). تُقرأ من appConfig/main.recusedPairs */
-async function loadRecusedPairs(): Promise<string[][]> {
+/** إعدادات المادتين (13) و(14) من appConfig/main */
+async function loadConfig(): Promise<{ pairs: string[][]; finalCycle: number }> {
     try {
         const snap = await adminDb.collection("appConfig").doc("main").get();
-        const raw = (snap.data() as { recusedPairs?: unknown })?.recusedPairs;
+        const d = snap.data() as { recusedPairs?: unknown; finalCycle?: unknown } | undefined;
+        const fc = Number(d?.finalCycle);
+        const finalCycle = Number.isInteger(fc) && fc > 0 ? fc : DEFAULT_FINAL_CYCLE;
+        return { pairs: parsePairs(d?.recusedPairs), finalCycle };
+    } catch {
+        return { pairs: [], finalCycle: DEFAULT_FINAL_CYCLE };
+    }
+}
+
+function parsePairs(raw: unknown): string[][] {
+    try {
         if (!Array.isArray(raw)) return [];
         return raw
             .filter((p): p is string[] => Array.isArray(p) && p.length === 2
@@ -58,11 +70,12 @@ async function loadRecusedPairs(): Promise<string[][]> {
 }
 
 export async function computeCorrectedRanking(): Promise<CorrectedResult> {
-    const [weeksSnap, ratingsSnap, recusedPairs] = await Promise.all([
+    const [weeksSnap, ratingsSnap, cfg] = await Promise.all([
         adminDb.collection("weeks").get(),
         adminDb.collection("ratings").get(),
-        loadRecusedPairs(),
+        loadConfig(),
     ]);
+    const recusedPairs = cfg.pairs;
 
     // من يتنحّى عن تقييم من
     const recusedOf = new Map<string, Set<string>>();
@@ -111,7 +124,9 @@ export async function computeCorrectedRanking(): Promise<CorrectedResult> {
     const complete = cyclesSeen.filter((c) =>
         KING_NAMES.every((k) => all.some((w) => w.cycle === c && w.king === k)));
     const excludedCycles = cyclesSeen.filter((c) => !complete.includes(c));
-    const weightedCycle = complete.length ? complete[complete.length - 1] : null;
+    // المادة (14): الترجيح مخصّص للدورة الختامية وحدها (السادسة افتراضياً).
+    // قبل اكتمالها تتساوى كل الدورات — فلا تُرجَّح دورةٌ ليست ختام السنة.
+    const weightedCycle = complete.includes(cfg.finalCycle) ? cfg.finalCycle : null;
 
     const rows: CorrectedRow[] = KING_NAMES.map((king) => {
         let weeks = all.filter((w) => w.king === king && complete.includes(w.cycle));
@@ -132,7 +147,7 @@ export async function computeCorrectedRanking(): Promise<CorrectedResult> {
         weeks.forEach((w) => byCycle.set(w.cycle, [...(byCycle.get(w.cycle) || []), w.score]));
         let num = 0, den = 0;
         byCycle.forEach((scores, cycle) => {
-            const weight = cycle === weightedCycle ? LAST_CYCLE_WEIGHT : 1;
+            const weight = cycle === weightedCycle ? FINAL_CYCLE_WEIGHT : 1;
             num += mean(scores) * weight;
             den += weight;
         });
@@ -141,5 +156,5 @@ export async function computeCorrectedRanking(): Promise<CorrectedResult> {
     }).filter((r): r is CorrectedRow => r !== null)
       .sort((a, b) => b.average - a.average);
 
-    return { rows, weightedCycle, excludedCycles, recusedPairs };
+    return { rows, weightedCycle, finalCycle: cfg.finalCycle, excludedCycles, recusedPairs };
 }

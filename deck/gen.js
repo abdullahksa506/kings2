@@ -150,14 +150,14 @@ const CHART={showLegend:false, catAxisLabelColor:MU, valAxisLabelColor:MU,
   s.addText("لم يبقَ إلا فصلٌ واحد",
     R({x:M,y:1.05,w:CW,h:1.0,fontSize:48,bold:true,color:"FAFAF9"}));
 
-  s.addText("ستة ملوك.  عرشٌ واحد.  ودورةٌ أخيرة تزن ضعفين ونصفاً.",
+  s.addText("ستة ملوك.  عرشٌ واحد.  ودورةٌ سادسةٌ تزن ضعفين ونصفاً.",
     R({x:M,y:2.15,w:CW,h:0.55,fontSize:20,color:GOLD}));
 
   // ثلاث حقائق للمعركة
   const bw=(CW-0.6)/3, BX=i=>M+(2-i)*(bw+0.3);
   [["0.007","يفصل الأول عن الثاني","F43F5E"],
    ["+0.90","ما تمنحه عزيمة البيت","10B981"],
-   ["×2.5","وزن هذه الدورة وحدها","F59E0B"]].forEach(([n,l,c],i)=>{
+   ["×2.5","وزن الدورة السادسة وحدها","F59E0B"]].forEach(([n,l,c],i)=>{
     s.addShape(p.ShapeType.roundRect,{x:BX(i),y:2.95,w:bw,h:1.5,rectRadius:0.1,
       fill:{color:"1C1414"}, line:{color:"3F2426",width:1}});
     s.addText(n, {x:BX(i),y:3.12,w:bw,h:0.68,fontSize:34,bold:true,color:c,
@@ -465,7 +465,7 @@ const CHART={showLegend:false, catAxisLabelColor:MU, valAxisLabelColor:MU,
   card(s,M,1.3,CW,2.35,{fill:"EDE9FE"});
   badge(s,W-M-0.75,1.55,"14",{fill:VI,txt:"FFFFFF",d:0.5});
   s.addText("ترجيح الدورة الأخيرة", R({x:M+0.35,y:1.55,w:CW-1.3,h:0.45,fontSize:21,bold:true,color:"5B21B6"}));
-  s.addText("تُحتسب الدورة المكتملة الأخيرة بوزن 2.5 — كأنها دورتان ونصف — وباقي الدورات بوزن 1، ولا تدخل دورة الحساب قبل أن يلعبها الستة.",
+  s.addText("تُحتسب الدورة الختامية للسنة (السادسة) بوزن 2.5 — كأنها دورتان ونصف — وباقي الدورات بوزن 1، ولا تدخل دورة الحساب قبل أن يلعبها الستة.",
     R({x:M+0.35,y:2.08,w:CW-0.7,h:0.5,fontSize:13.5,color:TXD}));
   s.addText("الأثر: الدورة الجارية تحسم الترتيب أكثر من كل ما سبقها — من تحسّن يصعد بسرعة، ومن تراجع ينزل بسرعة",
     R({x:M+0.35,y:2.62,w:CW-0.7,h:0.6,fontSize:12.5,bold:true,color:"6D28D9",lineSpacingMultiple:1.25}));
