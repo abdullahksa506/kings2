@@ -8,7 +8,7 @@
 /**
  * 📊 القائمة المصححة — ترتيب الملوك وفق مواد الدستور v12.
  *
- * المادة (12) الطلعة المعفوّة  — تُسقط أسوأ طلعة (بأربع طلعات فأكثر)
+ * المادة (12) الطلعة المعفوّة  — تُسقط أسوأ طلعة من أي دورة (بأربع طلعات فأكثر)
  * المادة (13) التنحّي          — المتخاصمان لا يقيّم أحدهما الآخر (بشرط بقاء ٣ مقيّمين)
  * المادة (14) ترجيح الدورة     — الدورة المكتملة الأخيرة ×2.5، والناقصة تُستثنى
  *
@@ -118,19 +118,13 @@ export async function computeCorrectedRanking(): Promise<CorrectedResult> {
         if (!weeks.length) return null;
         const baseAverage = mean(weeks.map((w) => w.score));
 
-        // المادة (12): إسقاط أسوأ طلعة — لكن لا نُفرغ الدورة المرجّحة من طلعاتها،
-        // وإلا صار التخريب في الدورة الأخيرة مفيداً لصاحبه بدل أن يضرّه.
+        // المادة (12): تُسقط أسوأ طلعة من أي دورة — بما فيها الدورة المرجّحة،
+        // لأن الهجوم المنسّق غالباً يقع في الدورة الجارية وهي أَولى بالحماية.
         let droppedScore: number | null = null;
         if (weeks.length >= MIN_WEEKS_TO_DROP) {
-            const inWeighted = weeks.filter((w) => w.cycle === weightedCycle);
-            const pool = inWeighted.length <= 1
-                ? weeks.filter((w) => w.cycle !== weightedCycle)
-                : weeks;
-            if (pool.length) {
-                const worst = pool.reduce((a, b) => (b.score < a.score ? b : a));
-                droppedScore = worst.score;
-                weeks = weeks.filter((w) => w !== worst);
-            }
+            const worst = weeks.reduce((a, b) => (b.score < a.score ? b : a));
+            droppedScore = worst.score;
+            weeks = weeks.filter((w) => w !== worst);
         }
 
         // متوسط داخل كل دورة، ثم متوسط مرجّح بين الدورات
