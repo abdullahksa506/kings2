@@ -12,6 +12,8 @@ import { sendPushNotification } from "@/lib/pushHelper";
 import { createNextWeek } from "@/lib/weekLifecycle.server";
 // 💾 نسخ احتياطية للتقييمات. للحذف الكامل: REMOVED_FEATURES.md
 import { createBackup, listBackups, restoreBackup, deleteBackup } from "@/lib/ratingsBackup.server";
+// 📊 القائمة المصححة (مواد الدستور v12). للحذف: REMOVED_FEATURES.md
+import { computeCorrectedRanking } from "@/lib/correctedRanking.server";
 import { planOuting } from "@/lib/outingPlanner";
 import { SATURDAY_DEAN, currentSaturdayKey, isValidTime } from "@/lib/saturday";
 
@@ -1292,6 +1294,28 @@ export async function POST(request: Request) {
                     .limit(1)
                     .get();
                 return NextResponse.json({ result: !snap.empty });
+            }
+
+            // ═══════════ 📊 القائمة المصححة ═══════════
+            // تُحسب في السيرفر لأن المادة (13) تحتاج هوية المقيّمين وهي سرّية.
+            // المخرَج أرقام مجمّعة فقط. 🗑️ للحذف: REMOVED_FEATURES.md
+            case "getCorrectedLeaderboard": {
+                if (!authName) throw new Error("Unauthorized");
+                return NextResponse.json({ result: await computeCorrectedRanking() });
+            }
+
+            // إعلان/إلغاء زوج تنحٍّ (المادة 13) — العميد فقط
+            case "setRecusedPairs": {
+                if (!isAdmin) throw new Error("Dean only");
+                const raw = Array.isArray(payload?.pairs) ? payload.pairs : [];
+                const pairs = raw
+                    .filter((p: unknown) => Array.isArray(p) && p.length === 2
+                        && p.every((n: unknown) => typeof n === "string" && VALID_NAMES_RPC.includes(n)))
+                    .filter((p: string[]) => p[0] !== p[1])
+                    .slice(0, 10);
+                await adminDb.collection("appConfig").doc("main")
+                    .set({ recusedPairs: pairs, updatedAt: Timestamp.now() }, { merge: true });
+                return NextResponse.json({ result: { pairs } });
             }
 
             // ═══════════ 🔧 وضع الصيانة ═══════════

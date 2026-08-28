@@ -297,6 +297,21 @@ function pickNewestPendingWeek(weeks: WeekSession[]): WeekSession | null {
 
 // One in-flight/resolved fetch of the ratings payload per page load — several
 // views need it and it's a single server round trip.
+/** صف في القائمة المصححة (مواد الدستور v12). */
+export type CorrectedRow = {
+    king: string;
+    average: number;
+    count: number;
+    droppedScore: number | null;
+    baseAverage: number;
+};
+export type CorrectedResult = {
+    rows: CorrectedRow[];
+    weightedCycle: number | null;
+    excludedCycles: number[];
+    recusedPairs: string[][];
+};
+
 /** حالة وضع الصيانة. */
 export type MaintenanceState = {
     active: boolean;
@@ -378,6 +393,15 @@ export const services = {
 
     async setWeekChoices(weekId: string, day: WeekSession["day"], restaurant: string | null, activity: string | null) {
         return invokeRpc("setWeekChoices", { weekId, day, restaurant, activity });
+    },
+
+    // ── 📊 القائمة المصححة ──
+    // 🗑️ للحذف الكامل: REMOVED_FEATURES.md
+    async getCorrectedLeaderboard(): Promise<CorrectedResult> {
+        return invokeRpc("getCorrectedLeaderboard") as Promise<CorrectedResult>;
+    },
+    async setRecusedPairs(pairs: string[][]) {
+        return invokeRpc("setRecusedPairs", { pairs });
     },
 
     // ── 🔧 وضع الصيانة ──

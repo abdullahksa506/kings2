@@ -20,6 +20,8 @@ const DeanDashboard = dynamic(() => import("./DeanDashboard"), { ssr: false });
 const Leaderboard = dynamic(() => import("./Leaderboard"), { ssr: false });
 const GlobalLeaderboard = dynamic(() => import("./GlobalLeaderboard"), { ssr: false });
 const KingsLeaderboard = dynamic(() => import("./KingsLeaderboard"), { ssr: false });
+// 📊 القائمة المصححة (مواد الدستور v12). للحذف: REMOVED_FEATURES.md
+const CorrectedLeaderboard = dynamic(() => import("./CorrectedLeaderboard"), { ssr: false });
 const ConstitutionModal = dynamic(() => import("./ConstitutionModal"), { ssr: false });
 // Heavy panels — code-split so they only load when first opened.
 const RestaurantMapPanel = dynamic(() => import("./RestaurantMapPanel"), { ssr: false });
@@ -2036,6 +2038,7 @@ export default function Dashboard() {
                     {activeTab === "leaderboard" && !(selectedTheme === "tiktok" && !tiktokFullView) && (
                         <div className="space-y-4 max-w-2xl mx-auto">
                             <KingsLeaderboard />
+                            <CorrectedLeaderboard />
                             <Leaderboard
                                 cycleNumber={currentWeek ? currentWeek.cycleNumber : (pastWeek ? pastWeek.cycleNumber : 1)}
                                 isDean={user?.role === "dean"}

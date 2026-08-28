@@ -186,3 +186,27 @@ rm src/components/MaintenanceToggle.tsx
 
 **تأكيد:** البوابة تفشل **مفتوحة** — لو تعذّرت قراءة الإعداد لأي سبب، الموقع
 يشتغل عادي وما ينقفل على أحد.
+
+---
+
+## 📊 القائمة المصححة — دليل الحذف
+
+> ⚠️ ميزة **موجودة حالياً**.
+
+**الملفات:**
+```bash
+rm src/lib/correctedRanking.server.ts
+rm src/components/CorrectedLeaderboard.tsx
+```
+
+**التعديلات اليدوية:**
+
+| الملف | وش تشيل |
+|---|---|
+| `src/app/api/rpc/route.ts` | سطر `import { computeCorrectedRanking } ...` + كتلة `═══ 📊 القائمة المصححة ═══` (حالتان: getCorrectedLeaderboard و setRecusedPairs) |
+| `src/lib/services.ts` | النوعان `CorrectedRow` و `CorrectedResult` + `getCorrectedLeaderboard` و `setRecusedPairs` |
+| `src/components/Dashboard.tsx` | سطر `const CorrectedLeaderboard = dynamic(...)` + `<CorrectedLeaderboard />` |
+
+**البيانات:** الحقل `recusedPairs` في `appConfig/main` — غير مؤذٍ، خلّه أو امسحه.
+
+**تأكيد:** لا تلمس `KingsLeaderboard` ولا `submitRating` ولا أي حساب قائم. حذفها يرجّع كل شي كما كان.
