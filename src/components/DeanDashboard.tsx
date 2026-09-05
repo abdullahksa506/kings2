@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, Rating, VALID_NAMES } from "@/lib/services";
 import { Star, ShieldAlert, BarChart3, KeyRound, Users, CheckCircle2, Bell, Lock, RefreshCw, Trash2, MapPinOff, ChevronRight } from "lucide-react";
@@ -33,6 +33,36 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
     const [deletingLocId, setDeletingLocId] = useState<string | null>(null);
     const [completedWeekNames, setCompletedWeekNames] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
+    const [refreshingRatings, setRefreshingRatings] = useState(false);
+
+    // جلب تقييمات الأسبوع وحدها — تُستدعى دورياً وعند عودة التطبيق للواجهة،
+    // لأن اللوحة كانت تجلب مرة واحدة فقط فتبقى قديمة أياماً في التطبيق المثبّت.
+    const refreshRatings = useCallback(async (showSpinner = false) => {
+        if (!weekId) { setRatings([]); return; }
+        if (showSpinner) setRefreshingRatings(true);
+        try {
+            services.invalidateRatingsCache();
+            setRatings(await services.getAllRatingsForWeek(weekId));
+        } catch (e) {
+            if (showSpinner) toast.error(e instanceof Error ? e.message : "تعذّر التحديث");
+        } finally {
+            if (showSpinner) setRefreshingRatings(false);
+        }
+    }, [weekId]);
+
+    // تحديث تلقائي: كل 45 ثانية، وفوراً عند رجوع التطبيق للواجهة
+    useEffect(() => {
+        if (!weekId) return;
+        const tick = () => { if (document.visibilityState === "visible") refreshRatings(); };
+        const timer = setInterval(tick, 45000);
+        document.addEventListener("visibilitychange", tick);
+        window.addEventListener("focus", tick);
+        return () => {
+            clearInterval(timer);
+            document.removeEventListener("visibilitychange", tick);
+            window.removeEventListener("focus", tick);
+        };
+    }, [weekId, refreshRatings]);
 
     useEffect(() => {
         let unsubscribeRatings: (() => void) | undefined;
@@ -249,6 +279,14 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
                 <h3 className="text-lg font-bold text-amber-500 flex items-center gap-2">
                     <BarChart3 className="w-5 h-5" />
                     تفاصيل تصويت الأسبوع (سرية للغاية)
+                    <button
+                        onClick={() => refreshRatings(true)}
+                        disabled={refreshingRatings}
+                        title="تحديث الآن"
+                        className="text-slate-400 hover:text-amber-400 disabled:opacity-50"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${refreshingRatings ? "animate-spin" : ""}`} />
+                    </button>
                 </h3>
                 <div className="flex bg-slate-900 rounded-lg p-1 border border-slate-700">
                     <button
