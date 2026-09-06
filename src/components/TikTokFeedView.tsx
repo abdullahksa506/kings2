@@ -1193,7 +1193,21 @@ export default function TikTokFeedView({
     });
 
     // ── Rate past meal card (RatingForm inline) ──
-    if (pastWeek && pastWeek.restaurant && pastWeek.ratingEnabled !== false && isMember && currentWeek?.king !== userName) {
+    // بوابة التقييم — كانت أضعف من نظيرتها في اللوحة العادية فتُظهر الزر لمن لا يحق له:
+    //  • ratingEnabled !== false تمرّ لو كان الحقل غير مضبوط (يظهر الزر قبل أن يفتحه العميد)
+    //  • كانت تفحص ملك الأسبوع الحالي، والتقييم للأسبوع السابق — فملك الطلعة يرى زر تقييم طلعته هو
+    //  • ولا تستثني المعتذرين، وهم ممنوعون من التصويت أصلاً
+    const mayRateBath = Boolean(
+        pastWeek && pastWeek.restaurant && isMember
+        && pastWeek.king !== userName
+        && !(pastWeek.absentees || []).includes(userName),
+    );
+    const mayRatePast = Boolean(
+        pastWeek && pastWeek.restaurant && pastWeek.ratingEnabled === true && isMember
+        && pastWeek.king !== userName
+        && !(pastWeek.absentees || []).includes(userName),
+    );
+    if (mayRatePast && pastWeek) {
         cards.push({
             id: "rate-past",
             render: () => (
@@ -1249,7 +1263,9 @@ export default function TikTokFeedView({
     }
 
     // ── Rate bathroom card ──
-    if (pastWeek && pastWeek.restaurant && isMember && currentWeek?.king !== userName) {
+    // نفس تصحيح البوابة السابقة: المرجع هو ملك الطلعة السابقة لا الحالية،
+    // والمعتذر لم يحضر أصلاً فلا حمّام يقيّمه.
+    if (mayRateBath && pastWeek) {
         cards.push({
             id: "rate-bath",
             render: () => (
