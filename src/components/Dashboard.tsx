@@ -582,6 +582,23 @@ export default function Dashboard() {
     const [showNotifDiagnostics, setShowNotifDiagnostics] = useState(false);
     const [notifStatus, setNotifStatus] = useState<string>("");
 
+    // الأسبوع السابق كان يُجلب مرة واحدة عند فتح التطبيق فقط، بينما الأسبوع
+    // الحالي له مستمع لحظي. فتبقى حالة ratingEnabled للأسبوع السابق مجمّدة على
+    // لحظة الفتح — والتطبيق المثبّت يظل مفتوحاً أياماً، فيرى العضو نموذج تقييم
+    // لأسبوع أُغلق تقييمه (أو العكس). نحدّثه دورياً وعند عودة التطبيق للواجهة.
+    useEffect(() => {
+        const refresh = () => { if (document.visibilityState === "visible") fetchPastWeekOnly(); };
+        const timer = setInterval(refresh, 60000);
+        document.addEventListener("visibilitychange", refresh);
+        window.addEventListener("focus", refresh);
+        return () => {
+            clearInterval(timer);
+            document.removeEventListener("visibilitychange", refresh);
+            window.removeEventListener("focus", refresh);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.name]);
+
     useEffect(() => {
         fetchPastWeekOnly();
 
@@ -1353,9 +1370,15 @@ export default function Dashboard() {
                         )}
 
                         {(() => {
-                            const ratingWeek = currentWeek || pastWeek;
+                            // كان: currentWeek || pastWeek — فيستهدف الأسبوع القادم متى وُجد،
+                            // حتى قبل اختيار مطعمه وقبل أن تقع الطلعة أصلاً. فيفتح العميد
+                            // التقييم ظانّاً أنه للطلعة الماضية، ويرى الأعضاء نموذج تقييم
+                            // لطلعة لم تحصل. الآن نستهدف الأسبوع الذي له مطعم فعلاً.
+                            const ratingWeek = (currentWeek && currentWeek.restaurant) ? currentWeek : (pastWeek || currentWeek);
                             if (!ratingWeek) return null;
+                            const noRestaurant = !ratingWeek.restaurant;
                             return (
+                                <div className="flex flex-col gap-1.5">
                                 <button
                                     onClick={async () => {
                                         setSaving(true);
@@ -1378,8 +1401,8 @@ export default function Dashboard() {
                                         await fetchWeek();
                                         setSaving(false);
                                     }}
-                                    disabled={saving}
-                                    className={`py-3 px-6 rounded-xl flex items-center gap-2 transition-all font-semibold ${ratingWeek.ratingEnabled
+                                    disabled={saving || (noRestaurant && !ratingWeek.ratingEnabled)}
+                                    className={`py-3 px-6 rounded-xl flex items-center gap-2 transition-all font-semibold disabled:opacity-50 ${ratingWeek.ratingEnabled
                                         ? "bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
                                         : "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
                                         }`}
@@ -1387,6 +1410,12 @@ export default function Dashboard() {
                                     {ratingWeek.ratingEnabled ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
                                     {ratingWeek.ratingEnabled ? "قفل التقييم" : "فتح التقييم للأعضاء"}
                                 </button>
+                                <p className="text-[11px] text-slate-500 px-1">
+                                    {noRestaurant
+                                        ? "⚠️ ما فيه مطعم محدد — اختر المطعم قبل فتح التقييم"
+                                        : `الطلعة المستهدفة: ${ratingWeek.restaurant} · أسبوع ${ratingWeek.weekNumber}`}
+                                </p>
+                                </div>
                             );
                         })()}
 
