@@ -241,19 +241,19 @@ rm src/components/OpenRatingsPanel.tsx
 
 ## 📖 قارئ المانجا المترجم — دليل الاسترجاع
 
-**حُذفت في:** `MANGA_REMOVAL` — كوميت الحذف نفسه.
-**آخر كوميت فيه الميزة:** `MANGA_BASE`
+**حُذفت في:** `2737ecb` — كوميت الحذف نفسه.
+**آخر كوميت فيه الميزة:** `eafe4a3`
 
 ### أسرع طريقة
 
 ```bash
-git revert MANGA_REMOVAL
+git revert 2737ecb
 ```
 
 ### أو استرجاع الملفات يدوياً
 
 ```bash
-git checkout MANGA_BASE -- src/app/manga src/app/api/manga
+git checkout eafe4a3 -- src/app/manga src/app/api/manga
 ```
 
 ثم أعد رابط الدخول في `src/components/DeanDashboard.tsx` أعلى `<CycleOrganizer />`:
