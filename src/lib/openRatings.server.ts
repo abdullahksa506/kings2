@@ -52,7 +52,11 @@ export async function listOpenRatingWeeks(): Promise<OpenRatingWeek[]> {
     const now = Date.now();
     const rows: OpenRatingWeek[] = [];
     weeksSnap.forEach((d) => {
-        const w = d.data() as any;
+        const w = d.data() as {
+            restaurant?: string | null; king?: string | null;
+            cycleNumber?: number; weekNumber?: number;
+            absentees?: string[]; ratingEnabledAt?: { toMillis?: () => number };
+        };
         if (!w.restaurant) return;                       // أسابيع بلا مطعم لا تُقيَّم أصلاً
         const openedAt = w.ratingEnabledAt?.toMillis?.() ?? null;
         const rated = counts.get(d.id) ?? new Set<string>();
@@ -81,14 +85,19 @@ export async function closeRatingForWeeks(weekIds: string[]): Promise<{ closed: 
     const ids = [...new Set(weekIds.filter((x) => typeof x === "string" && x.trim()))].slice(0, 200);
     if (!ids.length) return { closed: 0 };
 
+    // batch.update على مستند محذوف يُفشل الدفعة كاملة، فلو حُذف أسبوع واحد
+    // بين عرض القائمة والضغط على القفل ما انقفل ولا أسبوع. نتحقق من وجودها أولاً.
+    const refs = ids.map((id) => adminDb.collection("weeks").doc(id));
+    const snaps = await adminDb.getAll(...refs);
+    const existing = snaps.filter((s) => s.exists).map((s) => s.ref);
+
     let closed = 0;
-    for (let i = 0; i < ids.length; i += 400) {
+    for (let i = 0; i < existing.length; i += 400) {
+        const chunk = existing.slice(i, i + 400);
         const batch = adminDb.batch();
-        ids.slice(i, i + 400).forEach((id) => {
-            batch.update(adminDb.collection("weeks").doc(id), { ratingEnabled: false });
-            closed++;
-        });
+        chunk.forEach((ref) => batch.update(ref, { ratingEnabled: false }));
         await batch.commit();
+        closed += chunk.length;      // نعدّ بعد نجاح الحفظ لا قبله
     }
     return { closed };
 }
