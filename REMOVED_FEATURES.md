@@ -235,3 +235,57 @@ rm src/components/OpenRatingsPanel.tsx
 | `src/components/DeanDashboard.tsx` | سطر `import OpenRatingsPanel ...` + الـ `<div>` اللي فيه `<OpenRatingsPanel />` |
 
 **تأكيد:** ما تلمس `submitRating` ولا أي حساب. حذفها يرجّع كل شي كما كان — بس ترجع معه مشكلة الأسابيع المفتوحة للأبد.
+
+
+---
+
+## 📖 قارئ المانجا المترجم — دليل الاسترجاع
+
+**حُذفت في:** `MANGA_REMOVAL` — كوميت الحذف نفسه.
+**آخر كوميت فيه الميزة:** `MANGA_BASE`
+
+### أسرع طريقة
+
+```bash
+git revert MANGA_REMOVAL
+```
+
+### أو استرجاع الملفات يدوياً
+
+```bash
+git checkout MANGA_BASE -- src/app/manga src/app/api/manga
+```
+
+ثم أعد رابط الدخول في `src/components/DeanDashboard.tsx` أعلى `<CycleOrganizer />`:
+
+```tsx
+<Link href="/manga" className="mb-6 flex items-center justify-between gap-3 bg-gradient-to-br from-indigo-900/40 to-violet-900/30 border border-indigo-500/30 hover:border-indigo-400/60 rounded-2xl p-4 transition group">
+    <div className="flex items-center gap-3">
+        <div className="p-2 rounded-xl bg-indigo-500/20 border border-indigo-500/40 text-xl">📖</div>
+        <div className="text-right">
+            <h3 className="text-sm font-bold text-indigo-200">قارئ المانجا المترجم</h3>
+            <p className="text-[11px] text-indigo-300/60">ابحث · اقرأ · ترجمة عربية تلقائية (تجريبي)</p>
+        </div>
+    </div>
+    <ChevronRight className="w-5 h-5 text-indigo-300 rotate-180 group-hover:-translate-x-1 transition-transform" />
+</Link>
+```
+
+### ما كانت تتكوّن منه
+
+| الملف | الدور |
+|---|---|
+| `src/app/manga/page.tsx` | صفحة القارئ (للعميد فقط) |
+| `src/app/api/manga/_lib.ts` | حارس العميد + مضيفات الصور المسموحة |
+| `src/app/api/manga/search/route.ts` | البحث في المصادر |
+| `src/app/api/manga/chapters/route.ts` | قائمة الفصول |
+| `src/app/api/manga/pages/route.ts` | صفحات الفصل |
+| `src/app/api/manga/image/route.ts` | وسيط تحميل الصور |
+| `src/app/api/manga/translate/route.ts` | الترجمة (Gemini ثم OpenRouter) |
+
+### متغيرات البيئة
+
+- `GEMINI_API_KEY` — **لا تحذفه**، يستخدمه «الملك الذكي» أيضاً
+- `OPENROUTER_API_KEY` و `OPENROUTER_MODEL` — كانا للمانجا فقط، تقدر تشيلهما
+
+**تأكيد:** الميزة كانت معزولة تماماً — ما لمست أي تقييم ولا ترتيب ولا حسبة. حذفها ما أثّر على شي.
