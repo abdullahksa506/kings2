@@ -14,6 +14,8 @@ import { createNextWeek } from "@/lib/weekLifecycle.server";
 import { createBackup, listBackups, restoreBackup, deleteBackup } from "@/lib/ratingsBackup.server";
 // 📊 القائمة المصححة (مواد الدستور v12). للحذف: REMOVED_FEATURES.md
 import { computeCorrectedRanking } from "@/lib/correctedRanking.server";
+// 🔒 إدارة التقييمات المفتوحة. للحذف: REMOVED_FEATURES.md
+import { listOpenRatingWeeks, closeRatingForWeeks } from "@/lib/openRatings.server";
 import { planOuting } from "@/lib/outingPlanner";
 import { SATURDAY_DEAN, currentSaturdayKey, isValidTime } from "@/lib/saturday";
 
@@ -1294,6 +1296,20 @@ export async function POST(request: Request) {
                     .limit(1)
                     .get();
                 return NextResponse.json({ result: !snap.empty });
+            }
+
+            // ═══════════ 🔒 التقييمات المفتوحة ═══════════
+            // لا شيء يُغلق التقييم تلقائياً، فتبقى أسابيع قديمة مفتوحة للأبد
+            // ويُقيّمها الأعضاء بعد شهور. هذي أدوات العميد ليراها ويقفلها.
+            case "listOpenRatings": {
+                if (!isAdmin) throw new Error("Dean only");
+                return NextResponse.json({ result: await listOpenRatingWeeks() });
+            }
+
+            case "closeRatings": {
+                if (!isAdmin) throw new Error("Dean only");
+                const ids = Array.isArray(payload?.weekIds) ? payload.weekIds : [];
+                return NextResponse.json({ result: await closeRatingForWeeks(ids) });
             }
 
             // ═══════════ 📊 القائمة المصححة ═══════════

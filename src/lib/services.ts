@@ -297,6 +297,20 @@ function pickNewestPendingWeek(weeks: WeekSession[]): WeekSession | null {
 
 // One in-flight/resolved fetch of the ratings payload per page load — several
 // views need it and it's a single server round trip.
+/** أسبوع تقييمه ما زال مفتوحاً (للعميد). */
+export type OpenRatingWeek = {
+    id: string;
+    restaurant: string | null;
+    king: string | null;
+    cycleNumber: number;
+    weekNumber: number;
+    openedAt: number | null;
+    daysOpen: number | null;
+    ratingCount: number;
+    eligibleCount: number;
+    missing: string[];
+};
+
 /** صف في القائمة المصححة (مواد الدستور v12). */
 export type CorrectedRow = {
     king: string;
@@ -394,6 +408,17 @@ export const services = {
 
     async setWeekChoices(weekId: string, day: WeekSession["day"], restaurant: string | null, activity: string | null) {
         return invokeRpc("setWeekChoices", { weekId, day, restaurant, activity });
+    },
+
+    // ── 🔒 التقييمات المفتوحة (العميد فقط) ──
+    // 🗑️ للحذف الكامل: REMOVED_FEATURES.md
+    async listOpenRatings(): Promise<OpenRatingWeek[]> {
+        return invokeRpc("listOpenRatings") as Promise<OpenRatingWeek[]>;
+    },
+    async closeRatings(weekIds: string[]): Promise<{ closed: number }> {
+        const r = await invokeRpc("closeRatings", { weekIds });
+        this.invalidateRatingsCache();
+        return r as { closed: number };
     },
 
     // ── 📊 القائمة المصححة ──

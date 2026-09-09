@@ -13,6 +13,7 @@ import DataIntegrityPanel from "./DataIntegrityPanel";
 import RatingsBackupPanel from "./RatingsBackupPanel";
 import MaintenanceToggle from "./MaintenanceToggle";
 import RecusedPairsPanel from "./RecusedPairsPanel";
+import OpenRatingsPanel from "./OpenRatingsPanel";
 import { canonRestaurant, deleteRestaurantLocation, listenToRestaurantLocations, RestaurantLocation } from "@/lib/mapServices";
 
 export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWeekId?: string, pastWeekId?: string }) {
@@ -190,6 +191,11 @@ export default function DeanDashboard({ currentWeekId, pastWeekId }: { currentWe
             {/* 💾 نسخ التقييمات الاحتياطية — احفظ الوضع الحالي وارجع له بضغطة زر */}
             <div className="mb-6">
                 <RatingsBackupPanel />
+            </div>
+
+            {/* 🔒 التقييمات المفتوحة — ما فيه إغلاق تلقائي، فالعميد يشوفها ويقفلها */}
+            <div className="mb-6">
+                <OpenRatingsPanel />
             </div>
 
             {/* 🤝 التنحّي لتعارض المصالح — المادة (13) */}

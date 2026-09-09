@@ -213,3 +213,25 @@ rm src/components/CorrectedLeaderboard.tsx
 **البيانات:** الحقل `recusedPairs` في `appConfig/main` — غير مؤذٍ، خلّه أو امسحه.
 
 **تأكيد:** لا تلمس `KingsLeaderboard` ولا `submitRating` ولا أي حساب قائم. حذفها يرجّع كل شي كما كان.
+
+---
+
+## 🔒 التقييمات المفتوحة — دليل الحذف
+
+> ⚠️ ميزة **موجودة حالياً**.
+
+**الملفات:**
+```bash
+rm src/lib/openRatings.server.ts
+rm src/components/OpenRatingsPanel.tsx
+```
+
+**التعديلات اليدوية:**
+
+| الملف | وش تشيل |
+|---|---|
+| `src/app/api/rpc/route.ts` | سطر `import { listOpenRatingWeeks, closeRatingForWeeks } ...` + كتلة `═══ 🔒 التقييمات المفتوحة ═══` (حالتان) |
+| `src/lib/services.ts` | النوع `OpenRatingWeek` + `listOpenRatings` + `closeRatings` |
+| `src/components/DeanDashboard.tsx` | سطر `import OpenRatingsPanel ...` + الـ `<div>` اللي فيه `<OpenRatingsPanel />` |
+
+**تأكيد:** ما تلمس `submitRating` ولا أي حساب. حذفها يرجّع كل شي كما كان — بس ترجع معه مشكلة الأسابيع المفتوحة للأبد.
