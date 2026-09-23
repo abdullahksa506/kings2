@@ -82,10 +82,10 @@ export default function AuthScreen() {
                         <Crown className="w-8 h-8 text-amber-500" />
                     </div>
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent">
-                        ملك الخميس
+                        عرش الخميس
                     </h1>
                     <p className="text-slate-400 mt-2 text-sm text-center">
-                        دستور 2026: ولست بخيركم فأن رأيتموني على حق أطيعوني
+                        منصة الطلعات الأسبوعية — اختيار الملك، الحضور والتقييمات
                     </p>
                 </div>
 
