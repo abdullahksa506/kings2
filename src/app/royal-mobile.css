@@ -3,6 +3,22 @@
  */
 
 /* Visual styling only; other themes and the original map keep their styles. */
+[data-theme="royal-amber"] { --royal-gold: #e8bd6d; color: #f5f3ef; font-family: "Segoe UI", Tahoma, sans-serif; }
+[data-theme="royal-amber"] .royal-header h1 { background: none; color: #e8bd6d; }
+[data-theme="royal-amber"] .royal-header svg { color: #e8bd6d; }
+[data-theme="royal-amber"]:not([data-view="map"]) :is(.rounded-3xl, .rounded-2xl).border { border-radius: 20px; border-color: #273146; background: linear-gradient(145deg, #182234, #121a28); box-shadow: 0 8px 30px #00000012; }
+[data-theme="royal-amber"]:not([data-view="map"]) :is(.text-amber-400, .text-amber-500, .text-yellow-400) { color: #e8bd6d; }
+[data-theme="royal-amber"]:not([data-view="map"]) :is(.bg-amber-500, .bg-yellow-500) { background: #e8bd6d; color: #1a1720; }
+[data-theme="royal-amber"] .royal-admin { max-width: 900px; margin-inline: auto; }
+[data-theme="royal-amber"] .royal-admin > .absolute { display: none; }
+[data-theme="royal-amber"] .royal-admin > .flex { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+[data-theme="royal-amber"] .royal-admin > .flex > * { width: 100%; min-width: 0; }
+[data-theme="royal-amber"] .royal-admin > .flex > div { padding: 20px; border: 1px solid #273146; border-radius: 16px; background: #0d152266; }
+[data-theme="royal-amber"] .royal-list-tabs button[aria-selected="true"] { border-color: #e8bd6d55; background: #e8bd6d18; color: #e8bd6d; }
+[data-theme="royal-amber"] .royal-nav { background: #0c1424f5; border-color: #273146; }
+[data-theme="royal-amber"] .royal-nav button, [data-theme="royal-amber"] .royal-nav a { flex-shrink: 0; }
+.royal-auth h1 { background: none; color: #e8bd6d; }
+.royal-auth button[type="submit"] { background: #e8bd6d; color: #1a1720; box-shadow: none; }
 [data-theme="royal-amber"] { background: radial-gradient(ellipse at 80% 0, #27304455, transparent 55%), #0b101b; }
 [data-theme="royal-amber"] .royal-header { gap: 12px; padding-top: 24px; border-color: #273146; }
 [data-theme="royal-amber"] .royal-header h1 { font-size: clamp(1.4rem, 5vw, 1.875rem); gap: 8px; }
@@ -17,6 +33,10 @@
 .royal-auth { background: radial-gradient(ellipse at 50% 20%, #27304477, transparent 60%), #0b101b; }
 .royal-auth > div.relative { background: linear-gradient(145deg, #182234, #121a28); border-color: #273146; }
 @media (max-width: 640px) {
+  [data-theme="royal-amber"] .royal-admin > .flex { grid-template-columns: minmax(0, 1fr); }
+  [data-theme="royal-amber"] .royal-header { align-items: flex-start; }
+  [data-theme="royal-amber"] .royal-nav > div { justify-content: flex-start; gap: 4px; padding-inline: 8px; }
+  [data-theme="royal-amber"]:not([data-view="map"]) :is(.rounded-3xl, .rounded-2xl).border { padding: 20px; }
   [data-theme="royal-amber"] { padding-inline: 16px; }
   [data-theme="royal-amber"] .royal-header { margin-bottom: 24px; padding-bottom: 20px; }
   [data-theme="royal-amber"] .royal-admin { padding: 18px; margin-bottom: 22px; }

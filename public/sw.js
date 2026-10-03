@@ -7,7 +7,7 @@
  */
 
 // Version for cache busting - increment this on each deployment
-const SW_VERSION = '1.0.0'
+const SW_VERSION = '2.0.1'
 const CACHE_NAME = `king-app-v${SW_VERSION}`
 
 self.addEventListener('install', function () {

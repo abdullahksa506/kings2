@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { toast } from 'sonner'
 
 const urlBase64ToUint8Array = (base64String: string) => {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -166,8 +167,13 @@ export function usePushNotifications() {
             navigator.serviceWorker.addEventListener('message', (event) => {
                 if (event.data?.type === 'SW_UPDATED') {
                     console.log(`🔄 Service Worker updated to version ${event.data.version}`)
-                    // Optionally reload the page to get the latest assets
-                    // window.location.reload()
+                    if (navigator.serviceWorker.controller) {
+                        toast('تحديث جديد لعرش الخميس جاهز', {
+                            id: 'app-update-ready',
+                            duration: Infinity,
+                            action: { label: 'تحديث الشكل', onClick: () => window.location.reload() },
+                        })
+                    }
                 }
             })
 

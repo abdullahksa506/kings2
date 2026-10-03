@@ -507,8 +507,9 @@ export default function Dashboard() {
     // Tab State
     // "ai" is rendered as a Link in the bottom bar (navigates to /ai page);
     // the other entries are real tabs that switch the activeTab state.
-    type TabType = "week" | "leaderboard" | "bathroom" | "map" | "ai" | "more";
+    type TabType = "week" | "leaderboard" | "bathroom" | "map" | "ai" | "more" | "dean";
     const [activeTab, setActiveTab] = useState<TabType>("week");
+    const [leaderboardView, setLeaderboardView] = useState(0);
     // Lazy init from localStorage so first React render already uses correct
     // theme — combined with the inline boot script in layout.tsx, this kills
     // the brief flash of the default theme on cold start.
@@ -1233,7 +1234,7 @@ export default function Dashboard() {
             )}
 
             {/* Dean's Admin Panel */}
-            {user?.role === "dean" && (
+            {user?.role === "dean" && (selectedTheme !== "royal-amber" || activeTab === "dean") && (
                 <details open className={`royal-admin bg-slate-900/70 border ${activeThemeStyle.accentBorderClass} rounded-2xl p-6 mb-8 relative overflow-hidden`}>
                     <summary className={`${activeThemeStyle.accentTextClass} font-bold mb-4 flex items-center gap-2 text-xl cursor-pointer`}>
                         <Shield className="w-6 h-6" />
@@ -2066,9 +2067,16 @@ export default function Dashboard() {
 
                     {/* ===== TAB: لوحة المتصدرين ===== */}
                     {activeTab === "leaderboard" && !(selectedTheme === "tiktok" && !tiktokFullView) && (
-                        <div className="space-y-4 max-w-2xl mx-auto">
-                            <KingsLeaderboard />
-                            <CorrectedLeaderboard />
+                        <div className="royal-leaders space-y-4 max-w-2xl mx-auto">
+                            <h2 className="text-2xl font-bold">المتصدرين</h2>
+                            <div className="royal-list-tabs flex gap-2 overflow-x-auto pb-2" role="tablist" aria-label="قوائم المتصدرين">
+                                {["قائمة الملوك", "القائمة المصححة", "قائمة شرف المطاعم", "السجل الشامل", "مستكشف التقييمات"].map((label, index) => (
+                                    <button key={label} id={`royal-list-tab-${index}`} role="tab" aria-selected={leaderboardView === index} aria-controls={`royal-list-${index}`} onClick={() => setLeaderboardView(index)} className="shrink-0 rounded-xl border border-slate-700 px-4 py-3 text-sm">{label}</button>
+                                ))}
+                            </div>
+                            <div id="royal-list-0" role="tabpanel" aria-labelledby="royal-list-tab-0" hidden={leaderboardView !== 0}><KingsLeaderboard /></div>
+                            <div id="royal-list-1" role="tabpanel" aria-labelledby="royal-list-tab-1" hidden={leaderboardView !== 1}><CorrectedLeaderboard /></div>
+                            <div id="royal-list-2" role="tabpanel" aria-labelledby="royal-list-tab-2" hidden={leaderboardView !== 2}>
                             <Leaderboard
                                 cycleNumber={currentWeek ? currentWeek.cycleNumber : (pastWeek ? pastWeek.cycleNumber : 1)}
                                 isDean={user?.role === "dean"}
@@ -2079,8 +2087,9 @@ export default function Dashboard() {
                                     setSaving(false);
                                 } : undefined}
                             />
-                            <GlobalLeaderboard />
-                            <RatingsExplorer />
+                            </div>
+                            <div id="royal-list-3" role="tabpanel" aria-labelledby="royal-list-tab-3" hidden={leaderboardView !== 3}><GlobalLeaderboard /></div>
+                            <div id="royal-list-4" role="tabpanel" aria-labelledby="royal-list-tab-4" hidden={leaderboardView !== 4}><RatingsExplorer /></div>
                         </div>
                     )}
 
@@ -2423,9 +2432,10 @@ export default function Dashboard() {
 
             {/* ===== BOTTOM TAB BAR (hidden in TikTok feed mode — it has its own nav) ===== */}
             {!loading && !(selectedTheme === "tiktok" && !tiktokFullView) && (
-                <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 pb-safe">
-                    <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-1">
+                <div className="royal-nav fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 pb-safe">
+                    <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-1 overflow-x-auto">
                         {[
+                            ...(user?.role === "dean" && selectedTheme === "royal-amber" ? [{ id: "dean" as TabType, icon: Shield, label: "العميد", special: false }] : []),
                             { id: "week" as TabType, icon: Calendar, label: "الأسبوع", special: false },
                             { id: "leaderboard" as TabType, icon: Trophy, label: "المتصدرين", special: false },
                             { id: "ai" as TabType, icon: Brain, label: "AI", special: true },
