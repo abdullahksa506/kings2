@@ -18,6 +18,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "ملك الخميس | King of Thursday",
   description: "The Official King of Thursday Management App 2026",
+  icons: {
+    apple: [{ url: '/icons/royal-v2-180.png', sizes: '180x180', type: 'image/png' }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
