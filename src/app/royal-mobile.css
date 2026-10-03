@@ -1,0 +1,31 @@
+/*
+ * 🤖 قال الروبوت: رتبت المجلس، بس اختيار المطعم ما زال على الملك 😂
+ */
+
+/* Visual styling only; other themes and the original map keep their styles. */
+[data-theme="royal-amber"] { background: radial-gradient(ellipse at 80% 0, #27304455, transparent 55%), #0b101b; }
+[data-theme="royal-amber"] .royal-header { gap: 12px; padding-top: 24px; border-color: #273146; }
+[data-theme="royal-amber"] .royal-header h1 { font-size: clamp(1.4rem, 5vw, 1.875rem); gap: 8px; }
+[data-theme="royal-amber"] .royal-header p { color: #9ba8bc; font-size: 14px; }
+[data-theme="royal-amber"]:not([data-view="map"]) :is(.bg-slate-900, .bg-slate-900\/70, .bg-slate-900\/50, .bg-slate-800\/50)[class*="rounded-2xl"] { background: linear-gradient(145deg, #182234, #121a28); border-color: #273146; box-shadow: 0 8px 30px #00000012; }
+[data-theme="royal-amber"] .royal-admin { border-color: #a8814055; background: linear-gradient(145deg, #1d2636, #121a28); }
+.royal-admin > summary { list-style: none; }
+.royal-admin > summary::-webkit-details-marker { display: none; }
+.royal-admin > summary::after { content: '−'; margin-inline-start: auto; }
+.royal-admin:not([open]) > summary::after { content: '+'; }
+.royal-admin:not([open]) > summary { margin-bottom: 0; }
+.royal-auth { background: radial-gradient(ellipse at 50% 20%, #27304477, transparent 60%), #0b101b; }
+.royal-auth > div.relative { background: linear-gradient(145deg, #182234, #121a28); border-color: #273146; }
+@media (max-width: 640px) {
+  [data-theme="royal-amber"] { padding-inline: 16px; }
+  [data-theme="royal-amber"] .royal-header { margin-bottom: 24px; padding-bottom: 20px; }
+  [data-theme="royal-amber"] .royal-admin { padding: 18px; margin-bottom: 22px; }
+  [data-theme="royal-amber"] .royal-admin > summary { font-size: 18px; }
+  [data-theme="royal-amber"] .royal-admin > .flex > button { width: 100%; justify-content: center; min-height: 48px; }
+  [data-theme="royal-amber"]:not([data-view="map"]) :is(button, select, input) { min-height: 44px; }
+  [data-theme="royal-amber"]:not([data-view="map"]) :is(input, select, textarea) { font-size: 16px; }
+  [data-theme="royal-amber"] .pb-24 { padding-bottom: calc(7rem + env(safe-area-inset-bottom)); }
+  .royal-auth { padding-inline: 18px; }
+  .royal-auth > div.relative { padding: 26px 22px; border-radius: 24px; }
+  .royal-auth button[type="submit"] { min-height: 48px; }
+}

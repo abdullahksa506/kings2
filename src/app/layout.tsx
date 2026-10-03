@@ -1,7 +1,11 @@
+/*
+ * 🤖 قال الروبوت: رتبت المجلس، بس اختيار المطعم ما زال على الملك 😂
+ */
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import "./theme-overrides.css";
+import "./royal-mobile.css";
 import { AuthProvider } from "@/context/AuthContext";
 // 🔧 بوابة الصيانة — تغطي كل الروابط. للحذف: REMOVED_FEATURES.md
 import MaintenanceGate from "@/components/MaintenanceGate";

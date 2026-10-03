@@ -1,10 +1,14 @@
 "use client";
 
+/*
+ * 🤖 قال الروبوت: رتبت المجلس، بس اختيار المطعم ما زال على الملك 😂
+ */
+import RoyalMark from "./RoyalMark";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { services } from "@/lib/services";
 import { motion, AnimatePresence } from "framer-motion";
-import { Crown, Lock, User, AlertCircle, ArrowRight, KeyRound, CheckCircle2 } from "lucide-react";
+import { Lock, User, AlertCircle, ArrowRight, KeyRound, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 const VALID_NAMES = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
@@ -66,7 +70,7 @@ export default function AuthScreen() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-slate-950">
+        <div className="royal-auth min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-slate-950">
             {/* Background glowing effects */}
             <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -79,7 +83,7 @@ export default function AuthScreen() {
             >
                 <div className="flex flex-col items-center mb-8">
                     <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center mb-4 border border-amber-500/30">
-                        <Crown className="w-8 h-8 text-amber-500" />
+                        <RoyalMark className="w-12 h-12 text-amber-300" />
                     </div>
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent">
                         عرش الخميس

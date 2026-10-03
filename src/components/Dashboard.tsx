@@ -7,11 +7,12 @@
  * الحين الخلفية سما زرقا، الكاردات بيضا، والظلال سوداء واضحة 💥📚
  */
 
+import RoyalMark from "./RoyalMark";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, VALID_NAMES, invokeRpc, PublicUserProfile } from "@/lib/services";
-import { Crown, Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users, KeyRound, LogOut, Palette, Brain } from "lucide-react";
+import { Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users, KeyRound, LogOut, Palette, Brain } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import RatingForm from "./RatingForm";
@@ -1071,7 +1072,7 @@ export default function Dashboard() {
     };
 
     return (
-        <div data-theme={selectedTheme} className={`min-h-screen ${activeTheme.appBgClass} p-4 md:p-8 font-sans relative`}>
+        <div data-theme={selectedTheme} data-view={activeTab} className={`min-h-screen ${activeTheme.appBgClass} p-4 md:p-8 font-sans relative`}>
             <div className={`pointer-events-none absolute inset-0 ${activeThemeStyle.atmosphereClass}`} />
             {/* What's New popup — shows up to 4 times per member per VERSION */}
             <WhatsNewPopup userName={user?.name || ""} />
@@ -1126,10 +1127,10 @@ export default function Dashboard() {
                     {v2AnnouncementSending ? "⏳ يُرسل..." : v2AnnouncementConfirm ? "اضغط ثانية للتأكيد ⚠️" : "📢 إعلان v2"}
                 </button>
             )}
-            <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-800">
+            <header className="royal-header flex justify-between items-center mb-10 pb-6 border-b border-slate-800">
                 <div>
                     <h1 className={`text-3xl font-bold bg-gradient-to-r ${activeTheme.headerGradientClass} bg-clip-text text-transparent flex items-center gap-3`}>
-                        <Crown className={`w-8 h-8 ${activeTheme.headerIconClass}`} />
+                        <RoyalMark className={`w-11 h-11 shrink-0 ${activeTheme.headerIconClass}`} />
                         عرش الخميس
                     </h1>
                     <p className="text-slate-400 mt-2">أهلاً بك، {displayName}</p>
@@ -1233,12 +1234,12 @@ export default function Dashboard() {
 
             {/* Dean's Admin Panel */}
             {user?.role === "dean" && (
-                <div className={`bg-slate-900/70 border ${activeThemeStyle.accentBorderClass} rounded-2xl p-6 mb-8 relative overflow-hidden`}>
-                    <div className={`absolute top-0 left-0 w-2 h-full ${activeThemeStyle.accentSolidClass} opacity-80`} />
-                    <h2 className={`${activeThemeStyle.accentTextClass} font-bold mb-4 flex items-center gap-2 text-xl`}>
+                <details open className={`royal-admin bg-slate-900/70 border ${activeThemeStyle.accentBorderClass} rounded-2xl p-6 mb-8 relative overflow-hidden`}>
+                    <summary className={`${activeThemeStyle.accentTextClass} font-bold mb-4 flex items-center gap-2 text-xl cursor-pointer`}>
                         <Shield className="w-6 h-6" />
                         لوحة العميد (سرية)
-                    </h2>
+                    </summary>
+                    <div className={`absolute top-0 left-0 w-2 h-full ${activeThemeStyle.accentSolidClass} opacity-80`} />
                     <div className="flex flex-wrap gap-4">
                         <button
                             onClick={handleStartNewWeek}
@@ -1652,7 +1653,7 @@ export default function Dashboard() {
 
                     {/* Dean can see stats + reset codes + phone numbers */}
                     <DeanDashboard currentWeekId={currentWeek?.id} pastWeekId={pastWeek?.id} />
-                </div>
+                </details>
             )}
 
             {loading ? (
