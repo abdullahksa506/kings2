@@ -1,4 +1,7 @@
 "use client";
+/*
+ * 🤖 الروبوت عدّ الثيمات، وقرر ما يحسب الثيم المتقاعد 😂🎨
+ */
 
 import { useEffect, useState } from "react";
 import { Sparkles, X } from "lucide-react";
@@ -51,7 +54,7 @@ const FEATURES: Feature[] = [
     },
     {
         icon: "🎨",
-        title: "١٦ ثيم شخصي",
+        title: "١٥ ثيم شخصي",
         desc: "كل عضو يختار ثيمه ويحتفظ فيه — TikTok، كوميك، أورورا، بنتو، ملكي ذهبي وأكثر",
         gradient: "from-cyan-500 to-blue-600",
     },

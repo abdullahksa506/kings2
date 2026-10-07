@@ -13,7 +13,7 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/context/AuthContext";
 import { services, WeekSession, VALID_NAMES, invokeRpc, PublicUserProfile } from "@/lib/services";
-import { Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users, KeyRound, LogOut, Palette, Brain } from "lucide-react";
+import { Calendar, MapPin, CheckCircle, Shield, PlusCircle, AlertTriangle, Lock, Unlock, RotateCcw, Bell, ScrollText, BookOpen, MessageCircle, Trophy, Ellipsis, Users, KeyRound, LogOut, Palette } from "lucide-react";
 import { isBefore, setDay, setHours, setMinutes } from "date-fns";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import RatingForm from "./RatingForm";
@@ -32,13 +32,11 @@ const BathroomRatingForm = dynamic(() => import("./BathroomRatingForm"), { ssr: 
 const BathroomRatingsDisplay = dynamic(() => import("./BathroomRatingsDisplay"), { ssr: false });
 const BathroomLeaderboard = dynamic(() => import("./BathroomLeaderboard"), { ssr: false });
 const WhisperPanel = dynamic(() => import("./WhisperPanel"), { ssr: false });
-const SecurityLogPanel = dynamic(() => import("./SecurityLogPanel"), { ssr: false });
 const StatisticsPanel = dynamic(() => import("./StatisticsPanel"), { ssr: false });
 import SmartReminders from "./SmartReminders";
 import RestaurantVotingPanel from "./RestaurantVotingPanel";
 import ImpromptuMeetupCard from "./ImpromptuMeetupCard";
 const OutingPlannerPanel = dynamic(() => import("./OutingPlannerPanel"), { ssr: false });
-const FutureFeaturesVoting = dynamic(() => import("./FutureFeaturesVoting"), { ssr: false });
 const BentoWeekView = dynamic(() => import("./BentoWeekView"), { ssr: false });
 const TikTokFeedView = dynamic(() => import("./TikTokFeedView"), { ssr: false });
 const TikTokSettings = dynamic(() => import("./TikTokSettings"), { ssr: false });
@@ -64,7 +62,6 @@ type ThemeKey =
     | "midnight-indigo"
     | "neon-cyber"
     | "brutalist"
-    | "terminal"
     | "luxe-gold"
     | "comic-pop"
     | "aurora"
@@ -191,17 +188,6 @@ const THEME_OPTIONS: {
             tabIndicatorClass: "bg-yellow-400",
             previewA: "bg-yellow-300",
             previewB: "bg-black",
-        },
-        {
-            id: "terminal",
-            name: "تيرمنال 💻",
-            appBgClass: "bg-gradient-to-b from-black via-green-950/40 to-black",
-            headerGradientClass: "from-green-200 to-green-500",
-            headerIconClass: "text-green-400",
-            tabActiveClass: "text-green-400",
-            tabIndicatorClass: "bg-green-400",
-            previewA: "bg-green-400",
-            previewB: "bg-green-700",
         },
         {
             id: "luxe-gold",
@@ -370,16 +356,6 @@ const THEME_STYLE: Record<ThemeKey, {
         accentSolidHoverClass: "hover:bg-yellow-300",
         accentSpinnerClass: "text-yellow-400",
     },
-    "terminal": {
-        atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(34,197,94,0.25),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(22,163,74,0.2),transparent_44%)]",
-        accentTextClass: "text-green-400",
-        accentSoftClass: "bg-green-500/20",
-        accentSoftHoverClass: "hover:bg-green-500/30",
-        accentBorderClass: "border-green-500/40",
-        accentSolidClass: "bg-green-500",
-        accentSolidHoverClass: "hover:bg-green-400",
-        accentSpinnerClass: "text-green-400",
-    },
     "luxe-gold": {
         atmosphereClass: "bg-[radial-gradient(circle_at_20%_10%,rgba(252,211,77,0.22),transparent_46%),radial-gradient(circle_at_85%_80%,rgba(180,83,9,0.18),transparent_44%)]",
         accentTextClass: "text-amber-300",
@@ -443,7 +419,6 @@ const THEME_META_COLOR: Record<ThemeKey, string> = {
     "midnight-indigo": "#6366f1",
     "neon-cyber": "#d946ef",
     "brutalist": "#facc15",
-    "terminal": "#22c55e",
     "luxe-gold": "#fbbf24",
     "comic-pop": "#ec4899",
     "aurora": "#a78bfa",
@@ -506,9 +481,7 @@ export default function Dashboard() {
     const [isMemberProfileOpen, setIsMemberProfileOpen] = useState(false);
 
     // Tab State
-    // "ai" is rendered as a Link in the bottom bar (navigates to /ai page);
-    // the other entries are real tabs that switch the activeTab state.
-    type TabType = "week" | "leaderboard" | "bathroom" | "map" | "ai" | "more" | "dean";
+    type TabType = "week" | "leaderboard" | "bathroom" | "map" | "more" | "dean";
     const [activeTab, setActiveTab] = useState<TabType>("week");
     const [leaderboardView, setLeaderboardView] = useState(0);
     // Lazy init from localStorage so first React render already uses correct
@@ -2057,14 +2030,6 @@ export default function Dashboard() {
                                 </div>
                             )}
 
-                            {/* تصويت الميزات المستقبلية */}
-                            <FutureFeaturesVoting
-                                userName={user?.name || ""}
-                                isDean={user?.role === "dean"}
-                                accentSoftClass={activeThemeStyle.accentSoftClass}
-                                accentBorderClass={activeThemeStyle.accentBorderClass}
-                                accentTextClass={activeThemeStyle.accentTextClass}
-                            />
                         </div>
                     )}
 
@@ -2417,7 +2382,6 @@ export default function Dashboard() {
                                 <ChevronRight className="w-6 h-6 text-emerald-300 rotate-180 group-hover:-translate-x-1 transition-transform" />
                             </Link>
 
-                            <SecurityLogPanel />
 
                             <div className="flex justify-center pt-2 pb-4">
                                 <button
@@ -2436,39 +2400,20 @@ export default function Dashboard() {
             {/* ===== BOTTOM TAB BAR (hidden in TikTok feed mode — it has its own nav) ===== */}
             {!loading && !(selectedTheme === "tiktok" && !tiktokFullView) && (
                 <div className="royal-nav fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 pb-safe">
-                    <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-1 overflow-x-auto">
+                    <div className="grid grid-flow-col auto-cols-fr items-center h-16 max-w-lg mx-auto px-1">
                         {[
                             ...(user?.role === "dean" && selectedTheme === "royal-amber" ? [{ id: "dean" as TabType, icon: Shield, label: "العميد", special: false }] : []),
                             { id: "week" as TabType, icon: Calendar, label: "الأسبوع", special: false },
                             { id: "leaderboard" as TabType, icon: Trophy, label: "المتصدرين", special: false },
-                            { id: "ai" as TabType, icon: Brain, label: "AI", special: true },
                             { id: "bathroom" as TabType, icon: Bath, label: "الحمامات", special: false },
                             { id: "map" as TabType, icon: MapPin, label: "الخريطة", special: false },
                             { id: "more" as TabType, icon: Ellipsis, label: "المزيد", special: false },
                         ].map(tab => {
-                            if (tab.special) {
-                                // King AI Brain — navigates to standalone /ai page (not a tab)
-                                return (
-                                    <Link
-                                        key={tab.id}
-                                        href="/ai"
-                                        className="relative flex flex-col items-center gap-1 py-1.5 px-1.5 group"
-                                    >
-                                        <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 flex items-center justify-center shadow-lg shadow-fuchsia-500/40 transition-all scale-100 group-active:scale-95">
-                                            <tab.icon className="relative w-5 h-5 text-white drop-shadow-md" />
-                                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-yellow-300 rounded-full shadow-[0_0_8px_rgba(253,224,71,0.8)] animate-pulse" />
-                                        </div>
-                                        <span className="text-[10px] font-black bg-gradient-to-r from-violet-300 to-pink-300 bg-clip-text text-transparent">
-                                            {tab.label}
-                                        </span>
-                                    </Link>
-                                );
-                            }
                             return (
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
-                                    className={`flex flex-col items-center gap-1 py-2 px-2 rounded-xl transition-all duration-200 min-w-[52px] ${
+                                    className={`relative flex flex-col items-center gap-1 py-2 px-1 rounded-xl transition-all duration-200 min-w-0 ${
                                         activeTab === tab.id
                                             ? `${activeTheme.tabActiveClass} scale-105`
                                             : "text-slate-500 hover:text-slate-300"

@@ -40,9 +40,7 @@ const RATE_LIMIT_RULES: Record<string, RateLimitRule> = {
     endRestaurantVoting: { limit: 5, windowMs: 60 * 1000 },
     overrideRestaurantResult: { limit: 5, windowMs: 60 * 1000 },
     cancelRestaurantVoting: { limit: 5, windowMs: 60 * 1000 },
-    submitFeatureVote: { limit: 30, windowMs: 60 * 1000 },
     submitBathroomReview: { limit: 30, windowMs: 60 * 1000 },
-    setFeatureRemoved: { limit: 20, windowMs: 60 * 1000 },
     recordActivity: { limit: 40, windowMs: 60 * 1000 },
     setRestaurantLocation: { limit: 20, windowMs: 60 * 1000 },
     deleteRestaurantLocation: { limit: 20, windowMs: 60 * 1000 },
@@ -1560,58 +1558,6 @@ export async function POST(request: Request) {
                 }
                 return NextResponse.json({ result: added });
 
-            case "submitFeatureVote": {
-                const featureId = asTrimmedString(payload?.featureId);
-                if (!featureId || featureId.length > 64) throw new Error("Invalid feature id");
-                const vote = payload?.vote;
-                if (vote !== "yes" && vote !== "no" && vote !== null) {
-                    throw new Error("Invalid vote value");
-                }
-                if (!authName) throw new Error("Unauthorized");
-
-                const featureRef = adminDb.collection("featureFeedback").doc(featureId);
-                await adminDb.runTransaction(async (tx) => {
-                    const snap = await tx.get(featureRef);
-                    const current = snap.exists ? (snap.data() as any) : {};
-                    const votes: Record<string, string> = { ...(current.votes || {}) };
-                    if (vote === null) {
-                        delete votes[authName];
-                    } else {
-                        votes[authName] = vote;
-                    }
-                    if (snap.exists) {
-                        tx.update(featureRef, { votes });
-                    } else {
-                        tx.set(featureRef, {
-                            votes,
-                            removed: false,
-                            createdAt: Timestamp.now(),
-                        });
-                    }
-                });
-                return NextResponse.json({ result: true });
-            }
-
-            case "setFeatureRemoved": {
-                if (!isAdmin) throw new Error("Dean only");
-                const featureId = asTrimmedString(payload?.featureId);
-                if (!featureId || featureId.length > 64) throw new Error("Invalid feature id");
-                const removed = Boolean(payload?.removed);
-
-                const featureRef = adminDb.collection("featureFeedback").doc(featureId);
-                const snap = await featureRef.get();
-                if (snap.exists) {
-                    await featureRef.update({ removed });
-                } else {
-                    await featureRef.set({
-                        votes: {},
-                        removed,
-                        createdAt: Timestamp.now(),
-                    });
-                }
-                return NextResponse.json({ result: true });
-            }
-
             case "deleteWeek": {
                 if (!isAdmin) throw new Error("Dean only");
                 const { weekNumber } = payload;
@@ -1922,7 +1868,7 @@ export async function POST(request: Request) {
             case "voteStylePreference": {
                 if (!authName) throw new Error("Unauthorized");
                 const style = asTrimmedString(payload?.style);
-                const VALID_STYLES = ["minimal", "glass", "editorial", "pastel", "current", "neon", "brutalist", "terminal", "luxe", "comic", "aurora", "stories", "console", "bento"];
+                const VALID_STYLES = ["minimal", "glass", "editorial", "pastel", "current", "neon", "brutalist", "luxe", "comic", "aurora", "stories", "console", "bento"];
                 if (!VALID_STYLES.includes(style)) throw new Error("ستايل غير معروف");
                 await adminDb.collection("stylePreferences").doc(authName).set({
                     userName: authName,

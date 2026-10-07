@@ -41,12 +41,12 @@ const themeBootScript = `
 (function(){
   try {
     var t = localStorage.getItem('king_theme');
+    if (t === 'terminal') { t = 'royal-amber'; localStorage.setItem('king_theme', t); }
     if (!t) return;
     document.documentElement.setAttribute('data-theme', t);
     var bgs = {
       'tiktok': '#000000',
       'brutalist': '#1c1917',
-      'terminal': '#0a0e0a',
       'luxe-gold': '#0a0a0a',
       'comic-pop': '#bae6fd',
       'aurora': '#1e1b4b',
@@ -57,7 +57,7 @@ const themeBootScript = `
       'royal-amber':'#f59e0b','ocean-cyan':'#06b6d4','emerald-night':'#10b981',
       'sunset-fire':'#f97316','rose-neon':'#f43f5e','arctic-ice':'#60a5fa',
       'forest-olive':'#84cc16','midnight-indigo':'#6366f1','neon-cyber':'#d946ef',
-      'brutalist':'#facc15','terminal':'#22c55e','luxe-gold':'#fbbf24',
+      'brutalist':'#facc15','luxe-gold':'#fbbf24',
       'comic-pop':'#ec4899','aurora':'#a78bfa','bento':'#f59e0b','tiktok':'#000000'
     };
     var bg = bgs[t];

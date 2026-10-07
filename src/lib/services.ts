@@ -107,11 +107,6 @@ export interface PublicUserProfile {
     showProfileImage: boolean;
 }
 
-export interface FeatureFeedbackEntry {
-    votes: Record<string, "yes" | "no">;
-    removed: boolean;
-}
-
 export interface MemberActivityStat {
     userName: string;
     totalMinutes: number;
@@ -120,47 +115,6 @@ export interface MemberActivityStat {
     favoriteTabLabel: string | null;
     lastSeenAt: Timestamp | null;
 }
-
-export interface FutureFeatureSeed {
-    id: string;
-    title: string;
-    description: string;
-    icon: string;
-}
-
-export const FUTURE_FEATURE_SEEDS: FutureFeatureSeed[] = [
-    {
-        id: "seasons",
-        title: "نظام المواسم 🏆",
-        description: "كل 3 شهور موسم جديد. بطل الموسم يحصل لقب دائم في بروفايله، وأرشيف للمواسم السابقة.",
-        icon: "🏆",
-    },
-    {
-        id: "points-store",
-        title: "نقاط ومتجر افتراضي 🪙",
-        description: "اكسب نقاط من الحضور والتقييم والمنافسات، وتصرفها على لون بروفايل مميز، شارة، أو فيتو على قرار الملك.",
-        icon: "🪙",
-    },
-    {
-        id: "restaurant-map",
-        title: "خريطة المطاعم 📍",
-        description: "خريطة تفاعلية لكل المطاعم اللي زرتوها مع تقييمها، تساعد الملك يقرر بسرعة.",
-        icon: "📍",
-    },
-    {
-        id: "group-vote",
-        title: "تصويت جماعي على المطعم 🗳️",
-        description: "الملك يقترح 3 مطاعم، الأعضاء يصوتون، ويُعتمد الفائز. يخفف ضغط القرار على الملك.",
-        icon: "🗳️",
-    },
-    {
-        id: "impromptu-meetup",
-        title: "أنا فاضي — لقاء مفاجئ 🚨",
-        description:
-            "زر في الصفحة الرئيسية: 'فاضي بكير، مين معاي؟' → إشعار يطير لكل الأعضاء فوراً، وكل واحد يرد بحالته خلال 5 دقايق (فاضي / مشغول / يمكن). لو 3 أعضاء أو أكثر ردوا 'فاضي'، يبدأ تصويت سريع على مطعم بدون انتظار الأسبوع. الهدف: ننظّم المعزوفة الجماعية اللي تصير في الواتساب يومياً ونحفظ سجلها داخل الموقع. مفيدة في إجازات نهاية الأسبوع، رمضان (لقاءات السحور)، والمواعيد المفاجئة. تشتغل بالإشعارات الموجودة بدون أي إعداد جديد. سجل اللقاءات المفاجئة يضاف للإحصائيات (مين أكثر واحد يرد 'فاضي'، مين دائماً 'مشغول'، إلخ).",
-        icon: "🚨",
-    },
-];
 
 /** Server-served ratings payload. Scores (`detail`) are dean-only. */
 export interface RatingsData {
@@ -983,29 +937,6 @@ export const services = {
             stopped = true;
             window.clearInterval(intervalId);
         };
-    },
-
-    // --- Future Feature Voting ---
-    async submitFeatureVote(featureId: string, vote: "yes" | "no" | null) {
-        return invokeRpc("submitFeatureVote", { featureId, vote });
-    },
-
-    async setFeatureRemoved(featureId: string, removed: boolean) {
-        return invokeRpc("setFeatureRemoved", { featureId, removed });
-    },
-
-    listenToFeatureFeedback(callback: (map: Record<string, FeatureFeedbackEntry>) => void) {
-        return onSnapshot(collection(db, "featureFeedback"), (snap) => {
-            const next: Record<string, FeatureFeedbackEntry> = {};
-            snap.forEach((doc) => {
-                const data = doc.data() as any;
-                next[doc.id] = {
-                    votes: (data?.votes as Record<string, "yes" | "no">) || {},
-                    removed: Boolean(data?.removed),
-                };
-            });
-            callback(next);
-        });
     },
 
     // --- Member Activity Tracking (feature suggested by هشام) ---

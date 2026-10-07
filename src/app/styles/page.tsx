@@ -1,4 +1,7 @@
 "use client";
+/*
+ * 🤖 الروبوت شال ثيمًا، وعدّ الخيارات قبل ما يقول إنها ستة عشر 😂🎨
+ */
 
 /*
  * صفحة معاينة أشكال التصميم — مو جزء من الموقع الفعلي، فقط للاستعراض.
@@ -12,7 +15,7 @@ import { StoriesExperience, ConsoleExperience, BentoExperience } from "./interac
 
 type StyleKey =
     | "current" | "minimal" | "glass" | "editorial" | "pastel"
-    | "neon" | "brutalist" | "terminal" | "luxe" | "comic" | "aurora"
+    | "neon" | "brutalist" | "luxe" | "comic" | "aurora"
     | "stories" | "console" | "bento";
 
 const INTERACTIVE: StyleKey[] = ["stories", "console", "bento"];
@@ -25,7 +28,6 @@ const STYLES: { key: StyleKey; label: string; emoji: string; desc: string }[] = 
     { key: "pastel", label: "هادئ (Pastel)", emoji: "🌸", desc: "ألوان دافئة وودودة، إحساس مريح، أقل رسمية" },
     { key: "neon", label: "نيون سايبر", emoji: "⚡", desc: "أسود مع توهّج نيون بنفسجي وسماوي، إحساس مستقبلي حاد" },
     { key: "brutalist", label: "بروتالي خام", emoji: "🧱", desc: "حدود سوداء سميكة، ظلال صلبة، صفر زوايا ناعمة، جريء وصادم" },
-    { key: "terminal", label: "تيرمنال هاكر", emoji: "💻", desc: "أخضر على أسود، خط مونوسبيس، إحساس كونسول وكود" },
     { key: "luxe", label: "فخامة ذهبية", emoji: "🥂", desc: "أسود وذهبي فاخر، خط كلاسيكي أنيق، إحساس راقٍ جداً" },
     { key: "comic", label: "كوميك مرح", emoji: "💥", desc: "حدود سميكة، ألوان بوب، ظلال كرتونية، مرح وجريء" },
     { key: "aurora", label: "أورورا", emoji: "🌌", desc: "تدرّجات حيّة وكرات متوهّجة، إحساس تطبيق عصري ناعم" },
@@ -48,7 +50,7 @@ export default function StylePreview() {
                         </Link>
                         <div>
                             <h1 className="font-bold text-white">معاينة أشكال التصميم</h1>
-                            <p className="text-[11px] text-slate-500">جرّب 14 شكل (آخر 3 تفاعلية) قبل ما نغيّر الموقع</p>
+                            <p className="text-[11px] text-slate-500">جرّب {STYLES.length} شكل (آخر 3 تفاعلية) قبل ما نغيّر الموقع</p>
                         </div>
                     </div>
                 </div>
@@ -156,7 +158,6 @@ function containerClass(style: StyleKey) {
         pastel: "min-h-screen bg-gradient-to-br from-rose-50 via-amber-50 to-sky-50 text-stone-800 pb-20",
         neon: "min-h-screen bg-black text-white pb-20",
         brutalist: "min-h-screen bg-yellow-300 text-black pb-20",
-        terminal: "min-h-screen bg-[#0a0e0a] text-green-400 pb-20 font-mono",
         luxe: "min-h-screen bg-neutral-950 text-amber-50 pb-20",
         comic: "min-h-screen bg-sky-200 text-black pb-20",
         aurora: "min-h-screen bg-gradient-to-br from-violet-600 via-fuchsia-500 to-cyan-400 text-white pb-20",
@@ -301,22 +302,6 @@ function WeekCard({ style }: { style: StyleKey }) {
                         <span className="bg-fuchsia-400 border-2 border-black px-3 py-1 font-bold text-sm shadow-[3px_3px_0_0_#000]">{day}</span>
                         <span className="bg-cyan-400 border-2 border-black px-3 py-1 font-bold text-sm shadow-[3px_3px_0_0_#000]">{restaurant}</span>
                     </div>
-                </div>
-            );
-
-        case "terminal":
-            return (
-                <div className="bg-[#0d130d] border border-green-500/40 rounded p-5 font-mono">
-                    <div className="flex items-center gap-1.5 mb-3 border-b border-green-500/20 pb-2">
-                        <span className="w-3 h-3 rounded-full bg-red-500" />
-                        <span className="w-3 h-3 rounded-full bg-yellow-500" />
-                        <span className="w-3 h-3 rounded-full bg-green-500" />
-                        <span className="text-green-600 text-xs ml-2">king@thursday:~$</span>
-                    </div>
-                    <p className="text-green-600 text-xs mb-1">&gt; SELECT * FROM king WHERE week=current;</p>
-                    <h2 className="text-2xl font-bold text-green-300 mb-2">{"{ "}name: &quot;{king}&quot; {"}"}<span className="animate-pulse">_</span></h2>
-                    <p className="text-green-500 text-sm">day: <span className="text-green-300">{day}</span></p>
-                    <p className="text-green-500 text-sm">restaurant: <span className="text-green-300">{restaurant}</span></p>
                 </div>
             );
 
@@ -484,18 +469,6 @@ function RestaurantCard({ style }: { style: StyleKey }) {
                         <span className="bg-white border-2 border-black px-2">{district}</span>
                         <span className="bg-white border-2 border-black px-2">{price}﷼</span>
                     </div>
-                </div>
-            );
-
-        case "terminal":
-            return (
-                <div className="bg-[#0d130d] border border-green-500/40 rounded p-5 font-mono">
-                    <p className="text-green-600 text-xs mb-1">&gt; restaurant.find(&quot;{name}&quot;)</p>
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-green-300 text-lg font-bold">{name}</h3>
-                        <span className="text-green-400">[{rating}/10]</span>
-                    </div>
-                    <p className="text-green-600 text-sm mt-1">type=هندي | area={district} | cost={price}SAR</p>
                 </div>
             );
 
@@ -674,19 +647,6 @@ function LeaderboardCard({ style }: { style: StyleKey }) {
                         <div key={it.name} className="flex justify-between items-center bg-white border-2 border-black px-3 py-2 mb-2 font-black">
                             <span className="text-black">{it.rank}. {it.name}</span>
                             <span className="bg-black text-yellow-300 px-2">{it.score}</span>
-                        </div>
-                    ))}
-                </div>
-            );
-
-        case "terminal":
-            return (
-                <div className="bg-[#0d130d] border border-green-500/40 rounded p-5 font-mono">
-                    <p className="text-green-600 text-xs mb-3">&gt; leaderboard --top 3</p>
-                    {items.map((it) => (
-                        <div key={it.name} className="flex justify-between text-sm py-1">
-                            <span className="text-green-400">[{it.rank}] <span className="text-green-200">{it.name}</span></span>
-                            <span className="text-green-500">{it.score} ████</span>
                         </div>
                     ))}
                 </div>

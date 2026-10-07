@@ -1,4 +1,7 @@
 "use client";
+/*
+ * 🤖 الروبوت نظّف الفيد، وقال: حتى البطاقات تحتاج إجازة 😂
+ */
 
 import { useEffect, useRef, useState } from "react";
 import { Crown, MapPin, Calendar, Music, ChevronUp, Vote, Users, Check, X, Trophy, Rewind, Volume2, VolumeX, Settings, Heart, MessageCircle, Bookmark, Send, Plus } from "lucide-react";
@@ -14,7 +17,7 @@ function fmt(n: number): string {
     return String(n);
 }
 import { toast } from "sonner";
-import { WeekSession, VALID_NAMES, services, FUTURE_FEATURE_SEEDS } from "@/lib/services";
+import { WeekSession, VALID_NAMES, services } from "@/lib/services";
 import { impromptuServices, ImpromptuMeetup } from "@/lib/impromptuServices";
 
 /**
@@ -1503,39 +1506,6 @@ export default function TikTokFeedView({
         ),
     });
 
-
-    // ── Future Features Voting card ──
-    cards.push({
-        id: "future",
-        render: () => (
-            <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-cyan-500 via-blue-600 to-violet-700 flex items-center justify-center">
-                <span className="absolute opacity-10 text-[400px] select-none">🔮</span>
-                <div className="relative text-center text-white px-6 z-20 w-full max-w-md">
-                    <p className="text-2xl font-bold mb-1 drop-shadow-2xl">🔮 ميزات المستقبل</p>
-                    <p className="text-xs text-white/80 mb-4">صوّت لأي ميزة تبيها</p>
-                    <div className="space-y-2 text-right">
-                        {FUTURE_FEATURE_SEEDS.slice(0, 4).map((f) => (
-                            <div key={f.id} className="rounded-2xl px-4 py-3 bg-white/15 backdrop-blur flex items-start gap-3">
-                                <span className="text-2xl">{f.icon}</span>
-                                <div className="flex-1 text-right">
-                                    <p className="font-bold text-sm">{f.title}</p>
-                                    <p className="text-[11px] text-white/75 line-clamp-2">{f.description}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <p className="text-[10px] text-white/70 mt-3">افتح "المزيد" للتصويت الفعلي 👇</p>
-                </div>
-                <CaptionOverlay
-                    username="future_features"
-                    caption="وش تبي يصير في الموقع؟ 🔮"
-                    music={tracks[2]?.title}
-                    artist={tracks[2]?.artist}
-                />
-                <ActionRail profile="🔮" playing={!muted && audioReady} {...railProps("future")} />
-            </div>
-        ),
-    });
 
     // ── Impromptu meetup card (LIVE + interactive — start/respond from feed) ──
     cards.push({
