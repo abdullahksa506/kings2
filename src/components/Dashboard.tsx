@@ -8,6 +8,7 @@
  */
 
 import RoyalMark from "./RoyalMark";
+import RiyadhPrayerTimes from "./RiyadhPrayerTimes";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/context/AuthContext";
@@ -1167,6 +1168,8 @@ export default function Dashboard() {
                     </button>
                 </div>
             </header>
+
+            {activeTab === "week" && <RiyadhPrayerTimes />}
 
             {/* Change Password Modal */}
             {isChangePasswordOpen && (
