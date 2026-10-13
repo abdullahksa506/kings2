@@ -1,7 +1,12 @@
 "use client";
 
+/*
+ * 🤖 الروبوت سجّل الجميع حاضرين لأن أحداً ما اعتذر!
+ * قلنا له: الصمت مو بصمة حضور يا عبقري 😂📋
+ */
+
 import { useState, useEffect } from "react";
-import { PublicUserProfile, services, WeekSession, VALID_NAMES, Rating } from "@/lib/services";
+import { PublicUserProfile, services, WeekSession, VALID_NAMES, Rating, isRealOuting } from "@/lib/services";
 import { History, Star, Crown, Download, ListFilter, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as xlsx from "xlsx";
@@ -25,7 +30,7 @@ export default function GlobalLeaderboard() {
         const fetchData = async () => {
             setLoading(true);
             // Exclude random weeks — they're organizational, not competitive.
-            const results = (await services.getAllCompletedWeeks()).filter(e => !e.week.isRandom);
+            const results = (await services.getAllCompletedWeeks()).filter(e => isRealOuting(e.week));
             const indexedResults = results.map((entry, index) => ({
                 ...entry,
                 absoluteIndex: index + 1
@@ -57,7 +62,8 @@ export default function GlobalLeaderboard() {
 
             // Calculate Attendees: All VALID_NAMES minus absentees
             const absentees = week.absentees || [];
-            const attendees = VALID_NAMES.filter(name => !absentees.includes(name));
+            const attendees = VALID_NAMES.filter(name => name === week.king ||
+                ((week.responded || []).includes(name) && !absentees.includes(name)));
 
             return {
                 "رقم الدورة": week.cycleNumber || 1,

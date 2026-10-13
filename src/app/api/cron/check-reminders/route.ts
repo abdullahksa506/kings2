@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { services, VALID_NAMES } from "@/lib/services";
+import { KING_ORDER as VALID_NAMES } from "@/lib/weekLifecycle.server";
+import { getReminderWeek, missingRatingMembers } from "@/lib/reminderData.server";
+
+/*
+ * 🤖 الروبوت ذكّر واحد ما حضر أنه ما قيّم!
+ * قلنا له: شيّك الحضور قبل ما ترسل العتاب 😂🔔
+ */
 import { adminDb } from "@/lib/firebase-admin";
 import { sendPushNotification } from "@/lib/pushHelper";
 import * as admin from "firebase-admin";
@@ -126,7 +132,7 @@ async function handle(request: Request) {
         }
     }
 
-    const week = await services.getCurrentWeek();
+    const week = await getReminderWeek();
     if (!week) {
         return NextResponse.json({ ok: true, skipped: "no-active-week", log });
     }
@@ -237,15 +243,7 @@ async function handle(request: Request) {
         hour >= (R.ratingReminder.hourFrom ?? 19) &&
         hour < (R.ratingReminder.hourTo ?? 21)
     ) {
-        const absentees = new Set(week.absentees || []);
-        const candidates = VALID_NAMES.filter(
-            (name) => name !== week.king && !absentees.has(name)
-        );
-        const targets: string[] = [];
-        for (const name of candidates) {
-            const hasRated = await services.hasUserRated(week.id, name);
-            if (!hasRated) targets.push(name);
-        }
+        const targets = await missingRatingMembers(week);
         if (targets.length > 0) {
             const ruleId = `rating-reminder-${week.id}`;
             if (await shouldRunRule(ruleId, 24 * 60)) {
@@ -274,12 +272,7 @@ async function handle(request: Request) {
         hour >= (R.ratingFinalWarning.hourFrom ?? 22) &&
         hour < (R.ratingFinalWarning.hourTo ?? 23)
     ) {
-        const absentees = new Set(week.absentees || []);
-        const candidates = VALID_NAMES.filter((name) => name !== week.king && !absentees.has(name));
-        const targets: string[] = [];
-        for (const name of candidates) {
-            if (!(await services.hasUserRated(week.id, name))) targets.push(name);
-        }
+        const targets = await missingRatingMembers(week);
         if (targets.length > 0) {
             const ruleId = `rating-final-warning-${week.id}`;
             if (await shouldRunRule(ruleId, 24 * 60)) {

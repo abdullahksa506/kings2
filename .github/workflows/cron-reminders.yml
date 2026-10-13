@@ -1,5 +1,8 @@
 name: Reminder Cron
 
+# 🤖 الروبوت قال: السيرفر أعطاني 500 بس الاختبار ناجح!
+# قلنا له: النجاح مو مجاملة، رجّع الخطأ عشان نصلحه 😂🔔
+
 # Pings the app's reminder engine on a schedule. The endpoint itself handles all
 # timing logic (Riyadh time, quiet hours 11pm-8am, per-rule dedupe), so a coarse
 # 10-minute tick is plenty — it does nothing outside the relevant windows.
@@ -25,15 +28,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Hit reminder endpoint
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          if [ -z "${{ secrets.SITE_URL }}" ] || [ -z "${{ secrets.CRON_SECRET }}" ]; then
-            echo "⚠️ SITE_URL or CRON_SECRET secret not set — skipping."
-            exit 0
+          if [ -z "$SITE_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::error::SITE_URL or CRON_SECRET is missing."
+            exit 1
           fi
-          code=$(curl -sS -X POST "${{ secrets.SITE_URL }}/api/cron/check-reminders" \
-            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
-            -o /tmp/resp.json -w "%{http_code}" --max-time 60 || echo "000")
+          code=$(curl -sS --retry 2 --retry-delay 5 -X POST "${SITE_URL%/}/api/cron/check-reminders" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -o /tmp/resp.json -w "%{http_code}" --max-time 60)
           echo "HTTP $code"
           cat /tmp/resp.json 2>/dev/null || true
-          # Don't fail the workflow on transient endpoint errors.
-          exit 0
+          case "$code" in
+            2??) exit 0 ;;
+            *) echo "::error::Reminder endpoint returned HTTP $code"; exit 1 ;;
+          esac

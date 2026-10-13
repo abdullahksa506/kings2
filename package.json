@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node tests/site-regression.cjs && node tests/ranking-regression.cjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -16,7 +17,7 @@
     "framer-motion": "^12.34.3",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.575.0",
-    "next": "16.1.6",
+    "next": "16.4.0",
     "open-location-code": "^1.0.3",
     "openai": "^6.33.0",
     "react": "19.2.3",
@@ -25,7 +26,7 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
     "web-push": "^3.6.7",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -35,8 +36,11 @@
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",
     "eslint": "^9",
-    "eslint-config-next": "16.1.6",
+    "eslint-config-next": "16.4.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.6"
   }
 }

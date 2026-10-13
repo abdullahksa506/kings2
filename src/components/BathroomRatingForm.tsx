@@ -1,19 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+/*
+ * 🤖 الروبوت قال: فيه خطأ، بس ما أقول لك وش هو!
+ * قلنا له: اشرح سبب الرفض عشان هشام يعرف وين المشكلة 😂🚽
+ */
+
+import { useState } from "react";
 import { services } from "@/lib/services";
 import { Send, Lock, Bath } from "lucide-react";
 
 export default function BathroomRatingForm({ weekId, userName, restaurantName, onRated, disabled = false }: { weekId: string, userName: string, restaurantName?: string, onRated: () => void, disabled?: boolean }) {
     const [hoveredScore, setHoveredScore] = useState(0);
     const [score, setScore] = useState(0);
-    const [bathroomName, setBathroomName] = useState("");
+    const [customBathroomName, setBathroomName] = useState<string | null>(null);
+    const bathroomName = customBathroomName ?? (restaurantName ? `حمام ${restaurantName}` : "");
     const [submitting, setSubmitting] = useState(false);
-
-    useEffect(() => {
-        if (!restaurantName) return;
-        setBathroomName((prev) => prev || `حمام ${restaurantName}`);
-    }, [restaurantName]);
 
     const handleSubmit = async () => {
         const trimmedBathroom = bathroomName.trim();
@@ -26,7 +27,7 @@ export default function BathroomRatingForm({ weekId, userName, restaurantName, o
             onRated();
         } catch (e) {
             console.error(e);
-            alert("حدث خطأ أثناء تقييم دورات المياه");
+            alert(e instanceof Error ? e.message : "حدث خطأ أثناء تقييم دورات المياه");
         } finally {
             setSubmitting(false);
         }

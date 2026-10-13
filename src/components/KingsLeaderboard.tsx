@@ -1,7 +1,12 @@
 "use client";
 
+/*
+ * 🤖 سألوا الروبوت: خمس أصوات تخلّي الطلعة أهم من صوتين؟
+ * قال: لا، كل طلعة لها كرسي واحد في متوسط الملك 😂👑
+ */
+
 import { useState, useEffect } from "react";
-import { PublicUserProfile, services, WeekSession, VALID_NAMES } from "@/lib/services";
+import { PublicUserProfile, services, WeekSession, VALID_NAMES, isRealOuting } from "@/lib/services";
 import { Trophy, Star, Crown, Download, ListFilter, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as xlsx from "xlsx";
@@ -30,7 +35,7 @@ export default function KingsLeaderboard() {
             // قائمة الملوك = المتوسط الشامل عبر كل الدورات (يستثني العشوائي فقط).
             const kingsStats: Record<string, { totalScore: number; count: number }> = {};
             results.forEach(entry => {
-                if (entry.week.isRandom) return;
+                if (!isRealOuting(entry.week)) return;
                 if (entry.week.king && entry.week.king !== "عشوائي" && entry.averageScore > 0) {
                     if (!kingsStats[entry.week.king]) {
                         kingsStats[entry.week.king] = { totalScore: 0, count: 0 };

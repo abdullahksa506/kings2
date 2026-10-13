@@ -5,6 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { createHash, randomInt } from "node:crypto";
 import { adminDb } from "@/lib/firebase-admin";
 import * as admin from 'firebase-admin';
 import { hashPassword } from "@/lib/hash";
@@ -20,6 +21,16 @@ import { planOuting } from "@/lib/outingPlanner";
 import { SATURDAY_DEAN, currentSaturdayKey, isValidTime } from "@/lib/saturday";
 
 const VALID_NAMES_RPC = ["خالد", "طلال", "شوكا", "حكير", "هشام", "نواف"];
+
+/*
+ * 🤖 الروبوت كان يحسب المحاولة الخاطئة ثم يرمي الخطأ ويلغي الحسبة!
+ * علّمناه يحفظ العداد أولاً، عشان ذاكرته ما تصير ذاكرة سمكة 😂
+ */
+function requirePassword(value: unknown): asserts value is string {
+    if (typeof value !== "string" || !value.trim() || value.length > 1024) {
+        throw new Error("كلمة المرور مطلوبة ويجب ألا تتجاوز 1024 حرفاً");
+    }
+}
 const WEEK_DAYS = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"] as const;
 const STANDARD_OUTING_DAYS = ["الخميس", "الجمعة"] as const;
 const DAY_VOTE_OPTIONS = ["الخميس", "الجمعة", "الخميس والجمعة"] as const;
@@ -204,13 +215,10 @@ export async function POST(request: Request) {
         let authName = auth?.name;
 
         if (publicActions.includes(action)) {
-            // Public actions can't verify identity yet, so limit by declared name/IP.
+            // Public actions can't verify identity yet, so limit by IP, never a claimed name.
             // Brute-forceable actions (login/reset) are additionally protected by
             // non-spoofable per-account counters/lockouts inside their handlers.
-            const actorKey = authName && typeof authName === "string" && authName.trim()
-                ? `user:${authName.trim()}`
-                : `ip:${clientIp}`;
-            enforceRateLimit(action, actorKey);
+            enforceRateLimit(action, `ip:${clientIp}`);
         } else {
             if (!auth || !auth.name || !auth.token) {
                 return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -878,19 +886,12 @@ export async function POST(request: Request) {
 
             case "submitBathroomRating":
                 if (authName !== payload.userName) throw new Error("Identity mismatch");
+                if (authName !== "هشام") throw new Error("تقييم الحمامات لهشام فقط");
                 if (!Number.isInteger(payload.score) || payload.score < 1 || payload.score > 5) throw new Error("Invalid score");
 
                 const bathroomWeekId = typeof payload.weekId === "string" && payload.weekId.trim()
                     ? payload.weekId.trim()
                     : "general";
-
-                const existingBathroomRatingSnap = await adminDb
-                    .collection("bathroomRatings")
-                    .where("weekId", "==", bathroomWeekId)
-                    .where("userName", "==", payload.userName)
-                    .limit(1)
-                    .get();
-                if (!existingBathroomRatingSnap.empty) throw new Error("تم إرسال تقييم الحمام مسبقاً");
 
                 const normalizedBathroomName = normalizeNickName(
                     payload.bathroomName,
@@ -903,7 +904,18 @@ export async function POST(request: Request) {
                     throw new Error("اسم الحمام طويل جدًا");
                 }
 
-                const bathroomRef = await adminDb.collection("bathroomRatings").add({
+                const bathroomKey = createHash("sha256").update(JSON.stringify([bathroomWeekId, authName, normalizedBathroomName])).digest("hex");
+                const bathroomRef = adminDb.collection("bathroomRatings").doc(bathroomKey);
+                await adminDb.runTransaction(async tx => {
+                    // يشمل المستندات القديمة ذات المعرّفات العشوائية؛ لا نحذفها.
+                    const existing = await tx.get(adminDb.collection("bathroomRatings")
+                        .where("weekId", "==", bathroomWeekId).where("userName", "==", authName));
+                    if (existing.docs.some(d => {
+                        const r = d.data();
+                        const label = normalizeNickName(r.bathroomName, r.restaurantName ? `حمام ${r.restaurantName}` : "حمام غير مسمى");
+                        return label === normalizedBathroomName;
+                    })) throw new Error("تم إرسال تقييم هذا الحمام مسبقاً");
+                    tx.set(bathroomRef, {
                     weekId: bathroomWeekId,
                     userName: payload.userName,
                     score: payload.score,
@@ -912,6 +924,7 @@ export async function POST(request: Request) {
                         ? payload.restaurantName.trim()
                         : null,
                     createdAt: Timestamp.now()
+                    });
                 });
                 return NextResponse.json({ result: bathroomRef.id });
 
@@ -1124,7 +1137,7 @@ export async function POST(request: Request) {
                 if (!prSnap.exists) throw new Error("المستخدم غير مسجل بعد");
                 // 6-digit code (1,000,000 space vs the old 9,000) + a fresh per-account
                 // attempt counter so each new request resets the lockout window.
-                const code = Math.floor(100000 + Math.random() * 900000).toString();
+                const code = randomInt(100000, 1000000).toString();
                 await prRef.update({
                     resetCode: code,
                     resetCodeTimestamp: Date.now(),
@@ -1134,37 +1147,43 @@ export async function POST(request: Request) {
 
             case "resetPasswordWithCode": {
                 if (!VALID_NAMES_RPC.includes(payload.userName)) throw new Error("اسم غير مصرح به");
+                requirePassword(payload.newPassword);
                 const rpRef = adminDb.collection("users").doc(payload.userName);
                 // Atomic: verify + count attempts + lockout inside one transaction so a
                 // scripted F12 caller can't race unlimited guesses (IP throttling is
                 // spoofable; this per-account counter is not).
                 const MAX_RESET_ATTEMPTS = 5;
                 const newHashed = await hashPassword(payload.newPassword);
-                await adminDb.runTransaction(async (tx) => {
+                const resetError = await adminDb.runTransaction(async (tx) => {
                     const snap = await tx.get(rpRef);
                     if (!snap.exists) throw new Error("المستخدم غير مسجل");
                     const d = snap.data() as any;
                     if (!d.resetCode) throw new Error("ما فيه طلب استرجاع نشط — اطلب كود جديد");
                     if (Date.now() - (d.resetCodeTimestamp || 0) > 15 * 60 * 1000) {
                         tx.update(rpRef, { resetCode: null, resetCodeTimestamp: null, resetCodeAttempts: 0 });
-                        throw new Error("انتهت صلاحية الكود");
+                        return "انتهت صلاحية الكود";
                     }
                     const attempts = Number(d.resetCodeAttempts || 0);
                     if (attempts >= MAX_RESET_ATTEMPTS) {
                         tx.update(rpRef, { resetCode: null, resetCodeTimestamp: null, resetCodeAttempts: 0 });
-                        throw new Error("تجاوزت عدد المحاولات — اطلب كود جديد");
+                        return "تجاوزت عدد المحاولات — اطلب كود جديد";
                     }
                     if (String(d.resetCode) !== String(payload.code)) {
-                        tx.update(rpRef, { resetCodeAttempts: attempts + 1 });
-                        throw new Error(`رمز الاسترجاع خاطئ (${MAX_RESET_ATTEMPTS - attempts - 1} محاولات متبقية)`);
+                        tx.update(rpRef, { resetCodeAttempts: attempts + 1,
+                            ...(attempts + 1 >= MAX_RESET_ATTEMPTS ? { resetCode: null, resetCodeTimestamp: null } : {}) });
+                        return `رمز الاسترجاع خاطئ (${MAX_RESET_ATTEMPTS - attempts - 1} محاولات متبقية)`;
                     }
                     tx.update(rpRef, { password: newHashed, resetCode: null, resetCodeTimestamp: null, resetCodeAttempts: 0 });
+                    return null;
                 });
+                if (resetError) throw new Error(resetError);
                 return NextResponse.json({ result: true });
             }
 
             case "changePassword":
                 if (authName !== payload.userName) throw new Error("Identity mismatch");
+                requirePassword(payload.newPassword);
+                requirePassword(payload.currentPassword);
                 const cpRef = adminDb.collection("users").doc(payload.userName);
                 const cpSnap = await cpRef.get();
                 let validCp = false;
@@ -1176,6 +1195,7 @@ export async function POST(request: Request) {
                 
             case "register":
                 if (!VALID_NAMES_RPC.includes(payload.name)) throw new Error("اسم غير مصرح به");
+                requirePassword(payload.password);
                 const regRef = adminDb.collection("users").doc(payload.name);
                 const regSnap = await regRef.get();
                 if (regSnap.exists) throw new Error("المستخدم مسجل مسبقاً");
@@ -1186,6 +1206,7 @@ export async function POST(request: Request) {
 
             case "login_upgrade": // Upgrades plain text to hashed on login
                 if (authName !== payload.userName) throw new Error("Identity mismatch");
+                requirePassword(payload.password);
                 const updRef = adminDb.collection("users").doc(payload.userName);
                 const newHp = await hashPassword(payload.password);
                 await updRef.update({ password: newHp });
@@ -1253,7 +1274,7 @@ export async function POST(request: Request) {
                     const who = typeof r.userName === "string" ? r.userName : "";
                     const score = Number(r.score);
                     const review = typeof r.reviewText === "string" ? r.reviewText.trim() : "";
-                    if (!weekId || !Number.isFinite(score)) return;
+                    if (!weekId || !Number.isFinite(score) || score < 1 || score > 5) return;
 
                     if (review) {
                         reviews.push(

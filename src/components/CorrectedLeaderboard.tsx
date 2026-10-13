@@ -19,10 +19,33 @@ export default function CorrectedLeaderboard() {
     const [profiles, setProfiles] = useState<Record<string, PublicUserProfile>>({});
 
     useEffect(() => {
-        services.getCorrectedLeaderboard()
-            .then(setData)
-            .catch(() => setData(null))
-            .finally(() => setLoading(false));
+        let disposed = false;
+        let pending = false;
+        const refresh = async () => {
+            if (pending || document.visibilityState === "hidden") return;
+            pending = true;
+            try {
+                const next = await services.getCorrectedLeaderboard();
+                if (!disposed) setData(next);
+            } catch {
+                // نحتفظ بآخر نتيجة سليمة أثناء انقطاع الاتصال.
+            } finally {
+                pending = false;
+                if (!disposed) setLoading(false);
+            }
+        };
+        void refresh();
+        const timer = window.setInterval(refresh, 15000);
+        window.addEventListener("focus", refresh);
+        document.addEventListener("visibilitychange", refresh);
+        const unsubscribe = services.listenToCurrentWeek(() => { void refresh(); });
+        return () => {
+            disposed = true;
+            window.clearInterval(timer);
+            window.removeEventListener("focus", refresh);
+            document.removeEventListener("visibilitychange", refresh);
+            unsubscribe();
+        };
     }, []);
 
     useEffect(() => {
@@ -35,9 +58,6 @@ export default function CorrectedLeaderboard() {
     }, []);
 
     // ترتيب كل ملك في القائمة القديمة، لحساب فرق المركز
-    const oldOrder = data
-        ? [...data.rows].sort((a, b) => b.baseAverage - a.baseAverage).map((r) => r.king)
-        : [];
 
     return (
         <div className="bg-gradient-to-br from-slate-900 to-emerald-950/25 border border-emerald-500/25 rounded-3xl p-4 md:p-6 shadow-xl">
@@ -60,10 +80,10 @@ export default function CorrectedLeaderboard() {
                 <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-3 mb-3 space-y-2 text-[12px] text-slate-300 leading-relaxed">
                     <p><span className="text-emerald-400 font-bold">المادة (12)</span> — تُسقط أسوأ طلعة من سجل كل ملك (بأربع طلعات فأكثر)، فلا تهدم ليلةٌ واحدة عاماً كاملاً.</p>
                     <p><span className="text-sky-400 font-bold">المادة (13)</span> — المتخاصمان المعلنان لا يُحتسب تقييم أيٍّ منهما على طلعة الآخر، ما لم يهبط عدد المقيّمين تحت ثلاثة.</p>
-                    <p><span className="text-violet-400 font-bold">المادة (14)</span> — الدورة الختامية للسنة تزن ٢.٥، وباقي الدورات ١، والدورة الناقصة لا تدخل الحساب.</p>
+                    <p><span className="text-violet-400 font-bold">المادة (14)</span> — الدورة السابعة تزن ٢.٥ وتدخل فور تقييم أول طلعة مكتملة منها. باقي الدورات تزن ١ وتدخل بعد اكتمالها.</p>
                     {data && (
                         <p className="text-slate-500 pt-1 border-t border-slate-800">
-                            {data.weightedCycle ? `الدورة المرجّحة: ${data.weightedCycle} (الختامية)` : `كل الدورات متساوية — الترجيح يبدأ عند اكتمال الدورة ${data.finalCycle}`}
+                            {data.weightedCycle ? `الدورة المرجّحة: ${data.weightedCycle} — الترجيح مطبّق فوراً` : `الترجيح يبدأ مع أول طلعة مقيّمة في الدورة ${data.finalCycle}`}
                             {data.excludedCycles.length > 0 && ` · مستثناة لعدم اكتمالها: ${data.excludedCycles.join("، ")}`}
                             {data.recusedPairs.length > 0
                                 ? ` · تنحٍّ معلن: ${data.recusedPairs.map((p) => p.join(" ↔ ")).join("، ")}`
@@ -81,7 +101,7 @@ export default function CorrectedLeaderboard() {
                 <div className="space-y-2">
                     {data.rows.map((r, i) => {
                         const prof = profiles[r.king];
-                        const shift = oldOrder.indexOf(r.king) - i;   // + يعني صعد
+                        const shift = r.baseRank - (i + 1);   // + يعني صعد
                         const diff = r.average - r.baseAverage;
                         return (
                             <div key={r.king} className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 border ${

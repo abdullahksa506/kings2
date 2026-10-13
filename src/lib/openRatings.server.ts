@@ -55,13 +55,13 @@ export async function listOpenRatingWeeks(): Promise<OpenRatingWeek[]> {
         const w = d.data() as {
             restaurant?: string | null; king?: string | null;
             cycleNumber?: number; weekNumber?: number;
-            absentees?: string[]; ratingEnabledAt?: { toMillis?: () => number };
+            absentees?: string[]; responded?: string[]; ratingEnabledAt?: { toMillis?: () => number };
         };
         if (!w.restaurant) return;                       // أسابيع بلا مطعم لا تُقيَّم أصلاً
         const openedAt = w.ratingEnabledAt?.toMillis?.() ?? null;
         const rated = counts.get(d.id) ?? new Set<string>();
         const absent = new Set<string>(Array.isArray(w.absentees) ? w.absentees : []);
-        const eligible = KINGS.filter((n) => n !== w.king && !absent.has(n));
+        const eligible = KINGS.filter((n) => n !== w.king && !absent.has(n) && (w.responded || []).includes(n));
         rows.push({
             id: d.id,
             restaurant: w.restaurant ?? null,
@@ -70,7 +70,7 @@ export async function listOpenRatingWeeks(): Promise<OpenRatingWeek[]> {
             weekNumber: Number(w.weekNumber ?? 0),
             openedAt,
             daysOpen: openedAt ? (now - openedAt) / 86_400_000 : null,
-            ratingCount: rated.size,
+            ratingCount: eligible.filter(n => rated.has(n)).length,
             eligibleCount: eligible.length,
             missing: eligible.filter((n) => !rated.has(n)),
         });

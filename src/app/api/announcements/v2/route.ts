@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { authenticateServerRequest } from "@/lib/serverRequestAuth";
 import { sendPushNotification } from "@/lib/pushHelper";
 
+/*
+ * 🤖 الروبوت عدّ الثيمات بعد ما شلنا واحد وقال: لسه ١٦!
+ * قلنا له: الإعلان يحتاج حسبة، مو حماس زيادة 😂🎨
+ */
+
 /**
  * Dean-only endpoint that broadcasts the "ملك الخميس v2" release announcement
  * to every member's push subscription. Requires dean role.
@@ -18,7 +23,7 @@ export async function POST(request: Request) {
     const result = await sendPushNotification({
         title: "🎉 ملك الخميس v2 نزل!",
         body:
-            "تحديث جديد — ثيم TikTok مع ١٠٠ أغنية، خريطة مطاعم تفاعلية، تنسيق ذاتي للعشوائي، التيرمنال الحي، ١٦ ثيم شخصي، والمزيد. افتح الموقع جرّب 🚀",
+            "تحديث جديد — ثيم TikTok مع ١٠٠ أغنية، خريطة مطاعم تفاعلية، تنسيق ذاتي للعشوائي، التيرمنال الحي، ١٥ ثيم شخصي، والمزيد. افتح الموقع جرّب 🚀",
         type: "default",
         tag: "v2-announcement",
         url: "/",

@@ -1,5 +1,10 @@
 import { X, BookOpen, ScrollText } from "lucide-react";
 
+/*
+ * 🤖 الروبوت حفظ الدستور القديم ورفض التحديث!
+ * قلنا له: المادة تتحدث، مو كل شيء عندك كاش 😂📜
+ */
+
 export default function ConstitutionModal({
     isOpen,
     onClose
@@ -211,7 +216,7 @@ export default function ConstitutionModal({
                             </li>
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></div>
-                                <p><strong className="text-emerald-200">قيد مانع للتلاعب:</strong> لا تُسقَط الطلعة المعفوّة إذا كانت الطلعة الوحيدة في الدورة المرجّحة (المادة 14)؛ ويُسقَط بدلاً منها ثاني أسوأ طلعة. بدون هذا القيد يستطيع الملك أن يطلب من أصدقائه إفساد طلعته الأخيرة عمداً لتسقط ومعها وزن الدورة كله، فيرتفع معدّله بدل أن ينخفض.</p>
+                                <p>الإسقاط يشمل أسوأ طلعة من أي دورة، حتى لو كانت الطلعة الوحيدة في الدورة المرجّحة؛ ولا تُستبدل بثاني أسوأ طلعة.</p>
                             </li>
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></div>
@@ -253,11 +258,11 @@ export default function ConstitutionModal({
                         <ul className="space-y-3 list-none pl-0 pr-2 sm:pr-8">
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500 mt-2 shrink-0"></div>
-                                <p>تُحتسب <strong className="text-violet-200">الدورة الختامية للسنة (السادسة) بوزن ٢.٥</strong> — أي كأنها دورتان ونصف عادية — وباقي الدورات بوزن ١. أما قبل اكتمالها فتتساوى الدورات كلها، فلا تُرجَّح دورةٌ ليست ختام السنة.</p>
+                                <p>تُحتسب <strong className="text-violet-200">الدورة السابعة بوزن ٢.٥</strong>، وباقي الدورات بوزن ١. يبدأ أثر السابعة فور تقييم أول طلعة مكتملة منها.</p>
                             </li>
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500 mt-2 shrink-0"></div>
-                                <p><strong className="text-violet-200">لا تدخل دورة في الحساب إلا بعد أن يلعبها الأعضاء الستة كاملين.</strong> الدورة الناقصة تُستثنى حتى تكتمل، منعاً لمحاسبة البعض بمقياس لم يخضع له الباقون.</p>
+                                <p>الدورات الأخرى تدخل بعد أن يلعبها الأعضاء الستة. السابعة مستثناة من شرط الاكتمال وتدخل مباشرة. هذه المواد تخص القائمة المصححة؛ قائمة الملوك تبقى بمتوسط تقييم طلعات كل ملك، بلا وزن لعدد المقيّمين.</p>
                             </li>
                             <li className="flex items-start gap-2 sm:gap-3">
                                 <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-violet-500 mt-2 shrink-0"></div>

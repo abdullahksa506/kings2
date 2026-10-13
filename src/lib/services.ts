@@ -52,6 +52,7 @@ export interface WeekSession {
     absentees: string[];
     responded: string[];
     createdAt: Timestamp;
+    historicalAverageRating?: number;
 }
 
 export interface Rating {
@@ -170,6 +171,7 @@ export function isHistoricalWeek(w: any): boolean {
 /** Junk left by manual edits — invalid CYCLE or a fake king. NOTE: a large
  *  weekNumber is NOT junk — real weeks legitimately got numbered 1001-1005. */
 export function isJunkWeek(w: Partial<WeekSession>): boolean {
+    if (!Number.isInteger(w.cycleNumber)) return true;
     if ((w.cycleNumber ?? 0) <= 0) return true;        // cycle 0 / negative
     if ((w.cycleNumber ?? 0) >= 100) return true;      // cycle 100+ placeholders
     if (!w.isRandom && w.king && !VALID_NAMES.includes(w.king)) return true; // fake king
@@ -180,7 +182,18 @@ export function isJunkWeek(w: Partial<WeekSession>): boolean {
  *  imports — they're real past outings with real attendance. Excludes only random
  *  filler and junk-tagged weeks. */
 export function isRealOuting(w: any): boolean {
-    return !w.isRandom && !isJunkWeek(w);
+    return !w.isRandom && VALID_NAMES.includes(w.king) && !isJunkWeek(w);
+}
+
+/** لا نعامل الطلعة التي لم تُقيَّم كأن تقييمها صفر. */
+function meanRatedWeeks(weeks: WeekSession[], averages: Record<string, number>): number {
+    const scores = weeks.map(w => averages[w.id]).filter(n => Number.isFinite(n) && n >= 1 && n <= 5);
+    return scores.length ? scores.reduce((sum, n) => sum + n, 0) / scores.length : 0;
+}
+
+function outingAverage(week: WeekSession, agg?: { sum: number; count: number }): number {
+    const score = agg && agg.count > 0 ? agg.sum / agg.count : Number(week.historicalAverageRating);
+    return Number.isFinite(score) && score >= 1 && score <= 5 ? score : 0;
 }
 
 /** TRUE only for RATING competition (excludes random, junk, AND historical —
@@ -272,6 +285,7 @@ export type CorrectedRow = {
     count: number;
     droppedScore: number | null;
     baseAverage: number;
+    baseRank: number;
 };
 export type CorrectedResult = {
     rows: CorrectedRow[];
@@ -697,7 +711,7 @@ export const services = {
         const detailByWeek = await this.getRatingsDetailByWeek();
         const results = weeks.map((week) => {
             const agg = grouped.get(week.id);
-            const averageScore = agg && agg.count > 0 ? agg.sum / agg.count : 0;
+            const averageScore = outingAverage(week, agg);
             // Dean gets real per-person scores; everyone else gets names only.
             const ratings: Rating[] =
                 detailByWeek.get(week.id) ??
@@ -749,7 +763,7 @@ export const services = {
         );
         const attendanceRate = memberWeeks.length > 0 ? Math.round((attendedWeeks.length / memberWeeks.length) * 100) : 0;
 
-        const kingWeeks = allWeeksWithAvg.filter(({ week }) => week.king === memberName && week.status === "completed");
+        const kingWeeks = allWeeksWithAvg.filter(({ week }) => week.king === memberName && week.status === "completed" && isRealOuting(week));
         const kingWeekScores = kingWeeks.filter(w => w.averageScore > 0);
         const averageWeekScoreAsKing = kingWeekScores.length > 0
             ? Math.round((kingWeekScores.reduce((sum, w) => sum + w.averageScore, 0) / kingWeekScores.length) * 10) / 10
@@ -1066,9 +1080,8 @@ export const services = {
         const weekAverages: Record<string, number> = {};
         for (const week of completedWeeks) {
             const agg = ratingWeeks[week.id];
-            if (agg && agg.count > 0) {
-                weekAverages[week.id] = agg.sum / agg.count;
-            }
+            const score = outingAverage(week, agg);
+            if (score > 0) weekAverages[week.id] = score;
         }
 
         // --- Compute member stats ---
@@ -1252,9 +1265,7 @@ export const services = {
 
             const attendanceCounts = weeks.map((w) => attendedCountForWeek(w));
             const avgAttendance = attendanceCounts.reduce((s, n) => s + n, 0) / weeks.length;
-            const avgRating = weeks.length > 0
-                ? weeks.reduce((sum, w) => sum + (weekAverages[w.id] || 0), 0) / weeks.length
-                : 0;
+            const avgRating = meanRatedWeeks(weeks, weekAverages);
             const attendanceRate = (avgAttendance / VALID_NAMES.length) * 100;
 
             return {
@@ -1363,6 +1374,9 @@ export const services = {
         // --- King decision analytics ---
         const kingDecisionMap: Record<string, {
             outings: number;
+            ratedOutings: number;
+            thursdayRated: number;
+            fridayRated: number;
             scoreSum: number;
             attendanceSum: number;
             thursdayOutings: number;
@@ -1376,6 +1390,9 @@ export const services = {
         for (const name of VALID_NAMES) {
             kingDecisionMap[name] = {
                 outings: 0,
+                ratedOutings: 0,
+                thursdayRated: 0,
+                fridayRated: 0,
                 scoreSum: 0,
                 attendanceSum: 0,
                 thursdayOutings: 0,
@@ -1393,15 +1410,18 @@ export const services = {
             const attendance = attendedCountForWeek(week);
             const score = weekAverages[week.id] || 0;
             k.outings++;
+            if (score > 0) k.ratedOutings++;
             k.scoreSum += score;
             k.attendanceSum += attendance;
             if (week.day === "الخميس") {
                 k.thursdayOutings++;
+                if (score > 0) k.thursdayRated++;
                 k.thursdayScoreSum += score;
                 k.thursdayAttendanceSum += attendance;
             }
             if (week.day === "الجمعة") {
                 k.fridayOutings++;
+                if (score > 0) k.fridayRated++;
                 k.fridayScoreSum += score;
                 k.fridayAttendanceSum += attendance;
             }
@@ -1411,12 +1431,12 @@ export const services = {
             .map(([king, data]) => ({
                 king,
                 outings: data.outings,
-                avgScore: data.outings > 0 ? Math.round((data.scoreSum / data.outings) * 10) / 10 : 0,
+                avgScore: data.ratedOutings > 0 ? Math.round((data.scoreSum / data.ratedOutings) * 10) / 10 : 0,
                 avgAttendance: data.outings > 0 ? Math.round((data.attendanceSum / data.outings) * 10) / 10 : 0,
                 thursdayOutings: data.thursdayOutings,
                 fridayOutings: data.fridayOutings,
-                thursdayAvgScore: data.thursdayOutings > 0 ? Math.round((data.thursdayScoreSum / data.thursdayOutings) * 10) / 10 : 0,
-                fridayAvgScore: data.fridayOutings > 0 ? Math.round((data.fridayScoreSum / data.fridayOutings) * 10) / 10 : 0,
+                thursdayAvgScore: data.thursdayRated > 0 ? Math.round((data.thursdayScoreSum / data.thursdayRated) * 10) / 10 : 0,
+                fridayAvgScore: data.fridayRated > 0 ? Math.round((data.fridayScoreSum / data.fridayRated) * 10) / 10 : 0,
                 thursdayAvgAttendance: data.thursdayOutings > 0 ? Math.round((data.thursdayAttendanceSum / data.thursdayOutings) * 10) / 10 : 0,
                 fridayAvgAttendance: data.fridayOutings > 0 ? Math.round((data.fridayAttendanceSum / data.fridayOutings) * 10) / 10 : 0,
             }))
@@ -1462,7 +1482,7 @@ export const services = {
             if (cycleNumber === null || !byCycle[cycleNumber]) return { outings: 0, avgRating: 0, avgAttendance: 0 };
             const weeks = byCycle[cycleNumber];
             if (weeks.length === 0) return { outings: 0, avgRating: 0, avgAttendance: 0 };
-            const avgRating = weeks.reduce((s, w) => s + (weekAverages[w.id] || 0), 0) / weeks.length;
+            const avgRating = meanRatedWeeks(weeks, weekAverages);
             const avgAttendance = weeks.reduce((s, w) => s + attendedCountForWeek(w), 0) / weeks.length;
             return {
                 outings: weeks.length,

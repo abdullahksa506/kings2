@@ -5,9 +5,9 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: 'ملك الخميس | King of Thursday',
-        short_name: 'ملك الخميس',
-        description: 'The Official King of Thursday Management App 2026',
+        name: 'عرش الخميس',
+        short_name: 'عرش الخميس',
+        description: 'عرش الخميس — تنظيم الطلعات وتقييم المطاعم للأعضاء',
         start_url: '/',
         display: 'standalone',
         background_color: '#0b101b',

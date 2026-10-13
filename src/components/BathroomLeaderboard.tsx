@@ -1,5 +1,10 @@
 "use client";
 
+/*
+ * 🤖 الروبوت جمع حمامين مختلفين في متوسط واحد!
+ * قلنا له: افصل الأسماء، مو كل الأبواب تودّي لنفس المكان 😂🚽
+ */
+
 import { useState, useEffect } from "react";
 import { services, WeekSession, BathroomRating, isRealOuting } from "@/lib/services";
 import { Bath, Trophy } from "lucide-react";
@@ -35,17 +40,20 @@ export default function BathroomLeaderboard() {
                     const ratings = await services.getBathroomRatingsForWeek(week.id);
                     if (ratings.length === 0) continue;
 
-                    const totalScore = ratings.reduce((sum, r) => sum + r.score, 0);
-                    const averageScore = totalScore / ratings.length;
-
-                    statsData.push({
+                    const groups = new Map<string, BathroomRating[]>();
+                    for (const rating of ratings) {
+                        if (!Number.isFinite(rating.score) || rating.score < 1 || rating.score > 5) continue;
+                        const label = rating.bathroomName?.trim() || `حمام ${rating.restaurantName?.trim() || week.restaurant}`;
+                        groups.set(label, [...(groups.get(label) || []), rating]);
+                    }
+                    groups.forEach((group, label) => statsData.push({
                         weekId: week.id,
-                        restaurantName: week.restaurant,
+                        restaurantName: label,
                         cycleNumber: week.cycleNumber,
-                        averageScore,
-                        totalVotes: ratings.length,
-                        ratings: ratings.sort((a, b) => b.score - a.score) // Sort ratings descending
-                    });
+                        averageScore: group.reduce((sum, r) => sum + r.score, 0) / group.length,
+                        totalVotes: group.length,
+                        ratings: group.sort((a, b) => b.score - a.score)
+                    }));
                 }
 
                 // 3. Sort by average score descending
@@ -81,7 +89,7 @@ export default function BathroomLeaderboard() {
             <div className="space-y-4">
                 {stats.map((stat, index) => (
                     <div
-                        key={stat.restaurantName || `bathroom-${index}`}
+                        key={`${stat.weekId}::${stat.restaurantName}`}
                         className={`bg-slate-950/50 rounded-xl border transition-all ${index === 0 ? "border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)] relative overflow-hidden" :
                                 index === 1 ? "border-slate-400/50" :
                                     index === 2 ? "border-amber-700/50" : "border-slate-800"
